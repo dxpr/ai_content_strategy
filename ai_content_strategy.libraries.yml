@@ -1,25 +1,3 @@
-recommendations:
-  version: 1.x
-  css:
-    theme:
-      css/ai_content_strategy.css: {}
-  js:
-    js/content-ideas.js: {}
-  dependencies:
-    - core/jquery
-    - core/drupal
-    - core/once
-
-gap_analysis:
-  version: VERSION
-  js:
-    js/gap-analysis.js: {}
-  dependencies:
-    - core/jquery
-    - core/drupal
-    - core/once
-    - core/drupal.ajax 
-
 content_strategy:
   version: VERSION
   css:
@@ -27,8 +5,10 @@ content_strategy:
       css/content-strategy.css: {}
   js:
     js/content-strategy.js: {}
+    js/content-ideas.js: {}
   dependencies:
     - core/drupal
+    - core/jquery
     - core/once
     - core/drupal.ajax
     - core/drupal.message 

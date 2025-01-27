@@ -1,5 +1,5 @@
-ai_content_strategy.gap_analysis:
-  route_name: ai_content_strategy.gap_analysis
-  title: 'Compare with Competitor'
+ai_content_strategy.recommendations:
+  route_name: ai_content_strategy.recommendations
+  title: 'Content Strategy'
   appears_on:
-    - ai_content_strategy.recommendations 
+    - system.admin_reports 

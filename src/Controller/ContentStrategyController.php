@@ -198,7 +198,7 @@ class ContentStrategyController extends ControllerBase {
         ],
         '#attached' => [
           'library' => [
-            'ai_content_strategy/recommendations',
+            'ai_content_strategy/content_strategy',
           ],
         ],
       ],
@@ -502,104 +502,6 @@ EOT;
       $output[] = "- {$url}";
     }
     return implode("\n", $output);
-  }
-
-  /**
-   * Displays the content gap analysis page.
-   *
-   * @return array
-   *   Render array for the gap analysis page.
-   */
-  public function gapAnalysis() {
-    $build = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['content-gap-analysis']],
-    ];
-    
-    // Add description
-    $build['description'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['content-gap-description']],
-      'content' => [
-        '#markup' => $this->t('AI-powered content gap analysis based on competitor website comparison.'),
-        '#prefix' => '<p>',
-        '#suffix' => '</p>',
-      ],
-    ];
-
-    // Add URL input and analyze button
-    $build['input_group'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['gap-analysis-input-group']],
-    ];
-
-    $build['input_group']['url'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'input',
-      '#attributes' => [
-        'type' => 'url',
-        'class' => ['form-url', 'competitor-url-input'],
-        'placeholder' => $this->t('Enter competitor website URL (e.g., https://example.com)'),
-        'required' => 'required',
-      ],
-    ];
-
-    $build['input_group']['analyze'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#attributes' => [
-        'class' => ['button', 'button--primary', 'analyze-content-gap'],
-        'type' => 'button',
-      ],
-      '#value' => $this->t('Analyze Content Gap'),
-    ];
-
-    // Add results container
-    $build['results'] = [
-      '#type' => 'container',
-      '#attributes' => [
-        'class' => ['gap-analysis-results'],
-        'id' => 'gap-analysis-results',
-      ],
-    ];
-
-    // Attach library
-    $build['#attached']['library'][] = 'ai_content_strategy/gap_analysis';
-
-    return $build;
-  }
-
-  /**
-   * AJAX callback to analyze content gap.
-   *
-   * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   JSON response containing the analysis results.
-   */
-  public function analyzeGapAjax(Request $request) {
-    try {
-      $url = $request->query->get('url');
-      if (empty($url)) {
-        throw new \RuntimeException($this->t('No competitor URL provided'));
-      }
-
-      $analysis = $this->gapAnalyzer->analyzeContentGap($url);
-      
-      $build = [
-        '#theme' => 'ai_content_strategy_gap_analysis',
-        '#results' => $analysis,
-      ];
-
-      return new JsonResponse([
-        'success' => TRUE,
-        'html' => $this->renderer->render($build),
-      ]);
-    }
-    catch (\Exception $e) {
-      return new JsonResponse([
-        'success' => FALSE,
-        'error' => $e->getMessage(),
-      ]);
-    }
   }
 
 } 
