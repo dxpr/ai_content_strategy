@@ -22,6 +22,7 @@ use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\AppendCommand;
+use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 
 /**
  * Controller for content strategy functionality.
@@ -29,9 +30,14 @@ use Drupal\Core\Ajax\AppendCommand;
 class ContentStrategyController extends ControllerBase {
 
   /**
-   * Cache ID for content strategy recommendations.
+   * Key-Value collection for content strategy recommendations.
    */
-  const CACHE_ID = 'ai_content_strategy.recommendations';
+  const KV_COLLECTION = 'ai_content_strategy.recommendations';
+
+  /**
+   * Key for storing recommendations.
+   */
+  const KV_KEY = 'recommendations';
 
   /**
    * The strategy generator service.
@@ -83,6 +89,13 @@ class ContentStrategyController extends ControllerBase {
   protected $dateFormatter;
 
   /**
+   * The key value store.
+   *
+   * @var \Drupal\Core\KeyValueStore\KeyValueStoreInterface
+   */
+  protected $keyValue;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -99,6 +112,8 @@ class ContentStrategyController extends ControllerBase {
    *   The cache backend.
    * @param \Drupal\Core\Datetime\DateFormatterInterface $date_formatter
    *   The date formatter.
+   * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $key_value_factory
+   *   The key value factory.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -107,7 +122,8 @@ class ContentStrategyController extends ControllerBase {
     PromptJsonDecoderInterface $prompt_json_decoder,
     RendererInterface $renderer,
     CacheBackendInterface $cache,
-    DateFormatterInterface $date_formatter
+    DateFormatterInterface $date_formatter,
+    KeyValueFactoryInterface $key_value_factory
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -116,6 +132,7 @@ class ContentStrategyController extends ControllerBase {
     $this->renderer = $renderer;
     $this->cache = $cache;
     $this->dateFormatter = $date_formatter;
+    $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
   }
 
   /**
@@ -129,7 +146,8 @@ class ContentStrategyController extends ControllerBase {
       $container->get('ai.prompt_json_decode'),
       $container->get('renderer'),
       $container->get('cache.default'),
-      $container->get('date.formatter')
+      $container->get('date.formatter'),
+      $container->get('keyvalue')
     );
   }
 
@@ -166,21 +184,20 @@ class ContentStrategyController extends ControllerBase {
       ],
     ];
 
-    // Check for cached data
-    $cached = $this->cache->get(self::CACHE_ID);
+    // Get stored data from key-value store
+    $stored_data = $this->keyValue->get(self::KV_KEY);
     $recommendations = [];
     $last_run = NULL;
     
-    if ($cached) {
-      $cache_data = $cached->data;
-      if (is_array($cache_data) && isset($cache_data['data'], $cache_data['timestamp'])) {
-        $recommendations = $cache_data['data'];
-        $last_run = (int) $cache_data['timestamp'];
+    if ($stored_data) {
+      if (is_array($stored_data) && isset($stored_data['data'], $stored_data['timestamp'])) {
+        $recommendations = $stored_data['data'];
+        $last_run = (int) $stored_data['timestamp'];
       }
       else {
-        // Handle legacy cache format
-        $recommendations = $cache_data;
-        $last_run = (int) $cached->created;
+        // Handle legacy format
+        $recommendations = $stored_data;
+        $last_run = \Drupal::time()->getRequestTime();
       }
     }
 
@@ -191,7 +208,7 @@ class ContentStrategyController extends ControllerBase {
       'generate' => [
         '#type' => 'html_tag',
         '#tag' => 'button',
-        '#value' => !empty($recommendations) ? $this->t('Refresh Recommendations') : $this->t('Generate Recommendations'),
+        '#value' => $stored_data ? $this->t('Refresh Recommendations') : $this->t('Generate Recommendations'),
         '#attributes' => [
           'class' => ['button', 'button--primary', 'generate-recommendations'],
           'type' => 'button',
@@ -246,12 +263,12 @@ class ContentStrategyController extends ControllerBase {
       // Get recommendations
       $recommendations = $this->strategyGenerator->generateRecommendations();
       
-      // Cache the results with timestamp
+      // Store the results with timestamp in key-value store
       $timestamp = (int) \Drupal::time()->getCurrentTime();
-      $this->cache->set(self::CACHE_ID, [
+      $this->keyValue->set(self::KV_KEY, [
         'data' => $recommendations,
         'timestamp' => $timestamp,
-      ], CacheBackendInterface::CACHE_PERMANENT);
+      ]);
       
       // Build the response HTML
       $build = [
@@ -273,15 +290,15 @@ class ContentStrategyController extends ControllerBase {
           '<p>AI-powered content strategy recommendations based on your site structure.</p>' .
         '</div>' .
         '<div class="content-strategy-actions">' .
-          '<button class="button button--primary generate-recommendations" type="button">Refresh Recommendations</button>' .
+          '<button class="button button--primary generate-recommendations" type="button">' . $this->t('Refresh Recommendations') . '</button>' .
+          '<div class="last-run-time">' . 
+            $this->t('Last generated: @time ago', [
+              '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
+            ])->render() .
+          '</div>' .
         '</div>' .
         '<div class="recommendations-wrapper">' . 
           $html . 
-        '</div>' .
-        '<div class="last-run-time">' . 
-          $this->t('Last generated: @time ago', [
-            '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
-          ])->render() .
         '</div>';
 
       // Use HtmlCommand to update the content
@@ -357,6 +374,13 @@ class ContentStrategyController extends ControllerBase {
    */
   public function generateMore(string $section, string $title) {
     try {
+      // Get current stored data first
+      $stored_data = $this->keyValue->get(self::KV_KEY);
+      if (!$stored_data || !isset($stored_data['data'])) {
+        throw new \RuntimeException('No existing recommendations found');
+      }
+      $recommendations = $stored_data['data'];
+
       // Get site data for context
       $site_structure = $this->contentAnalyzer->getSiteStructure();
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
@@ -422,6 +446,51 @@ EOT;
         throw new \RuntimeException('Invalid response format from AI provider');
       }
 
+      // After successfully generating and parsing new ideas, update the stored data
+      $updated = FALSE;
+      
+      // Find the correct section and item to update
+      if (isset($recommendations[$section])) {
+        foreach ($recommendations[$section] as $key => $item) {
+          $match = FALSE;
+          switch ($section) {
+            case 'content_gaps':
+              $match = ($item['title'] === $title);
+              break;
+            case 'authority_topics':
+              $match = ($item['topic'] === $title);
+              break;
+            case 'expertise_demonstrations':
+              $match = ($item['content_type'] === $title);
+              break;
+            case 'trust_signals':
+              $match = ($item['signal'] === $title);
+              break;
+          }
+          
+          if ($match) {
+            // Append new ideas to existing ones
+            $recommendations[$section][$key]['content_ideas'] = array_merge(
+              $recommendations[$section][$key]['content_ideas'],
+              $ideas
+            );
+            $updated = TRUE;
+            break;
+          }
+        }
+      }
+
+      if ($updated) {
+        // Update the stored data with timestamp
+        $timestamp = (int) \Drupal::time()->getCurrentTime();
+        $this->keyValue->set(self::KV_KEY, [
+          'data' => $recommendations,
+          'timestamp' => $timestamp,
+        ]);
+      } else {
+        throw new \RuntimeException('Failed to find matching item to update');
+      }
+
       // Build HTML for new ideas
       $rows = [];
       foreach ($ideas as $idea) {
@@ -441,6 +510,16 @@ EOT;
       
       // Build the HTML for the new rows
       $html = $this->renderer->renderRoot($rows);
+
+      // Update the last run time
+      $response->addCommand(
+        new HtmlCommand(
+          '.last-run-time',
+          $this->t('Last generated: @time ago', [
+            '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
+          ])
+        )
+      );
       
       // Add command to append the new rows to the table
       $response->addCommand(

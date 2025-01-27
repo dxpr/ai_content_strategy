@@ -43,8 +43,8 @@
     element,
     url,
     loadingText = ButtonText.LOADING,
-    successText,
-    errorText,
+    successText = ButtonText.REFRESH,
+    errorText = ButtonText.REFRESH,
     onSuccess,
     method = 'html'
   }) {
@@ -162,7 +162,9 @@
     attach: function (context, settings) {
       // Handle main generate button
       once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
-        button.textContent = ButtonText.GENERATE;
+        // Don't override the initial button text from server
+        const initialText = button.textContent.trim();
+        const hasRecommendations = initialText === ButtonText.REFRESH;
 
         try {
           const ajaxHandler = new Drupal.Ajax(
@@ -173,7 +175,7 @@
               url: 'admin/reports/ai/content-strategy/generate',
               loadingText: ButtonText.LOADING,
               successText: ButtonText.REFRESH,
-              errorText: ButtonText.GENERATE,
+              errorText: hasRecommendations ? ButtonText.REFRESH : ButtonText.GENERATE,
               onSuccess: (target) => {
                 target.querySelectorAll('.generate-more-link').forEach((link, index) => {
                   attachGenerateMoreBehavior(link, index);
