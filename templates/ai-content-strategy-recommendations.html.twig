@@ -25,7 +25,7 @@
           <div class="recommendation-item recommendation-priority-{{ gap.priority }}" data-section="content_gaps" data-title="{{ gap.title }}">
             <h4>{{ gap.title }}</h4>
             <p>{{ gap.description }}</p>
-            <span class="priority-badge">{{ gap.priority|title|t }}</span>
+            <span class="priority-badge {{ gap.priority }}">{{ gap.priority|title|t }}</span>
             {% if gap.content_ideas is not empty %}
               <table class="content-ideas-table">
                 <thead>
