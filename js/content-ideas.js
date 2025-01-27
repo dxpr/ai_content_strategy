@@ -50,13 +50,12 @@
   }) {
     DOMUtils.ensureElementId(element, 'content-strategy');
 
-    return {
+    const settings = {
       base: element.id,
       element: element,
       url: Drupal.url(url),
-      event: 'click',
-      progress: { type: 'throbber' },
       submit: { js: true },
+      progress: { type: 'throbber' },
       beforeSend: function(xhr, settings) {
         element.textContent = loadingText;
         element.disabled = true;
@@ -72,6 +71,20 @@
                 onSuccess(target);
               }
             }
+            // Handle message commands using Drupal.Message API
+            else if (command.command === 'message') {
+              const messages = new Drupal.Message();
+              
+              if (command.clearPrevious) {
+                messages.clear();
+              }
+              
+              messages.add(command.message, {
+                type: command.messageOptions?.type || 'status',
+                id: `content-strategy-message-${Date.now()}`,
+                announce: command.message
+              });
+            }
           });
         }
         element.disabled = false;
@@ -80,9 +93,35 @@
       error: function(xhr, status, error) {
         element.disabled = false;
         element.textContent = errorText;
-        alert(Drupal.t('An error occurred while processing your request.'));
+        
+        try {
+          const response = JSON.parse(xhr.responseText);
+          const messages = new Drupal.Message();
+          
+          if (response[0]?.message) {
+            messages.add(response[0].message, {
+              type: 'error',
+              id: `content-strategy-error-${Date.now()}`,
+              announce: response[0].message
+            });
+          } else {
+            messages.add(Drupal.t('An error occurred while processing your request.'), {
+              type: 'error',
+              id: `content-strategy-error-${Date.now()}`
+            });
+          }
+        } catch (e) {
+          console.error('Error parsing response:', e);
+          const messages = new Drupal.Message();
+          messages.add(Drupal.t('An error occurred while processing your request.'), {
+            type: 'error',
+            id: `content-strategy-error-${Date.now()}`
+          });
+        }
       }
     };
+
+    return settings;
   }
 
   // Attach generate more behavior
@@ -95,17 +134,24 @@
 
     link.textContent = ButtonText.GENERATE_MORE;
     
-    const ajaxSettings = createAjaxHandler({
-      element: link,
-      url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
-      loadingText: ButtonText.LOADING,
-      successText: ButtonText.GENERATE_MORE,
-      errorText: ButtonText.GENERATE_MORE,
-      method: 'append'
-    });
-
     try {
-      Drupal.ajax(ajaxSettings);
+      const ajaxHandler = new Drupal.Ajax(
+        link.id,
+        link,
+        createAjaxHandler({
+          element: link,
+          url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
+          loadingText: ButtonText.LOADING,
+          successText: ButtonText.GENERATE_MORE,
+          errorText: ButtonText.GENERATE_MORE,
+          method: 'append'
+        })
+      );
+
+      link.addEventListener('click', function(event) {
+        event.preventDefault();
+        ajaxHandler.execute();
+      });
     } catch (e) {
       console.error('Error setting up generate more link:', e);
     }
@@ -118,24 +164,30 @@
       once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
         button.textContent = ButtonText.GENERATE;
 
-        const ajaxSettings = createAjaxHandler({
-          element: button,
-          url: 'admin/reports/ai/content-strategy/generate',
-          loadingText: ButtonText.LOADING,
-          successText: ButtonText.REFRESH,
-          errorText: ButtonText.GENERATE,
-          onSuccess: (target) => {
-            // Re-attach behaviors to new generate more links
-            target.querySelectorAll('.generate-more-link').forEach((link, index) => {
-              attachGenerateMoreBehavior(link, index);
-            });
-          }
-        });
-
         try {
-          Drupal.ajax(ajaxSettings);
+          const ajaxHandler = new Drupal.Ajax(
+            button.id,
+            button,
+            createAjaxHandler({
+              element: button,
+              url: 'admin/reports/ai/content-strategy/generate',
+              loadingText: ButtonText.LOADING,
+              successText: ButtonText.REFRESH,
+              errorText: ButtonText.GENERATE,
+              onSuccess: (target) => {
+                target.querySelectorAll('.generate-more-link').forEach((link, index) => {
+                  attachGenerateMoreBehavior(link, index);
+                });
+              }
+            })
+          );
+
+          button.addEventListener('click', function(event) {
+            event.preventDefault();
+            ajaxHandler.execute();
+          });
         } catch (e) {
-          console.error('Error setting up recommendations button:', e);
+          console.error('Error setting up main button:', e);
         }
       });
 

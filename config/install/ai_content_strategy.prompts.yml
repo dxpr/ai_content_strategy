@@ -30,12 +30,15 @@ content_strategy:
        - Provide EXACTLY 2 distinct recommendations
        - Each recommendation should focus on a different but complementary aspect
        - Ensure the two recommendations work together to provide comprehensive coverage
+    8. For ALL sections (content_gaps, authority_topics, expertise_demonstrations, trust_signals):
+       - Each recommendation MUST include a priority level (high/medium/low)
+       - Priorities should be determined based on alignment with existing content
 
     The response must be a valid JSON object with these exact keys:
     - content_gaps: array of EXACTLY 2 objects with title, description, priority, and content_ideas fields
-    - authority_topics: array of EXACTLY 2 objects with topic, rationale, and content_ideas fields
-    - expertise_demonstrations: array of EXACTLY 2 objects with content_type, description, and content_ideas fields
-    - trust_signals: array of EXACTLY 2 objects with signal, implementation, and content_ideas fields
+    - authority_topics: array of EXACTLY 2 objects with topic, rationale, priority, and content_ideas fields
+    - expertise_demonstrations: array of EXACTLY 2 objects with content_type, description, priority, and content_ideas fields
+    - trust_signals: array of EXACTLY 2 objects with signal, implementation, priority, and content_ideas fields
       </instructions>
 
       <schema_example>
@@ -58,6 +61,7 @@ content_strategy:
         {
           "topic": "Domain-Specific Topic",
           "rationale": "Topic relevance based on existing content",
+          "priority": "medium",
           "content_ideas": [
             "Example topic content 1 based on site focus",
             "Example topic content 2 based on site focus",
@@ -71,6 +75,7 @@ content_strategy:
         {
           "content_type": "Expertise Format",
           "description": "Content format aligned with site purpose",
+          "priority": "low",
           "content_ideas": [
             "Example expertise content 1 based on site type",
             "Example expertise content 2 based on site type",
@@ -84,6 +89,7 @@ content_strategy:
         {
           "signal": "Trust Element",
           "implementation": "Implementation approach based on site context",
+          "priority": "high",
           "content_ideas": [
             "Example trust content 1 based on site needs",
             "Example trust content 2 based on site needs",
@@ -135,6 +141,7 @@ content_strategy:
         {
           "topic": "Domain-Specific Topic",
           "rationale": "Topic relevance based on existing content",
+          "priority": "medium",
           "content_ideas": [
             "Example topic content 1 based on site focus",
             "Example topic content 2 based on site focus",
@@ -148,6 +155,7 @@ content_strategy:
         {
           "content_type": "Expertise Format",
           "description": "Content format aligned with site purpose",
+          "priority": "low",
           "content_ideas": [
             "Example expertise content 1 based on site type",
             "Example expertise content 2 based on site type",
@@ -161,6 +169,7 @@ content_strategy:
         {
           "signal": "Trust Element",
           "implementation": "Implementation approach based on site context",
+          "priority": "high",
           "content_ideas": [
             "Example trust content 1 based on site needs",
             "Example trust content 2 based on site needs",

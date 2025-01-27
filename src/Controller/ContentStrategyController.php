@@ -160,7 +160,7 @@ class ContentStrategyController extends ControllerBase {
       '#type' => 'container',
       '#attributes' => ['class' => ['content-strategy-description']],
       'content' => [
-        '#markup' => $this->t('AI-powered content strategy recommendations based on your site structure and EEAT principles.'),
+        '#markup' => $this->t('AI-powered content strategy recommendations based on your site structure.'),
         '#prefix' => '<p>',
         '#suffix' => '</p>',
       ],
@@ -270,7 +270,7 @@ class ContentStrategyController extends ControllerBase {
       // Create the full content structure
       $content = 
         '<div class="content-strategy-description">' .
-          '<p>AI-powered content strategy recommendations based on your site structure and EEAT principles.</p>' .
+          '<p>AI-powered content strategy recommendations based on your site structure.</p>' .
         '</div>' .
         '<div class="content-strategy-actions">' .
           '<button class="button button--primary generate-recommendations" type="button">Refresh Recommendations</button>' .

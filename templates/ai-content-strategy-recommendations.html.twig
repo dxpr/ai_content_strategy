@@ -57,9 +57,10 @@
     {% if authority_topics is not empty %}
       <div class="recommendation-items">
         {% for topic in authority_topics %}
-          <div class="recommendation-item" data-section="authority_topics" data-title="{{ topic.topic }}">
+          <div class="recommendation-item recommendation-priority-{{ topic.priority }}" data-section="authority_topics" data-title="{{ topic.topic }}">
             <h4>{{ topic.topic }}</h4>
             <p>{{ topic.rationale }}</p>
+            <span class="priority-badge {{ topic.priority }}">{{ topic.priority|title|t }}</span>
             {% if topic.content_ideas is not empty %}
               <table class="content-ideas-table">
                 <thead>
@@ -90,11 +91,12 @@
     <h3>{{ 'Expertise Demonstrations'|t }}</h3>
     {% if expertise_demonstrations is not empty %}
       <div class="recommendation-items">
-        {% for demo in expertise_demonstrations %}
-          <div class="recommendation-item" data-section="expertise_demonstrations" data-title="{{ demo.content_type }}">
-            <h4>{{ demo.content_type }}</h4>
-            <p>{{ demo.description }}</p>
-            {% if demo.content_ideas is not empty %}
+        {% for demonstration in expertise_demonstrations %}
+          <div class="recommendation-item recommendation-priority-{{ demonstration.priority }}" data-section="expertise_demonstrations" data-title="{{ demonstration.content_type }}">
+            <h4>{{ demonstration.content_type }}</h4>
+            <p>{{ demonstration.description }}</p>
+            <span class="priority-badge {{ demonstration.priority }}">{{ demonstration.priority|title|t }}</span>
+            {% if demonstration.content_ideas is not empty %}
               <table class="content-ideas-table">
                 <thead>
                   <tr>
@@ -102,14 +104,14 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for idea in demo.content_ideas %}
+                  {% for idea in demonstration.content_ideas %}
                     <tr>
                       <td>{{ idea }}</td>
                     </tr>
                   {% endfor %}
                 </tbody>
               </table>
-              <a href="#" class="generate-more-link" data-section="expertise_demonstrations" data-title="{{ demo.content_type }}">{{ 'Generate More Ideas'|t }}</a>
+              <a href="#" class="generate-more-link" data-section="expertise_demonstrations" data-title="{{ demonstration.content_type }}">{{ 'Generate More Ideas'|t }}</a>
             {% endif %}
           </div>
         {% endfor %}
@@ -125,9 +127,10 @@
     {% if trust_signals is not empty %}
       <div class="recommendation-items">
         {% for signal in trust_signals %}
-          <div class="recommendation-item" data-section="trust_signals" data-title="{{ signal.signal }}">
+          <div class="recommendation-item recommendation-priority-{{ signal.priority }}" data-section="trust_signals" data-title="{{ signal.signal }}">
             <h4>{{ signal.signal }}</h4>
             <p>{{ signal.implementation }}</p>
+            <span class="priority-badge {{ signal.priority }}">{{ signal.priority|title|t }}</span>
             {% if signal.content_ideas is not empty %}
               <table class="content-ideas-table">
                 <thead>

@@ -87,14 +87,10 @@ class ContentAnalyzer {
    *   The front page content as plain text.
    */
   protected function getFrontPageContent(): string {
-    \Drupal::messenger()->addStatus('Fetching front page content...');
-    
     // Get the front page path from configuration
     $front_uri = $this->configFactory->get('system.site')->get('page.front');
-    \Drupal::messenger()->addStatus('Front page URI: ' . $front_uri);
     
     if (empty($front_uri)) {
-      \Drupal::messenger()->addWarning('No front page URI found in configuration.');
       return '';
     }
 
@@ -104,8 +100,6 @@ class ContentAnalyzer {
       try {
         $node = $this->entityTypeManager->getStorage('node')->load($nid);
         if ($node) {
-          \Drupal::messenger()->addStatus('Front page node found.');
-          
           // Build the node view
           $view_builder = $this->entityTypeManager->getViewBuilder('node');
           $build = $view_builder->view($node);
@@ -114,18 +108,15 @@ class ContentAnalyzer {
           $html = $this->renderer->renderPlain($build);
           
           // Convert HTML to plain text
-          $text = strip_tags($html);
-          \Drupal::messenger()->addStatus('Retrieved front page content: ' . strlen($text) . ' characters');
-          
-          return $text;
+          return strip_tags($html);
         }
       }
       catch (\Exception $e) {
-        \Drupal::messenger()->addError('Error loading front page node: ' . $e->getMessage());
+        // Log error but continue with empty content
+        watchdog_exception('ai_content_strategy', $e);
       }
     }
     
-    \Drupal::messenger()->addWarning('Could not retrieve front page content.');
     return '';
   }
 
@@ -137,28 +128,31 @@ class ContentAnalyzer {
    */
   public function getSiteStructure(): array {
     try {
-      \Drupal::messenger()->addMessage('Getting site structure...');
-      
       // Get front page content
       $front_content = $this->getFrontPageContent();
       
-      // Get primary menu
-      $menu_tree = $this->menuActiveTrail->getActiveTrailIds('main');
+      // Get primary menu if Menu UI module is available
       $menu_items = [];
-      
-      foreach ($menu_tree as $id => $active) {
-        if ($id === 'main:') {
-          continue;
+      if ($this->menuActiveTrail && \Drupal::moduleHandler()->moduleExists('menu_ui')) {
+        try {
+          $menu_tree = $this->menuActiveTrail->getActiveTrailIds('main');
+          
+          foreach ($menu_tree as $id => $active) {
+            if ($id === 'main:') {
+              continue;
+            }
+            
+            $parts = explode(':', $id);
+            $menu_items[] = [
+              'title' => end($parts),
+              'url' => '/' . implode('/', array_slice($parts, 1)),
+            ];
+          }
         }
-        
-        $parts = explode(':', $id);
-        $menu_items[] = [
-          'title' => end($parts),
-          'url' => '/' . implode('/', array_slice($parts, 1)),
-        ];
+        catch (\Exception $e) {
+          watchdog_exception('ai_content_strategy', $e);
+        }
       }
-      
-      \Drupal::messenger()->addMessage('Found ' . count($menu_items) . ' menu items');
 
       return [
         'homepage' => [
@@ -169,7 +163,7 @@ class ContentAnalyzer {
       ];
     }
     catch (\Exception $e) {
-      \Drupal::messenger()->addError('Error getting site structure: ' . $e->getMessage());
+      watchdog_exception('ai_content_strategy', $e);
       return [
         'homepage' => ['title' => '', 'content' => ''],
         'primary_menu' => [],

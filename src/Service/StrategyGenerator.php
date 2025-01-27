@@ -89,7 +89,7 @@ class StrategyGenerator extends AnalyzerBase {
   public function checkHealth(): ?TranslatableMarkup {
     // Check if we have any chat providers installed.
     if (!$this->aiProvider->hasProvidersForOperationType('chat', FALSE)) {
-      return $this->t('No chat provider available. Please install a chat provider module first.');
+      return $this->t('No chat provider available. Please install a compatible provider module first.');
     }
 
     // Check if we have a configured and usable chat provider.
@@ -148,14 +148,7 @@ class StrategyGenerator extends AnalyzerBase {
     try {
       // Get site data.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
-      $this->messenger->addStatus($this->t('Site structure: @structure', [
-        '@structure' => print_r($site_structure, TRUE),
-      ]));
-
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
-      $this->messenger->addStatus($this->t('Sitemap URLs: @urls', [
-        '@urls' => print_r($sitemap_urls, TRUE),
-      ]));
 
       // Check sitemap data.
       if (empty($sitemap_urls['urls'])) {
@@ -165,51 +158,23 @@ class StrategyGenerator extends AnalyzerBase {
       // Get default provider and model.
       $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
       $provider = $this->aiProvider->createInstance($defaults['provider_id']);
-      
-      $this->messenger->addStatus($this->t('Using provider: @provider with model: @model', [
-        '@provider' => $defaults['provider_id'],
-        '@model' => $defaults['model_id'],
-      ]));
 
       // Set system role with more explicit JSON formatting instructions.
       $provider->setChatSystemRole('You are a content strategy expert focused on Google\'s EEAT framework. Your task is to analyze website structure and provide recommendations in a strict JSON format. Always return valid JSON that matches the provided schema exactly. Do not include any explanatory text or markdown formatting.');
 
       // Create chat input.
       $prompt = $this->buildEeatPrompt($site_structure, $sitemap_urls);
-      $this->messenger->addStatus($this->t('Generated prompt: @prompt', [
-        '@prompt' => $prompt,
-      ]));
-
       $messages = new ChatInput([
         new ChatMessage('user', $prompt),
       ]);
 
       // Get response.
       $response = $provider->chat($messages, $defaults['model_id'], ['content_strategy'])->getNormalized();
-      $this->messenger->addStatus($this->t('Raw AI response: @response', [
-        '@response' => $response->getText(),
-      ]));
       
       // Decode JSON response.
       $decoded = $this->promptJsonDecoder->decode($response);
-      $this->messenger->addStatus($this->t('Decoded response: @decoded', [
-        '@decoded' => print_r(is_array($decoded) ? $decoded : 'Decoding failed', TRUE),
-      ]));
-
       if (is_array($decoded)) {
         return $decoded;
-      }
-      
-      // If decoding failed, try to extract JSON from the response text
-      $text = $response->getText();
-      if (preg_match('/\{(?:[^{}]|(?R))*\}/', $text, $matches)) {
-        $json = json_decode($matches[0], TRUE);
-        if (json_last_error() === JSON_ERROR_NONE) {
-          $this->messenger->addStatus($this->t('Extracted JSON: @json', [
-            '@json' => print_r($json, TRUE),
-          ]));
-          return $json;
-        }
       }
       
       throw new \RuntimeException($this->t('Failed to parse AI response into valid JSON')->render());

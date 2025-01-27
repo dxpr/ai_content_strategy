@@ -22,10 +22,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["topic", "rationale"],
+        "required": ["topic", "rationale", "priority"],
         "properties": {
           "topic": { "type": "string" },
-          "rationale": { "type": "string" }
+          "rationale": { "type": "string" },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
         }
       }
     },
@@ -33,10 +37,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["content_type", "description"],
+        "required": ["content_type", "description", "priority"],
         "properties": {
           "content_type": { "type": "string" },
-          "description": { "type": "string" }
+          "description": { "type": "string" },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
         }
       }
     },
@@ -44,10 +52,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["signal", "implementation"],
+        "required": ["signal", "implementation", "priority"],
         "properties": {
           "signal": { "type": "string" },
-          "implementation": { "type": "string" }
+          "implementation": { "type": "string" },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
         }
       }
     }
