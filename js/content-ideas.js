@@ -13,14 +13,7 @@
   function getRecommendationTitle(link) {
     const item = link.closest('.recommendation-item');
     if (!item) return '';
-    
-    // Try to get title from data attribute first
-    const dataTitle = item.dataset.title;
-    if (dataTitle) return dataTitle;
-    
-    // Fallback to h4 content if data attribute is missing
-    const titleElement = item.querySelector('h4');
-    return titleElement ? titleElement.textContent.trim() : '';
+    return item.dataset.title;
   }
 
   // Helper function to attach generate more links behavior
@@ -33,15 +26,10 @@
     // Set initial link text
     link.textContent = ButtonText.GENERATE_MORE;
     
-    // Get section from link first, then try parent if missing
-    let section = link.dataset.section;
-    if (!section) {
-      const item = link.closest('.recommendation-item');
-      section = item ? item.dataset.section : '';
-    }
-    
-    // Get title, trying multiple sources
-    const title = link.dataset.title || getRecommendationTitle(link);
+    // Get section and title from data attributes
+    const item = link.closest('.recommendation-item');
+    const section = item.dataset.section;
+    const title = item.dataset.title;
     
     if (!section || !title) {
       console.error('Missing required data attributes:', { section, title });
@@ -67,11 +55,7 @@
             if (command.command === 'insert' && command.method === 'append') {
               const target = document.querySelector(command.selector);
               if (target) {
-                try {
-                  target.insertAdjacentHTML('beforeend', command.data);
-                } catch (e) {
-                  console.error('Error appending content:', e);
-                }
+                target.insertAdjacentHTML('beforeend', command.data);
               }
             }
           });
@@ -129,23 +113,15 @@
             // Process each command
             if (Array.isArray(response)) {
               response.forEach((command) => {
-                // Special handling for HTML updates
+                // Handle HTML updates
                 if (command.command === 'insert' && command.method === 'html') {
                   const target = document.querySelector(command.selector);
                   if (target) {
-                    // Store original content in case we need to restore
-                    const originalContent = target.innerHTML;
-                    
-                    try {
-                      target.innerHTML = command.data;
-                      // Re-attach behaviors to new generate more links
-                      target.querySelectorAll('.generate-more-link').forEach((link, index) => {
-                        attachGenerateMoreBehavior(link, index);
-                      });
-                    } catch (e) {
-                      // Restore original content on error
-                      target.innerHTML = originalContent;
-                    }
+                    target.innerHTML = command.data;
+                    // Re-attach behaviors to new generate more links
+                    target.querySelectorAll('.generate-more-link').forEach((link, index) => {
+                      attachGenerateMoreBehavior(link, index);
+                    });
                   }
                 }
               });
@@ -153,21 +129,6 @@
             
             button.disabled = false;
             button.textContent = ButtonText.REFRESH;
-            
-            // Final structure check
-            setTimeout(() => {
-              const wrapper = document.querySelector('.recommendations-wrapper');
-              const container = document.querySelector('.content-strategy-recommendations');
-              
-              // Force structure if missing
-              if (container && !wrapper) {
-                const content = container.innerHTML;
-                // Only wrap content that isn't already wrapped
-                if (!content.includes('recommendations-wrapper')) {
-                  container.innerHTML = `<div class="recommendations-wrapper">${content}</div>`;
-                }
-              }
-            }, 100);
           },
           error: function(xhr, status, error) {
             button.disabled = false;
