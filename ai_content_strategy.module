@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * Implements hook_theme().
+ */
+function ai_content_strategy_theme() {
+  return [
+    'ai_content_strategy_recommendations' => [
+      'variables' => [
+        'content_gaps' => [],
+        'authority_topics' => [],
+        'expertise_demonstrations' => [],
+        'trust_signals' => [],
+      ],
+    ],
+  ];
+} 

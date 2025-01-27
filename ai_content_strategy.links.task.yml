@@ -1,0 +1,9 @@
+ai_content_strategy.recommendations:
+  route_name: ai_content_strategy.recommendations
+  title: 'Content Recommendations'
+  base_route: ai_content_strategy.recommendations
+
+ai_content_strategy.gap_analysis:
+  route_name: ai_content_strategy.gap_analysis
+  title: 'Competitor Analysis'
+  base_route: ai_content_strategy.recommendations 

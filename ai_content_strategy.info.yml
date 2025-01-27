@@ -1,0 +1,8 @@
+name: 'AI Content Strategy'
+type: module
+description: 'Provides AI-powered content strategy recommendations based on existing site content and EEAT framework.'
+package: AI
+core_version_requirement: ^10
+dependencies:
+  - ai:ai
+  - drupal:menu_ui 

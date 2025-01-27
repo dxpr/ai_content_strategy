@@ -1,0 +1,156 @@
+{#
+/**
+ * @file
+ * Default theme implementation for content strategy recommendations.
+ *
+ * Available variables:
+ * - content_gaps: Array of content gap recommendations.
+ * - authority_topics: Array of authority topic recommendations.
+ * - expertise_demonstrations: Array of expertise demonstration recommendations.
+ * - trust_signals: Array of trust signal recommendations.
+ *
+ * @ingroup themeable
+ */
+#}
+{{ attach_library('ai_content_strategy/recommendations') }}
+
+<div{{ attributes.addClass('content-strategy-recommendations') }}>
+  
+  {# Content Gaps #}
+  <div class="recommendation-section">
+    <h3>{{ 'Content Gaps'|t }}</h3>
+    {% if content_gaps is not empty %}
+      <div class="recommendation-items">
+        {% for gap in content_gaps %}
+          <div class="recommendation-item recommendation-priority-{{ gap.priority }}">
+            <h4>{{ gap.title }}</h4>
+            <p>{{ gap.description }}</p>
+            <span class="priority-badge">{{ gap.priority|title|t }}</span>
+            {% if gap.content_ideas is not empty %}
+              <table class="content-ideas-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'Content Ideas'|t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for idea in gap.content_ideas %}
+                    <tr>
+                      <td>{{ idea }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <a href="#" class="generate-more-link" data-section="content_gaps" data-title="{{ gap.title }}">{{ 'Generate More Ideas'|t }}</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>{{ 'No content gaps identified.'|t }}</p>
+    {% endif %}
+  </div>
+
+  {# Authority Topics #}
+  <div class="recommendation-section">
+    <h3>{{ 'Authority Topics'|t }}</h3>
+    {% if authority_topics is not empty %}
+      <div class="recommendation-items">
+        {% for topic in authority_topics %}
+          <div class="recommendation-item">
+            <h4>{{ topic.topic }}</h4>
+            <p>{{ topic.rationale }}</p>
+            {% if topic.content_ideas is not empty %}
+              <table class="content-ideas-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'Content Ideas'|t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for idea in topic.content_ideas %}
+                    <tr>
+                      <td>{{ idea }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <a href="#" class="generate-more-link" data-section="authority_topics" data-title="{{ topic.topic }}">{{ 'Generate More Ideas'|t }}</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>{{ 'No authority topics identified.'|t }}</p>
+    {% endif %}
+  </div>
+
+  {# Expertise Demonstrations #}
+  <div class="recommendation-section">
+    <h3>{{ 'Expertise Demonstrations'|t }}</h3>
+    {% if expertise_demonstrations is not empty %}
+      <div class="recommendation-items">
+        {% for demo in expertise_demonstrations %}
+          <div class="recommendation-item">
+            <h4>{{ demo.content_type }}</h4>
+            <p>{{ demo.description }}</p>
+            {% if demo.content_ideas is not empty %}
+              <table class="content-ideas-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'Content Ideas'|t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for idea in demo.content_ideas %}
+                    <tr>
+                      <td>{{ idea }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <a href="#" class="generate-more-link" data-section="expertise_demonstrations" data-title="{{ demo.content_type }}">{{ 'Generate More Ideas'|t }}</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>{{ 'No expertise demonstrations identified.'|t }}</p>
+    {% endif %}
+  </div>
+
+  {# Trust Signals #}
+  <div class="recommendation-section">
+    <h3>{{ 'Trust Signals'|t }}</h3>
+    {% if trust_signals is not empty %}
+      <div class="recommendation-items">
+        {% for signal in trust_signals %}
+          <div class="recommendation-item">
+            <h4>{{ signal.signal }}</h4>
+            <p>{{ signal.implementation }}</p>
+            {% if signal.content_ideas is not empty %}
+              <table class="content-ideas-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'Content Ideas'|t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for idea in signal.content_ideas %}
+                    <tr>
+                      <td>{{ idea }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <a href="#" class="generate-more-link" data-section="trust_signals" data-title="{{ signal.signal }}">{{ 'Generate More Ideas'|t }}</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>{{ 'No trust signals identified.'|t }}</p>
+    {% endif %}
+  </div>
+
+</div> 

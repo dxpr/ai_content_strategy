@@ -1,0 +1,11 @@
+recommendations:
+  version: 1.x
+  css:
+    theme:
+      css/ai_content_strategy.css: {}
+  js:
+    js/content-ideas.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once 

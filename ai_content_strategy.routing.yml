@@ -1,0 +1,39 @@
+ai_content_strategy.recommendations:
+  path: '/admin/reports/ai/content-strategy'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::recommendations'
+    _title: 'AI Content Strategy Recommendations'
+  requirements:
+    _permission: 'access ai content strategy'
+
+ai_content_strategy.generate_recommendations:
+  path: '/admin/reports/ai/content-strategy/generate'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::generateRecommendationsAjax'
+    _title: 'Generate Recommendations'
+  requirements:
+    _permission: 'access ai content strategy'
+  options:
+    _admin_route: TRUE
+
+ai_content_strategy.generate_more:
+  path: '/admin/reports/ai/content-strategy/generate-more/{section}/{title}'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::generateMore'
+    _title: 'Generate More Ideas'
+  requirements:
+    _permission: 'access ai content strategy'
+  options:
+    parameters:
+      section:
+        type: string
+      title:
+        type: string
+
+ai_content_strategy.gap_analysis:
+  path: '/admin/reports/ai/content-strategy/gap-analysis'
+  defaults:
+    _form: '\Drupal\ai_content_strategy\Form\ContentGapAnalysisForm'
+    _title: 'Content Gap Analysis'
+  requirements:
+    _permission: 'access ai content strategy' 

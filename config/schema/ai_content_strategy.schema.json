@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["content_gaps", "authority_topics", "expertise_demonstrations", "trust_signals"],
+  "properties": {
+    "content_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "description", "priority"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
+        }
+      }
+    },
+    "authority_topics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["topic", "rationale"],
+        "properties": {
+          "topic": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "expertise_demonstrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["content_type", "description"],
+        "properties": {
+          "content_type": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "trust_signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["signal", "implementation"],
+        "properties": {
+          "signal": { "type": "string" },
+          "implementation": { "type": "string" }
+        }
+      }
+    }
+  }
+} 
