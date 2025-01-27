@@ -4,7 +4,6 @@ content_strategy:
     theme:
       css/content-strategy.css: {}
   js:
-    js/content-strategy.js: {}
     js/content-ideas.js: {}
   dependencies:
     - core/drupal
