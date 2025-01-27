@@ -30,8 +30,14 @@
 
 .recommendation-items {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5em;
+}
+
+@media screen and (max-width: 768px) {
+  .recommendation-items {
+    grid-template-columns: 1fr;
+  }
 }
 
 .recommendation-item {

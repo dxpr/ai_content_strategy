@@ -227,67 +227,67 @@ class StrategyGenerator extends AnalyzerBase {
       throw new \RuntimeException('Could not analyze sitemap: ' . $sitemap_urls['error']);
     }
 
-    $schema_example = <<<JSON
+    $schema_example = <<<XML
 {
-  "content_gaps": [
-    {
-      "title": "Content Type Gap",
-      "description": "Missing content type identified from site structure",
-      "priority": "high",
-      "content_ideas": [
-        "Example content idea 1 based on site context",
-        "Example content idea 2 based on site context",
-        "Example content idea 3 based on site context",
-        "Example content idea 4 based on site context",
-        "Example content idea 5 based on site context"
-      ]
-    }
-  ],
-  "authority_topics": [
-    {
-      "topic": "Domain-Specific Topic",
-      "rationale": "Topic relevance based on existing content",
-      "content_ideas": [
-        "Example topic content 1 based on site focus",
-        "Example topic content 2 based on site focus",
-        "Example topic content 3 based on site focus",
-        "Example topic content 4 based on site focus",
-        "Example topic content 5 based on site focus"
-      ]
-    }
-  ],
-  "expertise_demonstrations": [
-    {
-      "content_type": "Expertise Format",
-      "description": "Content format aligned with site purpose",
-      "content_ideas": [
-        "Example expertise content 1 based on site type",
-        "Example expertise content 2 based on site type",
-        "Example expertise content 3 based on site type",
-        "Example expertise content 4 based on site type",
-        "Example expertise content 5 based on site type"
-      ]
-    }
-  ],
-  "trust_signals": [
-    {
-      "signal": "Trust Element",
-      "implementation": "Implementation approach based on site context",
-      "content_ideas": [
-        "Example trust content 1 based on site needs",
-        "Example trust content 2 based on site needs",
-        "Example trust content 3 based on site needs",
-        "Example trust content 4 based on site needs",
-        "Example trust content 5 based on site needs"
-      ]
-    }
-  ]
+  <content_gaps>
+    <gap>
+      <title>Content Type Gap</title>
+      <description>Missing content type identified from site structure</description>
+      <priority>high</priority>
+      <content_ideas>
+        <idea>Example content idea 1 based on site context</idea>
+        <idea>Example content idea 2 based on site context</idea>
+        <idea>Example content idea 3 based on site context</idea>
+        <idea>Example content idea 4 based on site context</idea>
+        <idea>Example content idea 5 based on site context</idea>
+      </content_ideas>
+    </gap>
+  </content_gaps>
+  <authority_topics>
+    <topic>
+      <name>Domain-Specific Topic</name>
+      <rationale>Topic relevance based on existing content</rationale>
+      <content_ideas>
+        <idea>Example topic content 1 based on site focus</idea>
+        <idea>Example topic content 2 based on site focus</idea>
+        <idea>Example topic content 3 based on site focus</idea>
+        <idea>Example topic content 4 based on site focus</idea>
+        <idea>Example topic content 5 based on site focus</idea>
+      </content_ideas>
+    </topic>
+  </authority_topics>
+  <expertise_demonstrations>
+    <demonstration>
+      <content_type>Expertise Format</content_type>
+      <description>Content format aligned with site purpose</description>
+      <content_ideas>
+        <idea>Example expertise content 1 based on site type</idea>
+        <idea>Example expertise content 2 based on site type</idea>
+        <idea>Example expertise content 3 based on site type</idea>
+        <idea>Example expertise content 4 based on site type</idea>
+        <idea>Example expertise content 5 based on site type</idea>
+      </content_ideas>
+    </demonstration>
+  </expertise_demonstrations>
+  <trust_signals>
+    <signal>
+      <name>Trust Element</name>
+      <implementation>Implementation approach based on site context</implementation>
+      <content_ideas>
+        <idea>Example trust content 1 based on site needs</idea>
+        <idea>Example trust content 2 based on site needs</idea>
+        <idea>Example trust content 3 based on site needs</idea>
+        <idea>Example trust content 4 based on site needs</idea>
+        <idea>Example trust content 5 based on site needs</idea>
+      </content_ideas>
+    </signal>
+  </trust_signals>
 }
-JSON;
+XML;
 
     $prompt = <<<EOT
-Analyze the provided website structure and generate content strategy recommendations. Your response must be a valid JSON object following the exact schema provided. Base all recommendations entirely on analyzing the actual site content and structure.
-
+<prompt>
+  <instructions>
 Analysis Instructions:
 1. First analyze the site structure, URLs, and navigation to understand:
    - The site's primary purpose and domain
@@ -312,26 +312,39 @@ Rules for Recommendations:
    - Potential impact for the site's purpose
 5. Generate 5-10 highly specific content ideas for each recommendation
 6. Avoid assumptions about industry or purpose - base everything on the provided site data
+7. For each section (content_gaps, authority_topics, expertise_demonstrations, trust_signals):
+   - Provide at least 2-3 distinct recommendations
+   - Each recommendation should focus on a different aspect or approach
+   - Ensure recommendations complement each other within each section
 
 The response must be a valid JSON object with these exact keys:
-- content_gaps: array of objects with title, description, priority, and content_ideas fields
-- authority_topics: array of objects with topic, rationale, and content_ideas fields
-- expertise_demonstrations: array of objects with content_type, description, and content_ideas fields
-- trust_signals: array of objects with signal, implementation, and content_ideas fields
+- content_gaps: array of objects with title, description, priority, and content_ideas fields (provide 2-3 gaps)
+- authority_topics: array of objects with topic, rationale, and content_ideas fields (provide 2-3 topics)
+- expertise_demonstrations: array of objects with content_type, description, and content_ideas fields (provide 2-3 types)
+- trust_signals: array of objects with signal, implementation, and content_ideas fields (provide 2-3 signals)
+  </instructions>
 
-Schema example:
-{$schema_example}
+  <schema_example>
+    {$schema_example}
+  </schema_example>
 
-Website to analyze:
-Homepage: {$site_structure['homepage']['title']}
+  <website_data>
+Homepage:
+Title: {$site_structure['homepage']['title']}
+Content: {$site_structure['homepage']['content']}
 
 Primary Navigation:
 {$this->formatMenuItems($site_structure['primary_menu'])}
 
 Existing Content URLs:
 {$this->formatUrls($sitemap_urls['urls'])}
+  </website_data>
 
-Remember: Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().
+  <response_requirements>
+Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().
+Each section MUST contain 2-3 distinct recommendations to ensure balanced coverage.
+  </response_requirements>
+</prompt>
 EOT;
 
     return $prompt;

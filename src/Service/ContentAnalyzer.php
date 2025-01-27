@@ -9,6 +9,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Url;
+use Drupal\Core\Render\RendererInterface;
 
 /**
  * Service for analyzing existing site content.
@@ -45,6 +46,13 @@ class ContentAnalyzer {
   protected $configFactory;
 
   /**
+   * The renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
+
+  /**
    * Constructs a ContentAnalyzer object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -55,33 +63,118 @@ class ContentAnalyzer {
    *   The HTTP client.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
+   * @param \Drupal\Core\Render\RendererInterface $renderer
+   *   The renderer service.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     MenuActiveTrailInterface $menu_active_trail,
     ClientInterface $http_client,
-    ConfigFactoryInterface $config_factory
+    ConfigFactoryInterface $config_factory,
+    RendererInterface $renderer
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->menuActiveTrail = $menu_active_trail;
     $this->httpClient = $http_client;
     $this->configFactory = $config_factory;
+    $this->renderer = $renderer;
   }
 
   /**
-   * Gets the homepage and primary menu structure.
+   * Gets the front page content as plain text.
+   *
+   * @return string
+   *   The front page content as plain text.
+   */
+  protected function getFrontPageContent(): string {
+    \Drupal::messenger()->addStatus('Fetching front page content...');
+    
+    // Get the front page path from configuration
+    $front_uri = $this->configFactory->get('system.site')->get('page.front');
+    \Drupal::messenger()->addStatus('Front page URI: ' . $front_uri);
+    
+    if (empty($front_uri)) {
+      \Drupal::messenger()->addWarning('No front page URI found in configuration.');
+      return '';
+    }
+
+    // Extract node ID if front page is a node
+    if (preg_match('/node\/(\d+)/', $front_uri, $matches)) {
+      $nid = $matches[1];
+      try {
+        $node = $this->entityTypeManager->getStorage('node')->load($nid);
+        if ($node) {
+          \Drupal::messenger()->addStatus('Front page node found.');
+          
+          // Build the node view
+          $view_builder = $this->entityTypeManager->getViewBuilder('node');
+          $build = $view_builder->view($node);
+          
+          // Render the node
+          $html = $this->renderer->renderPlain($build);
+          
+          // Convert HTML to plain text
+          $text = strip_tags($html);
+          \Drupal::messenger()->addStatus('Retrieved front page content: ' . strlen($text) . ' characters');
+          
+          return $text;
+        }
+      }
+      catch (\Exception $e) {
+        \Drupal::messenger()->addError('Error loading front page node: ' . $e->getMessage());
+      }
+    }
+    
+    \Drupal::messenger()->addWarning('Could not retrieve front page content.');
+    return '';
+  }
+
+  /**
+   * Gets the site structure including homepage, navigation, and URLs.
    *
    * @return array
-   *   An array containing homepage and menu information.
+   *   Site structure array.
    */
   public function getSiteStructure(): array {
-    $homepage = $this->getHomepageContent();
-    $menu_items = $this->getPrimaryMenuItems();
+    try {
+      \Drupal::messenger()->addMessage('Getting site structure...');
+      
+      // Get front page content
+      $front_content = $this->getFrontPageContent();
+      
+      // Get primary menu
+      $menu_tree = $this->menuActiveTrail->getActiveTrailIds('main');
+      $menu_items = [];
+      
+      foreach ($menu_tree as $id => $active) {
+        if ($id === 'main:') {
+          continue;
+        }
+        
+        $parts = explode(':', $id);
+        $menu_items[] = [
+          'title' => end($parts),
+          'url' => '/' . implode('/', array_slice($parts, 1)),
+        ];
+      }
+      
+      \Drupal::messenger()->addMessage('Found ' . count($menu_items) . ' menu items');
 
-    return [
-      'homepage' => $homepage,
-      'primary_menu' => $menu_items,
-    ];
+      return [
+        'homepage' => [
+          'title' => $this->configFactory->get('system.site')->get('name'),
+          'content' => $front_content,
+        ],
+        'primary_menu' => $menu_items,
+      ];
+    }
+    catch (\Exception $e) {
+      \Drupal::messenger()->addError('Error getting site structure: ' . $e->getMessage());
+      return [
+        'homepage' => ['title' => '', 'content' => ''],
+        'primary_menu' => [],
+      ];
+    }
   }
 
   /**
@@ -128,54 +221,5 @@ class ContentAnalyzer {
         'error' => $this->t('An unexpected error occurred while processing sitemap.xml. Error: @error', ['@error' => $e->getMessage()]),
       ];
     }
-  }
-
-  /**
-   * Gets the homepage content.
-   *
-   * @return array
-   *   Homepage content information.
-   */
-  protected function getHomepageContent(): array {
-    $config = $this->configFactory->get('system.site');
-    $front_uri = $config->get('page.front') ?: '/';
-    
-    // Get the node if the homepage is a node.
-    if (preg_match('/node\/(\d+)/', $front_uri, $matches)) {
-      $node = $this->entityTypeManager->getStorage('node')->load($matches[1]);
-      if ($node) {
-        return [
-          'title' => $node->getTitle(),
-          'type' => $node->bundle(),
-          'uri' => $front_uri,
-        ];
-      }
-    }
-
-    return [
-      'uri' => $front_uri,
-    ];
-  }
-
-  /**
-   * Gets the primary menu items.
-   *
-   * @return array
-   *   Array of primary menu items.
-   */
-  protected function getPrimaryMenuItems(): array {
-    $menu_tree = $this->entityTypeManager->getStorage('menu_link_content')
-      ->loadByProperties(['menu_name' => 'main']);
-    
-    $items = [];
-    foreach ($menu_tree as $menu_link) {
-      $items[] = [
-        'title' => $menu_link->getTitle(),
-        'url' => $menu_link->getUrlObject()->toString(),
-        'weight' => $menu_link->getWeight(),
-      ];
-    }
-
-    return $items;
   }
 } 

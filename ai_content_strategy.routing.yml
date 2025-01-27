@@ -2,19 +2,17 @@ ai_content_strategy.recommendations:
   path: '/admin/reports/ai/content-strategy'
   defaults:
     _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::recommendations'
-    _title: 'AI Content Strategy Recommendations'
+    _title: 'Content Strategy Recommendations'
   requirements:
-    _permission: 'access ai content strategy'
+    _permission: 'access content strategy recommendations'
 
-ai_content_strategy.generate_recommendations:
+ai_content_strategy.generate:
   path: '/admin/reports/ai/content-strategy/generate'
   defaults:
     _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::generateRecommendationsAjax'
     _title: 'Generate Recommendations'
   requirements:
-    _permission: 'access ai content strategy'
-  options:
-    _admin_route: TRUE
+    _permission: 'access content strategy recommendations'
 
 ai_content_strategy.generate_more:
   path: '/admin/reports/ai/content-strategy/generate-more/{section}/{title}'
@@ -33,7 +31,31 @@ ai_content_strategy.generate_more:
 ai_content_strategy.gap_analysis:
   path: '/admin/reports/ai/content-strategy/gap-analysis'
   defaults:
-    _form: '\Drupal\ai_content_strategy\Form\ContentGapAnalysisForm'
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::gapAnalysis'
     _title: 'Content Gap Analysis'
   requirements:
-    _permission: 'access ai content strategy' 
+    _permission: 'access ai content strategy'
+
+ai_content_strategy.gap_analysis.analyze:
+  path: '/admin/reports/ai/content-strategy/gap-analysis/analyze'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::analyzeGapAjax'
+    _title: 'Analyze Content Gap'
+  requirements:
+    _permission: 'access ai content strategy'
+
+ai_content_strategy.competitor_analysis:
+  path: '/admin/reports/ai/content-strategy/competitor'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\CompetitorAnalysisController::analyze'
+    _title: 'Competitor Analysis'
+  requirements:
+    _permission: 'access content strategy recommendations'
+
+ai_content_strategy.competitor_analysis.generate:
+  path: '/admin/reports/ai/content-strategy/competitor-analysis/generate'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\CompetitorAnalysisController::generateAnalysisAjax'
+    _title: 'Generate Competitor Analysis'
+  requirements:
+    _permission: 'access content strategy recommendations' 

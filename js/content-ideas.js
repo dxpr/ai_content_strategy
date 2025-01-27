@@ -1,195 +1,162 @@
 ((Drupal, once) => {
   'use strict';
 
+  // Add consistent button text constants at the top
+  const ButtonText = {
+    GENERATE: Drupal.t('Generate Recommendations'),
+    REFRESH: Drupal.t('Refresh Recommendations'),
+    GENERATE_MORE: Drupal.t('Generate More Ideas'),
+    LOADING: Drupal.t('Generating recommendations...')
+  };
+
   Drupal.behaviors.contentIdeas = {
-    attach: function (context) {
-      console.log('Attaching content ideas behavior');
-      
+    attach: function (context, settings) {
       // Handle generate recommendations button
-      const buttons = once('generate-recommendations', '.generate-recommendations', context);
-      console.log('Found generate buttons:', buttons.length);
-      
-      buttons.forEach((button) => {
-        console.log('Adding click handler to button:', button);
+      once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
+        // Ensure button has an ID
+        if (!button.id) {
+          button.id = 'generate-recommendations-button';
+        }
         
-        button.addEventListener('click', async (e) => {
-          e.preventDefault();
-          console.log('Button clicked');
-          
-          // Find container
-          const container = button.closest('.content-strategy-recommendations');
-          console.log('Looking for container:', container);
-          
-          if (!container) {
-            console.error('Could not find recommendations container');
-            console.log('Button parent structure:', button.parentElement);
-            return;
-          }
-          
-          try {
-            // Show loading state
+        // Set initial button text
+        button.textContent = ButtonText.GENERATE;
+
+        // Create element settings for the AJAX call
+        const elementSettings = {
+          url: Drupal.url('admin/reports/ai/content-strategy/generate'),
+          event: 'click',
+          progress: { 
+            type: 'throbber',
+            message: ButtonText.LOADING
+          },
+          submit: {
+            js: true
+          },
+          element: button,
+          beforeSend: function(xhr, settings) {
+            button.textContent = ButtonText.LOADING;
             button.disabled = true;
-            button.classList.add('is-loading');
-            button.value = Drupal.t('Generating recommendations...');
-            button.setAttribute('value', Drupal.t('Generating recommendations...'));
-            
-            console.log('Fetching recommendations...');
-            const url = Drupal.url('admin/reports/ai/content-strategy/generate');
-            console.log('Request URL:', url);
-            
-            // Make the fetch request
-            const response = await fetch(url, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-              },
-            });
-
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('Received response:', data);
-
-            if (!data.success) {
-              throw new Error(data.error || 'Unknown error occurred');
-            }
-
-            // Remove existing content
-            const existingContent = container.querySelectorAll('.recommendations, .empty-recommendations');
-            console.log('Found existing content:', existingContent?.length);
-            existingContent?.forEach(el => el.remove());
-            
-            // Create a temporary container to parse the HTML
-            const temp = document.createElement('div');
-            temp.innerHTML = data.html;
-            
-            // Extract and append recommendation sections
-            const recommendations = temp.querySelectorAll('.recommendation-section');
-            console.log('Found recommendation sections:', recommendations?.length);
-            
-            if (recommendations?.length) {
-              const wrapper = document.createElement('div');
-              wrapper.className = 'recommendations';
-              recommendations.forEach(section => {
-                wrapper.appendChild(section.cloneNode(true));
+            return true;
+          },
+          success: function(response, status) {
+            // Process each command
+            if (Array.isArray(response)) {
+              response.forEach((command) => {
+                // Special handling for HTML updates
+                if (command.command === 'insert' && command.method === 'html') {
+                  const target = document.querySelector(command.selector);
+                  if (target) {
+                    // Store original content in case we need to restore
+                    const originalContent = target.innerHTML;
+                    
+                    try {
+                      target.innerHTML = command.data;
+                    } catch (e) {
+                      // Restore original content on error
+                      target.innerHTML = originalContent;
+                    }
+                  }
+                }
               });
-              container.appendChild(wrapper);
-              console.log('Added recommendations to container');
             }
             
-            // Update last run time
-            const lastRunEl = container.querySelector('.last-run-time');
-            if (lastRunEl) {
-              lastRunEl.remove();
-            }
-            const actionsEl = container.querySelector('.content-strategy-actions');
-            if (actionsEl) {
-              const newLastRun = document.createElement('div');
-              newLastRun.className = 'last-run-time';
-              newLastRun.innerHTML = data.last_run;
-              actionsEl.appendChild(newLastRun);
-              console.log('Updated last run time');
-            }
-            
-            // Update button text
-            button.value = Drupal.t('Refresh Recommendations');
-            button.setAttribute('value', Drupal.t('Refresh Recommendations'));
-
-            // Reattach behaviors for new content
-            console.log('Reattaching behaviors');
-            Drupal.attachBehaviors(container);
-          }
-          catch (error) {
-            console.error('AJAX Error:', error);
-            console.log('Error details:', {
-              message: error.message,
-              stack: error.stack
-            });
-            alert(Drupal.t('An error occurred while generating recommendations: @error', {
-              '@error': error.message
-            }));
-          }
-          finally {
-            // Remove loading state
             button.disabled = false;
-            button.classList.remove('is-loading');
+            button.textContent = ButtonText.REFRESH;
+            
+            // Final structure check
+            setTimeout(() => {
+              const wrapper = document.querySelector('.recommendations-wrapper');
+              const container = document.querySelector('.content-strategy-recommendations');
+              
+              // Force structure if missing
+              if (container && !wrapper) {
+                const content = container.innerHTML;
+                // Only wrap content that isn't already wrapped
+                if (!content.includes('recommendations-wrapper')) {
+                  container.innerHTML = `<div class="recommendations-wrapper">${content}</div>`;
+                }
+              }
+            }, 100);
+          },
+          error: function(xhr, status, error) {
+            button.disabled = false;
+            button.textContent = ButtonText.GENERATE;
+            alert(Drupal.t('An error occurred while generating recommendations.'));
           }
-        });
+        };
+
+        try {
+          // Create and attach the AJAX behavior
+          Drupal.ajax(elementSettings);
+        } catch (e) {
+          console.error('Error setting up recommendations button:', e);
+        }
       });
 
       // Handle generate more ideas links
-      once('content-ideas', '.generate-more-link', context).forEach((link) => {
-        link.addEventListener('click', async (e) => {
-          e.preventDefault();
-          
-          const item = link.closest('.recommendation-item');
-          if (!item) return;
-          
-          const table = item.querySelector('.content-ideas-table tbody');
-          if (!table) return;
-          
-          const section = link.dataset.section;
-          const title = link.dataset.title;
-          
-          if (!section || !title) {
-            console.error('Missing required data attributes');
-            return;
-          }
-          
-          try {
-            // Show loading state
-            link.classList.add('is-loading');
+      once('content-ideas', '.generate-more-link', context).forEach((link, index) => {
+        // Ensure link has an ID
+        if (!link.id) {
+          link.id = `generate-more-link-${index}`;
+        }
+        
+        // Set initial link text
+        link.textContent = ButtonText.GENERATE_MORE;
+        
+        const section = link.dataset.section;
+        const title = link.dataset.title;
+        
+        if (!section || !title) {
+          console.error('Missing required data attributes:', { section, title });
+          return;
+        }
+
+        // Create element settings for the AJAX call
+        const elementSettings = {
+          url: Drupal.url(`admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`),
+          event: 'click',
+          progress: { type: 'throbber' },
+          submit: { js: true },
+          element: link,
+          beforeSend: function(xhr, settings) {
+            link.textContent = ButtonText.LOADING;
             link.disabled = true;
+            return true;
+          },
+          success: function(response, status) {
+            if (Array.isArray(response)) {
+              response.forEach((command) => {
+                if (command.command === 'insert' && command.method === 'append') {
+                  const target = document.querySelector(command.selector);
+                  if (target) {
+                    try {
+                      target.insertAdjacentHTML('beforeend', command.data);
+                    } catch (e) {
+                      console.error('Error appending content:', e);
+                    }
+                  }
+                }
+              });
+            }
             
-            // Make the fetch request
-            const response = await fetch(Drupal.url(`admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`), {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-              },
-            });
-
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-              throw new Error(data.error || 'Failed to generate more ideas');
-            }
-
-            if (!Array.isArray(data.ideas)) {
-              throw new Error('Invalid response format');
-            }
-
-            // Add new rows to the table
-            data.ideas.forEach(idea => {
-              const row = document.createElement('tr');
-              const cell = document.createElement('td');
-              cell.textContent = idea;
-              row.appendChild(cell);
-              table.appendChild(row);
-            });
-          }
-          catch (error) {
-            console.error('AJAX Error:', error);
-            alert(Drupal.t('An error occurred while generating more ideas: @error', {
-              '@error': error.message
-            }));
-          }
-          finally {
-            // Remove loading state
-            link.classList.remove('is-loading');
             link.disabled = false;
+            link.textContent = ButtonText.GENERATE_MORE;
+          },
+          error: function(xhr, status, error) {
+            link.disabled = false;
+            link.textContent = ButtonText.GENERATE_MORE;
+            alert(Drupal.t('An error occurred while generating more ideas.'));
           }
-        });
+        };
+
+        try {
+          // Create and attach the AJAX behavior
+          Drupal.ajax(elementSettings);
+        } catch (e) {
+          console.error('Error setting up generate more link:', e);
+        }
       });
     }
   };
 
-})(Drupal, once); 
+})(Drupal, once);

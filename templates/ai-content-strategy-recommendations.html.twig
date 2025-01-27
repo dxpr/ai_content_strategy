@@ -22,7 +22,7 @@
     {% if content_gaps is not empty %}
       <div class="recommendation-items">
         {% for gap in content_gaps %}
-          <div class="recommendation-item recommendation-priority-{{ gap.priority }}">
+          <div class="recommendation-item recommendation-priority-{{ gap.priority }}" data-section="content_gaps" data-title="{{ gap.title }}">
             <h4>{{ gap.title }}</h4>
             <p>{{ gap.description }}</p>
             <span class="priority-badge">{{ gap.priority|title|t }}</span>
@@ -57,7 +57,7 @@
     {% if authority_topics is not empty %}
       <div class="recommendation-items">
         {% for topic in authority_topics %}
-          <div class="recommendation-item">
+          <div class="recommendation-item" data-section="authority_topics" data-title="{{ topic.topic }}">
             <h4>{{ topic.topic }}</h4>
             <p>{{ topic.rationale }}</p>
             {% if topic.content_ideas is not empty %}
@@ -91,7 +91,7 @@
     {% if expertise_demonstrations is not empty %}
       <div class="recommendation-items">
         {% for demo in expertise_demonstrations %}
-          <div class="recommendation-item">
+          <div class="recommendation-item" data-section="expertise_demonstrations" data-title="{{ demo.content_type }}">
             <h4>{{ demo.content_type }}</h4>
             <p>{{ demo.description }}</p>
             {% if demo.content_ideas is not empty %}
@@ -125,7 +125,7 @@
     {% if trust_signals is not empty %}
       <div class="recommendation-items">
         {% for signal in trust_signals %}
-          <div class="recommendation-item">
+          <div class="recommendation-item" data-section="trust_signals" data-title="{{ signal.signal }}">
             <h4>{{ signal.signal }}</h4>
             <p>{{ signal.implementation }}</p>
             {% if signal.content_ideas is not empty %}

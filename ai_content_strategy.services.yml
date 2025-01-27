@@ -1,7 +1,7 @@
 services:
   ai_content_strategy.content_analyzer:
     class: Drupal\ai_content_strategy\Service\ContentAnalyzer
-    arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory']
+    arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory', '@renderer']
   
   ai_content_strategy.strategy_generator:
     class: Drupal\ai_content_strategy\Service\StrategyGenerator
@@ -9,4 +9,8 @@ services:
 
   ai_content_strategy.gap_analyzer:
     class: Drupal\ai_content_strategy\Service\GapAnalyzer
-    arguments: ['@http_client', '@ai_content_strategy.content_analyzer', '@ai.provider'] 
+    arguments: ['@http_client', '@ai_content_strategy.content_analyzer', '@ai.provider', '@ai.prompt_json_decode']
+
+  ai_content_strategy.competitor_analyzer:
+    class: Drupal\ai_content_strategy\Service\CompetitorAnalyzer
+    arguments: ['@http_client', '@ai_content_strategy.content_analyzer', '@ai.provider', '@ai.prompt_json_decode'] 

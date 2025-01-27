@@ -8,4 +8,27 @@ recommendations:
   dependencies:
     - core/jquery
     - core/drupal
-    - core/once 
+    - core/once
+
+gap_analysis:
+  version: VERSION
+  js:
+    js/gap-analysis.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupal.ajax 
+
+content_strategy:
+  version: VERSION
+  css:
+    theme:
+      css/content-strategy.css: {}
+  js:
+    js/content-strategy.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - core/drupal.ajax
+    - core/drupal.message 

@@ -1,0 +1,131 @@
+/* Content Strategy Actions */
+.content-strategy-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.last-run-time {
+  color: #666;
+  font-size: 0.9em;
+}
+
+/* Loading State */
+.is-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.is-loading::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1em;
+  height: 1em;
+  margin: -0.5em 0 0 -0.5em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: button-spinner 0.75s linear infinite;
+}
+
+@keyframes button-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Recommendations Layout */
+.recommendation-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media screen and (max-width: 768px) {
+  .recommendation-items {
+    grid-template-columns: 1fr;
+  }
+}
+
+.recommendation-item {
+  background: white;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recommendation-item h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #2d2d2d;
+}
+
+.recommendation-item p {
+  margin-bottom: 1rem;
+  color: #4a4a4a;
+}
+
+.recommendation-item ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.recommendation-item li {
+  margin-bottom: 0.5rem;
+}
+
+/* Priority Badge */
+.priority-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.priority-high {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.priority-medium {
+  background-color: #fffbeb;
+  color: #d97706;
+}
+
+.priority-low {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+/* Empty State */
+.empty-recommendations {
+  text-align: center;
+  padding: 3rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  color: #6b7280;
+}
+
+/* Sections */
+.content-gaps-section,
+.authority-topics-section,
+.expertise-demonstrations-section,
+.trust-signals-section {
+  margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: #111827;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+} 

@@ -17,9 +17,11 @@ abstract class AnalyzerBase {
    *   Formatted URLs string.
    */
   protected function formatUrls(array $urls): string {
-    return implode("\n", array_map(function ($url) {
-      return "- $url";
-    }, $urls));
+    $output = '';
+    foreach ($urls as $url) {
+      $output .= "<url>" . htmlspecialchars($url) . "</url>\n";
+    }
+    return $output;
   }
 
   /**
@@ -32,11 +34,14 @@ abstract class AnalyzerBase {
    *   Formatted menu items string.
    */
   protected function formatMenuItems(array $menu_items): string {
-    $output = [];
+    $output = '';
     foreach ($menu_items as $item) {
-      $output[] = "- {$item['title']} ({$item['url']})";
+      $output .= "<menu_item>\n";
+      $output .= "  <title>" . htmlspecialchars($item['title']) . "</title>\n";
+      $output .= "  <url>" . htmlspecialchars($item['url']) . "</url>\n";
+      $output .= "</menu_item>\n";
     }
-    return implode("\n", $output);
+    return $output;
   }
 
 } 

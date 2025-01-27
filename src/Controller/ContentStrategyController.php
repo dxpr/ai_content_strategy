@@ -14,6 +14,14 @@ use Drupal\ai\OperationType\Chat\ChatMessage;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\InvokeCommand;
+use Drupal\Core\Ajax\MessageCommand;
+use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\RemoveCommand;
+use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Ajax\AppendCommand;
 
 /**
  * Controller for content strategy functionality.
@@ -181,10 +189,12 @@ class ContentStrategyController extends ControllerBase {
       '#type' => 'container',
       '#attributes' => ['class' => ['content-strategy-actions']],
       'generate' => [
-        '#type' => 'button',
+        '#type' => 'html_tag',
+        '#tag' => 'button',
         '#value' => !empty($recommendations) ? $this->t('Refresh Recommendations') : $this->t('Generate Recommendations'),
         '#attributes' => [
           'class' => ['button', 'button--primary', 'generate-recommendations'],
+          'type' => 'button',
         ],
         '#attached' => [
           'library' => [
@@ -228,23 +238,13 @@ class ContentStrategyController extends ControllerBase {
   /**
    * AJAX callback to generate recommendations.
    *
-   * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   JSON response containing the recommendations.
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   AJAX response containing the recommendations.
    */
   public function generateRecommendationsAjax() {
     try {
-      // Debug container for raw messages
-      $debug = [];
-      
-      // Get recommendations and capture debug info
-      try {
-        $recommendations = $this->strategyGenerator->generateRecommendations();
-        $debug[] = "Raw recommendations array:\n" . print_r($recommendations, TRUE);
-      }
-      catch (\Exception $e) {
-        $debug[] = "Error generating recommendations:\n" . $e->getMessage() . "\n" . $e->getTraceAsString();
-        throw $e;
-      }
+      // Get recommendations
+      $recommendations = $this->strategyGenerator->generateRecommendations();
       
       // Cache the results with timestamp
       $timestamp = (int) \Drupal::time()->getCurrentTime();
@@ -262,32 +262,45 @@ class ContentStrategyController extends ControllerBase {
         '#trust_signals' => $recommendations['trust_signals'] ?? [],
       ];
       
-      try {
-        $html = $this->renderer->render($build);
-        $debug[] = "Rendered HTML structure:\n" . htmlspecialchars($html);
-      }
-      catch (\Exception $e) {
-        $debug[] = "Error rendering template:\n" . $e->getMessage() . "\n" . $e->getTraceAsString();
-        throw $e;
-      }
+      $html = $this->renderer->render($build);
 
-      // Wrap debug messages in pre tag
-      $debug_output = '<pre class="debug-output">' . implode("\n\n", $debug) . '</pre>';
+      // Create AJAX response
+      $response = new AjaxResponse();
 
-      return new JsonResponse([
-        'success' => TRUE,
-        'html' => $debug_output . $html,
-        'last_run' => $this->t('Last generated: @time ago', [
-          '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
-        ])->render(),
-      ]);
+      // Create the full content structure
+      $content = 
+        '<div class="content-strategy-description">' .
+          '<p>AI-powered content strategy recommendations based on your site structure and EEAT principles.</p>' .
+        '</div>' .
+        '<div class="content-strategy-actions">' .
+          '<button class="button button--primary generate-recommendations" type="button">Refresh Recommendations</button>' .
+        '</div>' .
+        '<div class="recommendations-wrapper">' . 
+          $html . 
+        '</div>' .
+        '<div class="last-run-time">' . 
+          $this->t('Last generated: @time ago', [
+            '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
+          ])->render() .
+        '</div>';
+
+      // Use HtmlCommand to update the content
+      $response->addCommand(
+        new HtmlCommand('.content-strategy-recommendations', $content)
+      );
+
+      return $response;
     }
     catch (\Exception $e) {
-      return new JsonResponse([
-        'success' => FALSE,
-        'error' => $e->getMessage(),
-        'debug' => '<pre class="debug-output">' . $e->getMessage() . "\n" . $e->getTraceAsString() . '</pre>',
-      ]);
+      $response = new AjaxResponse();
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Error: @message', ['@message' => $e->getMessage()]),
+          NULL,
+          ['type' => 'error']
+        )
+      );
+      return $response;
     }
   }
 
@@ -339,8 +352,8 @@ class ContentStrategyController extends ControllerBase {
    * @param string $title
    *   The title of the specific item to generate more ideas for.
    *
-   * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   JSON response containing the new content ideas.
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   AJAX response containing the new content ideas.
    */
   public function generateMore(string $section, string $title) {
     try {
@@ -384,54 +397,76 @@ class ContentStrategyController extends ControllerBase {
 <instructions>
 Based on the above context, generate 5 additional, unique content ideas for the specified topic.
 Return ONLY a JSON array of strings, each being a new content idea.
-
-Example response format:
-[
-  "First specific content idea based on site context",
-  "Second specific content idea based on site context",
-  "Third specific content idea based on site context",
-  "Fourth specific content idea based on site context",
-  "Fifth specific content idea based on site context"
-]
 </instructions>
 EOT;
 
+      // Create chat input with proper format
       $messages = new ChatInput([
         new ChatMessage('user', $prompt),
       ]);
 
-      // Get response
-      $response = $provider->chat($messages, $defaults['model_id'], ['content_strategy'])->getNormalized();
+      // Generate ideas
+      $response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
       
-      // Decode JSON response
-      $decoded = $this->promptJsonDecoder->decode($response);
+      // Get the normalized response and try to decode it
+      $message = $response->getNormalized();
+      $text = $message->getText();
       
-      if (is_array($decoded)) {
-        return new JsonResponse([
-          'success' => TRUE,
-          'ideas' => $decoded,
-        ]);
-      }
-      
-      // If decoding failed, try to extract JSON array from the response text
-      $text = $response->getText();
+      // Try to extract and parse JSON array from the text
       if (preg_match('/\[(?:[^\[\]]|(?R))*\]/', $text, $matches)) {
-        $json = json_decode($matches[0], TRUE);
-        if (json_last_error() === JSON_ERROR_NONE) {
-          return new JsonResponse([
-            'success' => TRUE,
-            'ideas' => $json,
-          ]);
+        $ideas = json_decode($matches[0], TRUE);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+          throw new \RuntimeException('Failed to parse AI response into valid JSON array');
         }
+      } else {
+        throw new \RuntimeException('Invalid response format from AI provider');
       }
+
+      // Build HTML for new ideas
+      $rows = [];
+      foreach ($ideas as $idea) {
+        $rows[] = [
+          '#type' => 'html_tag',
+          '#tag' => 'tr',
+          'cell' => [
+            '#type' => 'html_tag',
+            '#tag' => 'td',
+            '#value' => $idea,
+          ],
+        ];
+      }
+
+      // Create AJAX response
+      $response = new AjaxResponse();
       
-      throw new \RuntimeException('Failed to parse AI response into valid JSON');
-    }
-    catch (\Exception $e) {
-      return new JsonResponse([
-        'success' => FALSE,
-        'error' => $e->getMessage(),
-      ]);
+      // Build the HTML for the new rows
+      $html = $this->renderer->renderRoot($rows);
+      
+      // Add command to append the new rows to the table
+      $response->addCommand(
+        new AppendCommand(
+          sprintf('.recommendation-item[data-section="%s"][data-title="%s"] .content-ideas-table tbody',
+            $section,
+            str_replace('"', '\"', $title)
+          ),
+          $html
+        )
+      );
+
+      return $response;
+
+    } catch (\Exception $e) {
+      watchdog_exception('ai_content_strategy', $e);
+      
+      $response = new AjaxResponse();
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('An error occurred while generating more ideas: @error', ['@error' => $e->getMessage()]),
+          null,
+          ['type' => 'error']
+        )
+      );
+      return $response;
     }
   }
 
@@ -467,6 +502,104 @@ EOT;
       $output[] = "- {$url}";
     }
     return implode("\n", $output);
+  }
+
+  /**
+   * Displays the content gap analysis page.
+   *
+   * @return array
+   *   Render array for the gap analysis page.
+   */
+  public function gapAnalysis() {
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['content-gap-analysis']],
+    ];
+    
+    // Add description
+    $build['description'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['content-gap-description']],
+      'content' => [
+        '#markup' => $this->t('AI-powered content gap analysis based on competitor website comparison.'),
+        '#prefix' => '<p>',
+        '#suffix' => '</p>',
+      ],
+    ];
+
+    // Add URL input and analyze button
+    $build['input_group'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['gap-analysis-input-group']],
+    ];
+
+    $build['input_group']['url'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'input',
+      '#attributes' => [
+        'type' => 'url',
+        'class' => ['form-url', 'competitor-url-input'],
+        'placeholder' => $this->t('Enter competitor website URL (e.g., https://example.com)'),
+        'required' => 'required',
+      ],
+    ];
+
+    $build['input_group']['analyze'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#attributes' => [
+        'class' => ['button', 'button--primary', 'analyze-content-gap'],
+        'type' => 'button',
+      ],
+      '#value' => $this->t('Analyze Content Gap'),
+    ];
+
+    // Add results container
+    $build['results'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['gap-analysis-results'],
+        'id' => 'gap-analysis-results',
+      ],
+    ];
+
+    // Attach library
+    $build['#attached']['library'][] = 'ai_content_strategy/gap_analysis';
+
+    return $build;
+  }
+
+  /**
+   * AJAX callback to analyze content gap.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   JSON response containing the analysis results.
+   */
+  public function analyzeGapAjax(Request $request) {
+    try {
+      $url = $request->query->get('url');
+      if (empty($url)) {
+        throw new \RuntimeException($this->t('No competitor URL provided'));
+      }
+
+      $analysis = $this->gapAnalyzer->analyzeContentGap($url);
+      
+      $build = [
+        '#theme' => 'ai_content_strategy_gap_analysis',
+        '#results' => $analysis,
+      ];
+
+      return new JsonResponse([
+        'success' => TRUE,
+        'html' => $this->renderer->render($build),
+      ]);
+    }
+    catch (\Exception $e) {
+      return new JsonResponse([
+        'success' => FALSE,
+        'error' => $e->getMessage(),
+      ]);
+    }
   }
 
 } 
