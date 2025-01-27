@@ -1,7 +1,7 @@
 ((Drupal, once) => {
   'use strict';
 
-  // Add consistent button text constants at the top
+  // Button text constants
   const ButtonText = {
     GENERATE: Drupal.t('Generate Recommendations'),
     REFRESH: Drupal.t('Refresh Recommendations'),
@@ -9,143 +9,137 @@
     LOADING: Drupal.t('Generating recommendations...')
   };
 
-  // Helper function to get the title from the parent recommendation item
-  function getRecommendationTitle(link) {
-    const item = link.closest('.recommendation-item');
-    if (!item) return '';
-    return item.dataset.title;
-  }
+  // DOM utility functions
+  const DOMUtils = {
+    ensureElementId(element, prefix, index = '') {
+      if (!element.id) {
+        element.id = `${prefix}-${index || Date.now()}`;
+      }
+      return element.id;
+    },
 
-  // Helper function to attach generate more links behavior
-  function attachGenerateMoreBehavior(link, index) {
-    // Ensure link has an ID
-    if (!link.id) {
-      link.id = `generate-more-link-${index}`;
-    }
-    
-    // Set initial link text
-    link.textContent = ButtonText.GENERATE_MORE;
-    
-    // Get section and title from data attributes
-    const item = link.closest('.recommendation-item');
-    const section = item.dataset.section;
-    const title = item.dataset.title;
-    
-    if (!section || !title) {
-      console.error('Missing required data attributes:', { section, title });
-      return;
-    }
+    getItemData(element) {
+      const item = element.closest('.recommendation-item');
+      if (!item) return {};
+      return {
+        section: item.dataset.section,
+        title: item.dataset.title
+      };
+    },
 
-    // Create element settings for the AJAX call
-    const elementSettings = {
-      base: link.id,
-      element: link,
-      url: Drupal.url(`admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`),
+    safeInsertHTML(target, html, method = 'html') {
+      if (!target) return false;
+      if (method === 'html') {
+        target.innerHTML = html;
+      } else if (method === 'append') {
+        target.insertAdjacentHTML('beforeend', html);
+      }
+      return true;
+    }
+  };
+
+  // AJAX handler factory
+  function createAjaxHandler({
+    element,
+    url,
+    loadingText = ButtonText.LOADING,
+    successText,
+    errorText,
+    onSuccess,
+    method = 'html'
+  }) {
+    DOMUtils.ensureElementId(element, 'content-strategy');
+
+    return {
+      base: element.id,
+      element: element,
+      url: Drupal.url(url),
       event: 'click',
       progress: { type: 'throbber' },
       submit: { js: true },
       beforeSend: function(xhr, settings) {
-        link.textContent = ButtonText.LOADING;
-        link.disabled = true;
+        element.textContent = loadingText;
+        element.disabled = true;
         return true;
       },
       success: function(response, status) {
         if (Array.isArray(response)) {
           response.forEach((command) => {
-            if (command.command === 'insert' && command.method === 'append') {
+            if (command.command === 'insert' && command.method === method) {
               const target = document.querySelector(command.selector);
-              if (target) {
-                target.insertAdjacentHTML('beforeend', command.data);
+              DOMUtils.safeInsertHTML(target, command.data, method);
+              if (onSuccess) {
+                onSuccess(target);
               }
             }
           });
         }
-        
-        link.disabled = false;
-        link.textContent = ButtonText.GENERATE_MORE;
+        element.disabled = false;
+        element.textContent = successText;
       },
       error: function(xhr, status, error) {
-        link.disabled = false;
-        link.textContent = ButtonText.GENERATE_MORE;
-        alert(Drupal.t('An error occurred while generating more ideas.'));
+        element.disabled = false;
+        element.textContent = errorText;
+        alert(Drupal.t('An error occurred while processing your request.'));
       }
     };
+  }
+
+  // Attach generate more behavior
+  function attachGenerateMoreBehavior(link, index) {
+    const { section, title } = DOMUtils.getItemData(link);
+    if (!section || !title) {
+      console.error('Missing required data attributes:', { section, title });
+      return;
+    }
+
+    link.textContent = ButtonText.GENERATE_MORE;
+    
+    const ajaxSettings = createAjaxHandler({
+      element: link,
+      url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
+      loadingText: ButtonText.LOADING,
+      successText: ButtonText.GENERATE_MORE,
+      errorText: ButtonText.GENERATE_MORE,
+      method: 'append'
+    });
 
     try {
-      // Create and attach the AJAX behavior
-      Drupal.ajax(elementSettings);
+      Drupal.ajax(ajaxSettings);
     } catch (e) {
       console.error('Error setting up generate more link:', e);
     }
   }
 
+  // Main behavior
   Drupal.behaviors.contentIdeas = {
     attach: function (context, settings) {
-      // Handle generate recommendations button
+      // Handle main generate button
       once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
-        // Ensure button has an ID
-        if (!button.id) {
-          button.id = 'generate-recommendations-button';
-        }
-        
-        // Set initial button text
         button.textContent = ButtonText.GENERATE;
 
-        // Create element settings for the AJAX call
-        const elementSettings = {
-          base: button.id,
+        const ajaxSettings = createAjaxHandler({
           element: button,
-          url: Drupal.url('admin/reports/ai/content-strategy/generate'),
-          event: 'click',
-          progress: { 
-            type: 'throbber',
-            message: ButtonText.LOADING
-          },
-          submit: {
-            js: true
-          },
-          beforeSend: function(xhr, settings) {
-            button.textContent = ButtonText.LOADING;
-            button.disabled = true;
-            return true;
-          },
-          success: function(response, status) {
-            // Process each command
-            if (Array.isArray(response)) {
-              response.forEach((command) => {
-                // Handle HTML updates
-                if (command.command === 'insert' && command.method === 'html') {
-                  const target = document.querySelector(command.selector);
-                  if (target) {
-                    target.innerHTML = command.data;
-                    // Re-attach behaviors to new generate more links
-                    target.querySelectorAll('.generate-more-link').forEach((link, index) => {
-                      attachGenerateMoreBehavior(link, index);
-                    });
-                  }
-                }
-              });
-            }
-            
-            button.disabled = false;
-            button.textContent = ButtonText.REFRESH;
-          },
-          error: function(xhr, status, error) {
-            button.disabled = false;
-            button.textContent = ButtonText.GENERATE;
-            alert(Drupal.t('An error occurred while generating recommendations.'));
+          url: 'admin/reports/ai/content-strategy/generate',
+          loadingText: ButtonText.LOADING,
+          successText: ButtonText.REFRESH,
+          errorText: ButtonText.GENERATE,
+          onSuccess: (target) => {
+            // Re-attach behaviors to new generate more links
+            target.querySelectorAll('.generate-more-link').forEach((link, index) => {
+              attachGenerateMoreBehavior(link, index);
+            });
           }
-        };
+        });
 
         try {
-          // Create and attach the AJAX behavior
-          Drupal.ajax(elementSettings);
+          Drupal.ajax(ajaxSettings);
         } catch (e) {
           console.error('Error setting up recommendations button:', e);
         }
       });
 
-      // Handle generate more ideas links - use context to ensure we only attach to new elements
+      // Handle generate more links
       once('content-ideas', '.generate-more-link', context).forEach((link, index) => {
         attachGenerateMoreBehavior(link, index);
       });

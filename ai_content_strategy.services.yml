@@ -1,7 +1,7 @@
 services:
   ai_content_strategy.strategy_generator:
     class: Drupal\ai_content_strategy\Service\StrategyGenerator
-    arguments: ['@ai.provider', '@ai_content_strategy.content_analyzer', '@ai.prompt_json_decode', '@messenger']
+    arguments: ['@ai.provider', '@ai_content_strategy.content_analyzer', '@ai.prompt_json_decode', '@messenger', '@config.factory']
   
   ai_content_strategy.content_analyzer:
     class: Drupal\ai_content_strategy\Service\ContentAnalyzer

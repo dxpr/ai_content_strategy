@@ -1,0 +1,21 @@
+ai_content_strategy.prompts:
+  type: config_object
+  label: 'AI Content Strategy Prompts'
+  mapping:
+    content_strategy:
+      type: mapping
+      label: 'Content Strategy Prompts'
+      mapping:
+        prompt_template:
+          type: text
+          label: 'Main prompt template'
+        schema_example:
+          type: text
+          label: 'Schema example'
+    generate_more:
+      type: mapping
+      label: 'Generate More Ideas Prompts'
+      mapping:
+        prompt_template:
+          type: text
+          label: 'Generate more prompt template' 

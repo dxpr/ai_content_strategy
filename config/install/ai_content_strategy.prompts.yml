@@ -1,0 +1,206 @@
+content_strategy:
+  prompt_template: |
+    <prompt>
+      <instructions>
+    Analysis Instructions:
+    1. First analyze the site structure, URLs, and navigation to understand:
+       - The site's primary purpose and domain
+       - Existing content types and formats
+       - Current content organization
+       - Target audience indicators
+       - Industry/sector context
+
+    2. Then identify:
+       - Missing content types compared to similar sites in the domain
+       - Underrepresented topics within the site's focus area
+       - Opportunities to demonstrate expertise in the site's domain
+       - Trust-building elements appropriate for the site type
+
+    Rules for Recommendations:
+    1. ALL recommendations must be directly inferred from the site's actual content and structure
+    2. NO generic suggestions - each recommendation should clearly relate to the site's specific domain and purpose
+    3. Content ideas must be specific and actionable
+    4. Prioritize recommendations based on:
+       - Alignment with existing content strategy
+       - Gaps in current content coverage
+       - Potential impact for the site's purpose
+    5. Generate exactly 5 highly specific content ideas for each recommendation
+    6. Avoid assumptions about industry or purpose - base everything on the provided site data
+    7. For each section (content_gaps, authority_topics, expertise_demonstrations, trust_signals):
+       - Provide EXACTLY 2 distinct recommendations
+       - Each recommendation should focus on a different but complementary aspect
+       - Ensure the two recommendations work together to provide comprehensive coverage
+
+    The response must be a valid JSON object with these exact keys:
+    - content_gaps: array of EXACTLY 2 objects with title, description, priority, and content_ideas fields
+    - authority_topics: array of EXACTLY 2 objects with topic, rationale, and content_ideas fields
+    - expertise_demonstrations: array of EXACTLY 2 objects with content_type, description, and content_ideas fields
+    - trust_signals: array of EXACTLY 2 objects with signal, implementation, and content_ideas fields
+      </instructions>
+
+      <schema_example>
+    {
+      "content_gaps": [
+        {
+          "title": "Content Type Gap",
+          "description": "Missing content type identified from site structure",
+          "priority": "high",
+          "content_ideas": [
+            "Example content idea 1 based on site context",
+            "Example content idea 2 based on site context",
+            "Example content idea 3 based on site context",
+            "Example content idea 4 based on site context",
+            "Example content idea 5 based on site context"
+          ]
+        }
+      ],
+      "authority_topics": [
+        {
+          "topic": "Domain-Specific Topic",
+          "rationale": "Topic relevance based on existing content",
+          "content_ideas": [
+            "Example topic content 1 based on site focus",
+            "Example topic content 2 based on site focus",
+            "Example topic content 3 based on site focus",
+            "Example topic content 4 based on site focus",
+            "Example topic content 5 based on site focus"
+          ]
+        }
+      ],
+      "expertise_demonstrations": [
+        {
+          "content_type": "Expertise Format",
+          "description": "Content format aligned with site purpose",
+          "content_ideas": [
+            "Example expertise content 1 based on site type",
+            "Example expertise content 2 based on site type",
+            "Example expertise content 3 based on site type",
+            "Example expertise content 4 based on site type",
+            "Example expertise content 5 based on site type"
+          ]
+        }
+      ],
+      "trust_signals": [
+        {
+          "signal": "Trust Element",
+          "implementation": "Implementation approach based on site context",
+          "content_ideas": [
+            "Example trust content 1 based on site needs",
+            "Example trust content 2 based on site needs",
+            "Example trust content 3 based on site needs",
+            "Example trust content 4 based on site needs",
+            "Example trust content 5 based on site needs"
+          ]
+        }
+      ]
+    }
+      </schema_example>
+
+      <website_data>
+    Homepage:
+    Title: {homepage_title}
+    Content: {homepage_content}
+
+    Primary Navigation:
+    {primary_menu}
+
+    Existing Content URLs:
+    {urls}
+      </website_data>
+
+      <response_requirements>
+    Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().
+    Each section MUST contain EXACTLY 2 distinct recommendations - no more, no less.
+    Each recommendation MUST have EXACTLY 5 content ideas.
+      </response_requirements>
+    </prompt>
+
+  schema_example: |
+    {
+      "content_gaps": [
+        {
+          "title": "Content Type Gap",
+          "description": "Missing content type identified from site structure",
+          "priority": "high",
+          "content_ideas": [
+            "Example content idea 1 based on site context",
+            "Example content idea 2 based on site context",
+            "Example content idea 3 based on site context",
+            "Example content idea 4 based on site context",
+            "Example content idea 5 based on site context"
+          ]
+        }
+      ],
+      "authority_topics": [
+        {
+          "topic": "Domain-Specific Topic",
+          "rationale": "Topic relevance based on existing content",
+          "content_ideas": [
+            "Example topic content 1 based on site focus",
+            "Example topic content 2 based on site focus",
+            "Example topic content 3 based on site focus",
+            "Example topic content 4 based on site focus",
+            "Example topic content 5 based on site focus"
+          ]
+        }
+      ],
+      "expertise_demonstrations": [
+        {
+          "content_type": "Expertise Format",
+          "description": "Content format aligned with site purpose",
+          "content_ideas": [
+            "Example expertise content 1 based on site type",
+            "Example expertise content 2 based on site type",
+            "Example expertise content 3 based on site type",
+            "Example expertise content 4 based on site type",
+            "Example expertise content 5 based on site type"
+          ]
+        }
+      ],
+      "trust_signals": [
+        {
+          "signal": "Trust Element",
+          "implementation": "Implementation approach based on site context",
+          "content_ideas": [
+            "Example trust content 1 based on site needs",
+            "Example trust content 2 based on site needs",
+            "Example trust content 3 based on site needs",
+            "Example trust content 4 based on site needs",
+            "Example trust content 5 based on site needs"
+          ]
+        }
+      ]
+    }
+
+generate_more:
+  prompt_template: |
+    <context>
+      <site_info>
+        <homepage>
+          <title>{homepage_title}</title>
+          <content>{homepage_content}</content>
+        </homepage>
+        <navigation>
+    {navigation}
+        </navigation>
+        <content_urls>
+    {urls}
+        </content_urls>
+      </site_info>
+      <task>
+        <section>{section}</section>
+        <topic>{topic}</topic>
+        <requirements>
+          <requirement>Specific and actionable ideas</requirement>
+          <requirement>Relevant to the site's context and purpose</requirement>
+          <requirement>Different from previously suggested ideas</requirement>
+          <requirement>Based on analyzing the site's structure and content</requirement>
+          <requirement>Aligned with the target audience</requirement>
+        </requirements>
+      </task>
+    </context>
+
+    <instructions>
+    Based on the above context, generate 5 additional, unique content ideas for the specified topic.
+    Return ONLY a JSON array of strings, each being a new content idea.
+    </instructions> 

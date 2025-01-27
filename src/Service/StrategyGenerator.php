@@ -9,6 +9,7 @@ use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 
 /**
  * Service for generating content strategy recommendations.
@@ -45,6 +46,13 @@ class StrategyGenerator extends AnalyzerBase {
   protected $messenger;
 
   /**
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
    * Constructs a StrategyGenerator object.
    *
    * @param \Drupal\ai\AiProviderPluginManager $ai_provider
@@ -55,17 +63,21 @@ class StrategyGenerator extends AnalyzerBase {
    *   The prompt JSON decoder.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The messenger service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
   public function __construct(
     AiProviderPluginManager $ai_provider,
     ContentAnalyzer $content_analyzer,
     PromptJsonDecoderInterface $prompt_json_decoder,
-    MessengerInterface $messenger
+    MessengerInterface $messenger,
+    ConfigFactoryInterface $config_factory
   ) {
     $this->aiProvider = $ai_provider;
     $this->contentAnalyzer = $content_analyzer;
     $this->promptJsonDecoder = $prompt_json_decoder;
     $this->messenger = $messenger;
+    $this->configFactory = $config_factory;
   }
 
   /**
@@ -227,128 +239,17 @@ class StrategyGenerator extends AnalyzerBase {
       throw new \RuntimeException('Could not analyze sitemap: ' . $sitemap_urls['error']);
     }
 
-    $schema_example = <<<XML
-{
-  <content_gaps>
-    <gap>
-      <title>Content Type Gap</title>
-      <description>Missing content type identified from site structure</description>
-      <priority>high</priority>
-      <content_ideas>
-        <idea>Example content idea 1 based on site context</idea>
-        <idea>Example content idea 2 based on site context</idea>
-        <idea>Example content idea 3 based on site context</idea>
-        <idea>Example content idea 4 based on site context</idea>
-        <idea>Example content idea 5 based on site context</idea>
-      </content_ideas>
-    </gap>
-  </content_gaps>
-  <authority_topics>
-    <topic>
-      <name>Domain-Specific Topic</name>
-      <rationale>Topic relevance based on existing content</rationale>
-      <content_ideas>
-        <idea>Example topic content 1 based on site focus</idea>
-        <idea>Example topic content 2 based on site focus</idea>
-        <idea>Example topic content 3 based on site focus</idea>
-        <idea>Example topic content 4 based on site focus</idea>
-        <idea>Example topic content 5 based on site focus</idea>
-      </content_ideas>
-    </topic>
-  </authority_topics>
-  <expertise_demonstrations>
-    <demonstration>
-      <content_type>Expertise Format</content_type>
-      <description>Content format aligned with site purpose</description>
-      <content_ideas>
-        <idea>Example expertise content 1 based on site type</idea>
-        <idea>Example expertise content 2 based on site type</idea>
-        <idea>Example expertise content 3 based on site type</idea>
-        <idea>Example expertise content 4 based on site type</idea>
-        <idea>Example expertise content 5 based on site type</idea>
-      </content_ideas>
-    </demonstration>
-  </expertise_demonstrations>
-  <trust_signals>
-    <signal>
-      <name>Trust Element</name>
-      <implementation>Implementation approach based on site context</implementation>
-      <content_ideas>
-        <idea>Example trust content 1 based on site needs</idea>
-        <idea>Example trust content 2 based on site needs</idea>
-        <idea>Example trust content 3 based on site needs</idea>
-        <idea>Example trust content 4 based on site needs</idea>
-        <idea>Example trust content 5 based on site needs</idea>
-      </content_ideas>
-    </signal>
-  </trust_signals>
-}
-XML;
+    $config = $this->configFactory->get('ai_content_strategy.prompts');
+    $prompt_template = $config->get('content_strategy.prompt_template');
+    $schema_example = $config->get('content_strategy.schema_example');
 
-    $prompt = <<<EOT
-<prompt>
-  <instructions>
-Analysis Instructions:
-1. First analyze the site structure, URLs, and navigation to understand:
-   - The site's primary purpose and domain
-   - Existing content types and formats
-   - Current content organization
-   - Target audience indicators
-   - Industry/sector context
-
-2. Then identify:
-   - Missing content types compared to similar sites in the domain
-   - Underrepresented topics within the site's focus area
-   - Opportunities to demonstrate expertise in the site's domain
-   - Trust-building elements appropriate for the site type
-
-Rules for Recommendations:
-1. ALL recommendations must be directly inferred from the site's actual content and structure
-2. NO generic suggestions - each recommendation should clearly relate to the site's specific domain and purpose
-3. Content ideas must be specific and actionable
-4. Prioritize recommendations based on:
-   - Alignment with existing content strategy
-   - Gaps in current content coverage
-   - Potential impact for the site's purpose
-5. Generate exactly 5 highly specific content ideas for each recommendation
-6. Avoid assumptions about industry or purpose - base everything on the provided site data
-7. For each section (content_gaps, authority_topics, expertise_demonstrations, trust_signals):
-   - Provide EXACTLY 2 distinct recommendations
-   - Each recommendation should focus on a different but complementary aspect
-   - Ensure the two recommendations work together to provide comprehensive coverage
-
-The response must be a valid JSON object with these exact keys:
-- content_gaps: array of EXACTLY 2 objects with title, description, priority, and content_ideas fields
-- authority_topics: array of EXACTLY 2 objects with topic, rationale, and content_ideas fields
-- expertise_demonstrations: array of EXACTLY 2 objects with content_type, description, and content_ideas fields
-- trust_signals: array of EXACTLY 2 objects with signal, implementation, and content_ideas fields
-  </instructions>
-
-  <schema_example>
-    {$schema_example}
-  </schema_example>
-
-  <website_data>
-Homepage:
-Title: {$site_structure['homepage']['title']}
-Content: {$site_structure['homepage']['content']}
-
-Primary Navigation:
-{$this->formatMenuItems($site_structure['primary_menu'])}
-
-Existing Content URLs:
-{$this->formatUrls($sitemap_urls['urls'])}
-  </website_data>
-
-  <response_requirements>
-Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().
-Each section MUST contain EXACTLY 2 distinct recommendations - no more, no less.
-Each recommendation MUST have EXACTLY 5 content ideas.
-  </response_requirements>
-</prompt>
-EOT;
-
-    return $prompt;
+    return strtr($prompt_template, [
+      '{schema_example}' => $schema_example,
+      '{homepage_title}' => $site_structure['homepage']['title'],
+      '{homepage_content}' => $site_structure['homepage']['content'],
+      '{primary_menu}' => $this->formatMenuItems($site_structure['primary_menu']),
+      '{urls}' => $this->formatUrls($sitemap_urls['urls']),
+    ]);
   }
 
 } 
