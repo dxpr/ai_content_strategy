@@ -9,6 +9,20 @@
     LOADING: Drupal.t('Generating recommendations...')
   };
 
+  // Helper function to get the title from the parent recommendation item
+  function getRecommendationTitle(link) {
+    const item = link.closest('.recommendation-item');
+    if (!item) return '';
+    
+    // Try to get title from data attribute first
+    const dataTitle = item.dataset.title;
+    if (dataTitle) return dataTitle;
+    
+    // Fallback to h4 content if data attribute is missing
+    const titleElement = item.querySelector('h4');
+    return titleElement ? titleElement.textContent.trim() : '';
+  }
+
   // Helper function to attach generate more links behavior
   function attachGenerateMoreBehavior(link, index) {
     // Ensure link has an ID
@@ -19,8 +33,15 @@
     // Set initial link text
     link.textContent = ButtonText.GENERATE_MORE;
     
-    const section = link.dataset.section;
-    const title = link.dataset.title;
+    // Get section from link first, then try parent if missing
+    let section = link.dataset.section;
+    if (!section) {
+      const item = link.closest('.recommendation-item');
+      section = item ? item.dataset.section : '';
+    }
+    
+    // Get title, trying multiple sources
+    const title = link.dataset.title || getRecommendationTitle(link);
     
     if (!section || !title) {
       console.error('Missing required data attributes:', { section, title });
