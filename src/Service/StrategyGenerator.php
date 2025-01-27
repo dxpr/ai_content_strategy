@@ -310,18 +310,18 @@ Rules for Recommendations:
    - Alignment with existing content strategy
    - Gaps in current content coverage
    - Potential impact for the site's purpose
-5. Generate exactly 5 highly specific content ideas for each recommendation
+5. Generate 5-10 highly specific content ideas for each recommendation
 6. Avoid assumptions about industry or purpose - base everything on the provided site data
 7. For each section (content_gaps, authority_topics, expertise_demonstrations, trust_signals):
-   - Provide EXACTLY 2 distinct recommendations
-   - Each recommendation should focus on a different but complementary aspect
-   - Ensure the two recommendations work together to provide comprehensive coverage
+   - Provide at least 2-3 distinct recommendations
+   - Each recommendation should focus on a different aspect or approach
+   - Ensure recommendations complement each other within each section
 
 The response must be a valid JSON object with these exact keys:
-- content_gaps: array of EXACTLY 2 objects with title, description, priority, and content_ideas fields
-- authority_topics: array of EXACTLY 2 objects with topic, rationale, and content_ideas fields
-- expertise_demonstrations: array of EXACTLY 2 objects with content_type, description, and content_ideas fields
-- trust_signals: array of EXACTLY 2 objects with signal, implementation, and content_ideas fields
+- content_gaps: array of objects with title, description, priority, and content_ideas fields (provide 2-3 gaps)
+- authority_topics: array of objects with topic, rationale, and content_ideas fields (provide 2-3 topics)
+- expertise_demonstrations: array of objects with content_type, description, and content_ideas fields (provide 2-3 types)
+- trust_signals: array of objects with signal, implementation, and content_ideas fields (provide 2-3 signals)
   </instructions>
 
   <schema_example>
@@ -342,8 +342,7 @@ Existing Content URLs:
 
   <response_requirements>
 Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().
-Each section MUST contain EXACTLY 2 distinct recommendations - no more, no less.
-Each recommendation MUST have EXACTLY 5 content ideas.
+Each section MUST contain 2-3 distinct recommendations to ensure balanced coverage.
   </response_requirements>
 </prompt>
 EOT;
