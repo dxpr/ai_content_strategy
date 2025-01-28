@@ -20,4 +20,31 @@ function ai_content_strategy_theme() {
       ],
     ],
   ];
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$variables) {
+  // Add our button text settings to both JavaScript and template variables
+  $button_text = [
+    'generate_more' => [
+      'content_gaps' => t('Generate more ideas for this content gap'),
+      'authority_topics' => t('Generate more ideas for this authority topic'),
+      'expertise_demonstrations' => t('Generate more ideas for this %type'),
+      'trust_signals' => t('Generate more ideas for this trust signal'),
+    ],
+    'add_more' => [
+      'content_gaps' => t('Discover More Content Opportunities'),
+      'authority_topics' => t('Explore More Authority Topics'),
+      'expertise_demonstrations' => t('Add More Ways to Showcase Expertise'),
+      'trust_signals' => t('Find More Trust-Building Elements'),
+    ],
+  ];
+
+  // Add to template variables
+  $variables['button_text'] = $button_text;
+
+  // Add to JavaScript settings
+  $variables['#attached']['drupalSettings']['aiContentStrategy']['buttonText'] = $button_text;
 } 

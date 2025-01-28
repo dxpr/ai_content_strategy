@@ -5,11 +5,22 @@
   const ButtonText = {
     GENERATE: Drupal.t('Generate Recommendations'),
     REFRESH: Drupal.t('Refresh Recommendations'),
-    GENERATE_MORE: Drupal.t('Generate More Ideas'),
-    ADD_MORE: Drupal.t('Add More Recommendations'),
     LOADING: Drupal.t('Generating recommendations...'),
-    LOADING_MORE: Drupal.t('Adding more recommendations...')
+    LOADING_MORE: Drupal.t('Adding more recommendations...'),
+    // Generate more ideas button text per section
+    GENERATE_MORE_CONTENT_GAP: Drupal.t('Generate more ideas for this content gap'),
+    GENERATE_MORE_AUTHORITY_TOPIC: Drupal.t('Generate more ideas for this authority topic'),
+    GENERATE_MORE_EXPERTISE: (type) => Drupal.t('Generate more ideas for this @type', {'@type': type.toLowerCase()}),
+    GENERATE_MORE_TRUST_SIGNAL: Drupal.t('Generate more ideas for this trust signal'),
+    // Add more recommendations button text per section
+    ADD_MORE_CONTENT_GAPS: Drupal.t('Discover More Content Opportunities'),
+    ADD_MORE_AUTHORITY_TOPICS: Drupal.t('Explore More Authority Topics'),
+    ADD_MORE_EXPERTISE: Drupal.t('Add More Ways to Showcase Expertise'),
+    ADD_MORE_TRUST_SIGNALS: Drupal.t('Find More Trust-Building Elements')
   };
+
+  // Get button text from settings
+  const buttonText = drupalSettings.aiContentStrategy.buttonText;
 
   // DOM utility functions
   const DOMUtils = {
@@ -37,6 +48,13 @@
         target.insertAdjacentHTML('beforeend', html);
       }
       return true;
+    },
+
+    getButtonText(type, section, itemType = '') {
+      const text = buttonText[type][section];
+      return type === 'generate_more' && section === 'expertise_demonstrations'
+        ? Drupal.formatString(text, {'%type': itemType.toLowerCase()})
+        : text;
     }
   };
 
@@ -134,7 +152,13 @@
       return;
     }
 
-    link.textContent = ButtonText.GENERATE_MORE;
+    const buttonText = DOMUtils.getButtonText('generate_more', section, title);
+    if (!buttonText) {
+      console.error('Unknown section:', section);
+      return;
+    }
+    
+    link.textContent = buttonText;
     
     try {
       const ajaxHandler = new Drupal.Ajax(
@@ -144,8 +168,8 @@
           element: link,
           url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
           loadingText: ButtonText.LOADING,
-          successText: ButtonText.GENERATE_MORE,
-          errorText: ButtonText.GENERATE_MORE,
+          successText: buttonText,
+          errorText: buttonText,
           method: 'append'
         })
       );
@@ -167,7 +191,13 @@
       return;
     }
 
-    link.textContent = ButtonText.ADD_MORE;
+    const buttonText = DOMUtils.getButtonText('add_more', section);
+    if (!buttonText) {
+      console.error('Unknown section:', section);
+      return;
+    }
+    
+    link.textContent = buttonText;
     
     try {
       const ajaxHandler = new Drupal.Ajax(
@@ -177,8 +207,8 @@
           element: link,
           url: `admin/reports/ai/content-strategy/add-more/${section}`,
           loadingText: ButtonText.LOADING_MORE,
-          successText: ButtonText.ADD_MORE,
-          errorText: ButtonText.ADD_MORE,
+          successText: buttonText,
+          errorText: buttonText,
           method: 'append',
           onSuccess: (target) => {
             // Find and attach behaviors to any new generate more links

@@ -21,11 +21,15 @@
     <h3>{{ 'Content Gaps'|t }}</h3>
     {% if content_gaps is not empty %}
       <div class="recommendation-items">
-        {{ content_gaps|theme('ai_content_strategy_recommendations_items', {'section': 'content_gaps'}) }}
+        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
+          'items': content_gaps,
+          'section': 'content_gaps',
+          'button_text': button_text
+        } %}
       </div>
       <div class="add-more-recommendations-wrapper">
         <a href="#" class="add-more-recommendations-link button button--secondary" data-section="content_gaps">
-          {{ 'Discover More Content Opportunities'|t }}
+          {{ button_text.add_more.content_gaps }}
         </a>
       </div>
     {% else %}
@@ -38,11 +42,15 @@
     <h3>{{ 'Authority Topics'|t }}</h3>
     {% if authority_topics is not empty %}
       <div class="recommendation-items">
-        {{ authority_topics|theme('ai_content_strategy_recommendations_items', {'section': 'authority_topics'}) }}
+        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
+          'items': authority_topics,
+          'section': 'authority_topics',
+          'button_text': button_text
+        } %}
       </div>
       <div class="add-more-recommendations-wrapper">
         <a href="#" class="add-more-recommendations-link button button--secondary" data-section="authority_topics">
-          {{ 'Explore More Authority Topics'|t }}
+          {{ button_text.add_more.authority_topics }}
         </a>
       </div>
     {% else %}
@@ -55,11 +63,15 @@
     <h3>{{ 'Expertise Demonstrations'|t }}</h3>
     {% if expertise_demonstrations is not empty %}
       <div class="recommendation-items">
-        {{ expertise_demonstrations|theme('ai_content_strategy_recommendations_items', {'section': 'expertise_demonstrations'}) }}
+        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
+          'items': expertise_demonstrations,
+          'section': 'expertise_demonstrations',
+          'button_text': button_text
+        } %}
       </div>
       <div class="add-more-recommendations-wrapper">
         <a href="#" class="add-more-recommendations-link button button--secondary" data-section="expertise_demonstrations">
-          {{ 'Add More Ways to Showcase Expertise'|t }}
+          {{ button_text.add_more.expertise_demonstrations }}
         </a>
       </div>
     {% else %}
@@ -72,11 +84,15 @@
     <h3>{{ 'Trust Signals'|t }}</h3>
     {% if trust_signals is not empty %}
       <div class="recommendation-items">
-        {{ trust_signals|theme('ai_content_strategy_recommendations_items', {'section': 'trust_signals'}) }}
+        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
+          'items': trust_signals,
+          'section': 'trust_signals',
+          'button_text': button_text
+        } %}
       </div>
       <div class="add-more-recommendations-wrapper">
         <a href="#" class="add-more-recommendations-link button button--secondary" data-section="trust_signals">
-          {{ 'Find More Trust-Building Elements'|t }}
+          {{ button_text.add_more.trust_signals }}
         </a>
       </div>
     {% else %}

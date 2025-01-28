@@ -45,17 +45,10 @@
         </tbody>
       </table>
       {% set item_name = item.title|default(item.topic|default(item.content_type|default(item.signal))) %}
-      {% set link_text %}
-        {% if section == 'content_gaps' %}
-          {{ 'Generate more ideas for this content gap'|t }}
-        {% elseif section == 'authority_topics' %}
-          {{ 'Generate more ideas for this authority topic'|t }}
-        {% elseif section == 'expertise_demonstrations' %}
-          {{ 'Generate more ideas for this %type'|t({'%type': item.content_type|lower}) }}
-        {% elseif section == 'trust_signals' %}
-          {{ 'Generate more ideas for this trust signal'|t }}
-        {% endif %}
-      {% endset %}
+      {% set link_text = section == 'expertise_demonstrations' 
+        ? button_text.generate_more[section]|replace({'%type': item.content_type|lower})
+        : button_text.generate_more[section]
+      %}
       <a href="#" class="generate-more-link" data-section="{{ section }}" data-title="{{ item_name }}">{{ link_text }}</a>
     {% endif %}
   </div>
