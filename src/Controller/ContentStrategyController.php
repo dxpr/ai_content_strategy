@@ -224,34 +224,70 @@ class ContentStrategyController extends ControllerBase {
         '#authority_topics' => $recommendations['authority_topics'] ?? [],
         '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
         '#trust_signals' => $recommendations['trust_signals'] ?? [],
+        '#last_run' => $this->dateFormatter->formatTimeDiffSince($timestamp),
       ];
       
-      $html = $this->renderer->render($build);
-
       // Create AJAX response
       $response = new AjaxResponse();
 
-      // Create the full content structure
-      $content = 
-        '<div class="content-strategy-description">' .
-          '<p>AI-powered content strategy recommendations based on your site structure.</p>' .
-        '</div>' .
-        '<div class="content-strategy-actions">' .
-          '<button class="button button--primary generate-recommendations" type="button">' . $this->t('Refresh Recommendations') . '</button>' .
-          '<div class="last-run-time">' . 
-            $this->t('Last generated: @time ago', [
-              '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
-            ])->render() .
-          '</div>' .
-        '</div>' .
-        '<div class="recommendations-wrapper">' . 
-          $html . 
-        '</div>';
-
-      // Use HtmlCommand to update the content
+      // Update the button text to "Refresh recommendations"
       $response->addCommand(
-        new HtmlCommand('.content-strategy-recommendations', $content)
+        new HtmlCommand(
+          '.generate-recommendations',
+          $this->t('Refresh recommendations')
+        )
       );
+      
+      // Update the last run time
+      $response->addCommand(
+        new HtmlCommand(
+          '.last-run-time',
+          $this->t('Last generated: @time ago', [
+            '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
+          ])
+        )
+      );
+
+      // For each section, build and update its content separately
+      $sections = [
+        'content_gaps',
+        'authority_topics',
+        'expertise_demonstrations',
+        'trust_signals'
+      ];
+
+      foreach ($sections as $section) {
+        if (!empty($recommendations[$section])) {
+          $section_build = [
+            '#theme' => 'ai_content_strategy_recommendations_items',
+            '#items' => $recommendations[$section],
+            '#section' => $section,
+            '#section_config' => [
+              'title' => $this->getSectionTitle($section),
+              'item_key' => $this->getSectionItemKey($section),
+              'description_key' => $this->getSectionDescriptionKey($section),
+            ],
+            '#button_text' => ai_content_strategy_get_button_texts(),
+          ];
+
+          $section_html = $this->renderer->render($section_build);
+
+          $response->addCommand(
+            new HtmlCommand(
+              ".recommendation-section[data-section='$section'] .recommendation-items",
+              $section_html
+            )
+          );
+        } else {
+          // If section is empty, show empty message
+          $response->addCommand(
+            new HtmlCommand(
+              ".recommendation-section[data-section='$section'] .recommendation-items",
+              '<p>' . $this->t('No @section identified.', ['@section' => $this->getSectionTitle($section)]) . '</p>'
+            )
+          );
+        }
+      }
 
       return $response;
     }

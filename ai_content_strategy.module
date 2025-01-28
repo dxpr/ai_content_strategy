@@ -6,46 +6,6 @@
  */
 
 /**
- * Main button states.
- */
-const AI_CONTENT_STRATEGY_BUTTON_MAIN = [
-  'generate' => 'Generate Recommendations',
-  'refresh' => 'Refresh Recommendations',
-  'loading' => 'Generating recommendations...',
-  'loading_more' => 'Adding more recommendations...',
-];
-
-/**
- * Generate ideas for new items.
- */
-const AI_CONTENT_STRATEGY_BUTTON_GENERATE = [
-  'content_gaps' => 'Generate ideas',
-  'authority_topics' => 'Generate ideas',
-  'expertise_demonstrations' => 'Generate ideas',
-  'trust_signals' => 'Generate ideas',
-];
-
-/**
- * Generate more ideas for existing items.
- */
-const AI_CONTENT_STRATEGY_BUTTON_GENERATE_MORE = [
-  'content_gaps' => 'Generate more ideas',
-  'authority_topics' => 'Generate more ideas',
-  'expertise_demonstrations' => 'Generate more ideas',
-  'trust_signals' => 'Generate more ideas',
-];
-
-/**
- * Add more recommendations buttons.
- */
-const AI_CONTENT_STRATEGY_BUTTON_ADD_MORE = [
-  'content_gaps' => 'Discover More %types',
-  'authority_topics' => 'Explore More %types',
-  'expertise_demonstrations' => 'Add More Ways to Showcase %types',
-  'trust_signals' => 'Find More %types',
-];
-
-/**
  * Gets translated button texts.
  *
  * @return array
@@ -56,8 +16,8 @@ function ai_content_strategy_get_button_texts() {
     'main' => [
       'generate' => t('Generate recommendations'),
       'refresh' => t('Refresh recommendations'),
-      'loading' => t('Generating recommendations...'),
-      'loading_more' => t('Adding more recommendations...'),
+      'loading' => t('Adding recommendations here...'),
+      'loading_more' => t('Adding more recommendations here...'),
     ],
     'generate' => [
       'content_gaps' => t('Generate @type', ['@type' => t('ideas')]),
