@@ -169,32 +169,6 @@ class ContentStrategyController extends ControllerBase {
    *   Render array for the recommendations page.
    */
   public function recommendations() {
-    $build = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['content-strategy-recommendations']],
-      '#attached' => [
-        'library' => [
-          'ai_content_strategy/content_strategy',
-        ],
-        'drupalSettings' => [
-          'aiContentStrategy' => [
-            'buttonText' => ai_content_strategy_get_button_texts(),
-          ],
-        ],
-      ],
-    ];
-    
-    // Add description
-    $build['description'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['content-strategy-description']],
-      'content' => [
-        '#markup' => $this->t('AI-powered content strategy recommendations based on your site structure.'),
-        '#prefix' => '<p>',
-        '#suffix' => '</p>',
-      ],
-    ];
-
     // Get stored data from key-value store
     $stored_data = $this->keyValue->get(self::KV_KEY);
     $recommendations = [];
@@ -212,50 +186,17 @@ class ContentStrategyController extends ControllerBase {
       }
     }
 
-    // Add generate/refresh button
-    $build['actions'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['content-strategy-actions']],
-      'generate' => [
-        '#type' => 'html_tag',
-        '#tag' => 'button',
-        '#value' => $stored_data ? $this->t('Refresh Recommendations') : $this->t('Generate Recommendations'),
-        '#attributes' => [
-          'class' => ['button', 'button--primary', 'generate-recommendations'],
-          'type' => 'button',
-        ],
+    return [
+      '#theme' => 'ai_content_strategy_recommendations',
+      '#content_gaps' => $recommendations['content_gaps'] ?? [],
+      '#authority_topics' => $recommendations['authority_topics'] ?? [],
+      '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
+      '#trust_signals' => $recommendations['trust_signals'] ?? [],
+      '#last_run' => $last_run ? $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
+      '#attached' => [
+        'library' => ['ai_content_strategy/content_strategy'],
       ],
     ];
-
-    if ($last_run) {
-      $build['actions']['last_run'] = [
-        '#type' => 'html_tag',
-        '#tag' => 'div',
-        '#attributes' => ['class' => ['last-run-time']],
-        '#value' => $this->t('Last generated: @time ago', [
-          '@time' => $this->dateFormatter->formatTimeDiffSince($last_run),
-        ]),
-      ];
-    }
-
-    // Display recommendations if available
-    if (!empty($recommendations)) {
-      $build['recommendations'] = [
-        '#theme' => 'ai_content_strategy_recommendations',
-        '#content_gaps' => $recommendations['content_gaps'] ?? [],
-        '#authority_topics' => $recommendations['authority_topics'] ?? [],
-        '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
-        '#trust_signals' => $recommendations['trust_signals'] ?? [],
-      ];
-    }
-    else {
-      $build['empty'] = [
-        '#type' => 'markup',
-        '#markup' => '<div class="empty-recommendations">' . $this->t('Click the button above to generate content recommendations.') . '</div>',
-      ];
-    }
-
-    return $build;
   }
 
   /**

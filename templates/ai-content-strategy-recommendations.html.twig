@@ -9,6 +9,7 @@
  * - expertise_demonstrations: Array of expertise demonstration recommendations.
  * - trust_signals: Array of trust signal recommendations.
  * - button_text: Button text configuration.
+ * - last_run: Last generation time as a formatted string.
  *
  * @ingroup themeable
  */
@@ -22,66 +23,76 @@
 
   <div class="content-strategy-actions">
     <button class="generate-recommendations button button--primary">
-      {{ button_text.main.generate }}
-    </button>
-    <div class="last-run-time">
-      {% if last_run %}
-        {{ 'Last generated: @time'|t({'@time': last_run}) }}
+      {% if content_gaps is empty and authority_topics is empty and expertise_demonstrations is empty and trust_signals is empty %}
+        {{ button_text.main.generate }}
+      {% else %}
+        {{ button_text.main.refresh }}
       {% endif %}
-    </div>
+    </button>
+    {% if last_run %}
+      <div class="last-run-time">
+        {{ 'Last generated: @time'|t({'@time': last_run}) }}
+      </div>
+    {% endif %}
   </div>
 
-  {% set sections = {
-    'content_gaps': {
-      'title': 'Content Gaps'|t,
-      'items': content_gaps,
-      'empty_message': 'No content gaps identified.'|t,
-      'item_key': 'title',
-      'description_key': 'description'
-    },
-    'authority_topics': {
-      'title': 'Authority Topics'|t,
-      'items': authority_topics,
-      'empty_message': 'No authority topics identified.'|t,
-      'item_key': 'topic',
-      'description_key': 'rationale'
-    },
-    'expertise_demonstrations': {
-      'title': 'Expertise Demonstrations'|t,
-      'items': expertise_demonstrations,
-      'empty_message': 'No expertise demonstrations identified.'|t,
-      'item_key': 'content_type',
-      'description_key': 'description'
-    },
-    'trust_signals': {
-      'title': 'Trust Signals'|t,
-      'items': trust_signals,
-      'empty_message': 'No trust signals identified.'|t,
-      'item_key': 'signal',
-      'description_key': 'implementation'
-    }
-  } %}
-
-  {% for section_id, section_config in sections %}
-    <div class="recommendation-section" data-section="{{ section_id }}">
-      <h3>{{ section_config.title }}</h3>
-      {% if section_config.items is not empty %}
-        <div class="recommendation-items">
-          {% include 'ai-content-strategy-recommendations-items.html.twig' with {
-            'items': section_config.items,
-            'section': section_id,
-            'section_config': section_config,
-            'button_text': button_text
-          } %}
-        </div>
-        <div class="add-more-recommendations-wrapper">
-          <a href="#" class="add-more-recommendations-link button button--secondary" data-section="{{ section_id }}">
-            {{ button_text.add_more[section_id] }}
-          </a>
-        </div>
-      {% else %}
-        <p>{{ section_config.empty_message }}</p>
-      {% endif %}
+  {% if content_gaps is empty and authority_topics is empty and expertise_demonstrations is empty and trust_signals is empty %}
+    <div class="empty-recommendations">
+      {{ 'Click the button above to generate content recommendations.'|t }}
     </div>
-  {% endfor %}
+  {% else %}
+    {% set sections = {
+      'content_gaps': {
+        'title': 'Content Gaps'|t,
+        'items': content_gaps,
+        'empty_message': 'No content gaps identified.'|t,
+        'item_key': 'title',
+        'description_key': 'description'
+      },
+      'authority_topics': {
+        'title': 'Authority Topics'|t,
+        'items': authority_topics,
+        'empty_message': 'No authority topics identified.'|t,
+        'item_key': 'topic',
+        'description_key': 'rationale'
+      },
+      'expertise_demonstrations': {
+        'title': 'Expertise Demonstrations'|t,
+        'items': expertise_demonstrations,
+        'empty_message': 'No expertise demonstrations identified.'|t,
+        'item_key': 'content_type',
+        'description_key': 'description'
+      },
+      'trust_signals': {
+        'title': 'Trust Signals'|t,
+        'items': trust_signals,
+        'empty_message': 'No trust signals identified.'|t,
+        'item_key': 'signal',
+        'description_key': 'implementation'
+      }
+    } %}
+
+    {% for section_id, section_config in sections %}
+      <div class="recommendation-section" data-section="{{ section_id }}">
+        <h3>{{ section_config.title }}</h3>
+        {% if section_config.items is not empty %}
+          <div class="recommendation-items">
+            {% include 'ai-content-strategy-recommendations-items.html.twig' with {
+              'items': section_config.items,
+              'section': section_id,
+              'section_config': section_config,
+              'button_text': button_text
+            } %}
+          </div>
+          <div class="add-more-recommendations-wrapper">
+            <a href="#" class="add-more-recommendations-link button button--secondary" data-section="{{ section_id }}">
+              {{ button_text.add_more[section_id] }}
+            </a>
+          </div>
+        {% else %}
+          <p>{{ section_config.empty_message }}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
 </div> 
