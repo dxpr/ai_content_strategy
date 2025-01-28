@@ -30,17 +30,44 @@
     },
 
     getButtonText(settings, type, section, itemType = '') {
-      try {
-        const text = settings?.aiContentStrategy?.buttonText?.[type]?.[section];
-        if (!text) return '';
-        
-        return type === 'generate_more' && section === 'expertise_demonstrations'
-          ? Drupal.formatString(text, {'%type': itemType.toLowerCase()})
-          : text;
-      } catch (e) {
-        console.warn('Button text not available yet');
-        return '';
+      if (!settings?.aiContentStrategy?.buttonText) {
+        throw new Error('Button text settings are not available. Make sure aiContentStrategy.buttonText is properly initialized in drupalSettings.');
       }
+
+      const buttonTexts = settings.aiContentStrategy.buttonText;
+      if (!buttonTexts[type]) {
+        throw new Error(`Button text type "${type}" is not defined in settings.`);
+      }
+      if (!buttonTexts[type][section] && type !== 'main') {
+        throw new Error(`Button text for section "${section}" is not defined in type "${type}".`);
+      }
+
+      const text = type === 'main' ? buttonTexts[type][section] : buttonTexts[type][section];
+      if (!text) {
+        throw new Error(`Button text is empty for type "${type}" and section "${section}".`);
+      }
+
+      // Get the appropriate type label based on section
+      const typeLabels = {
+        content_gaps: 'content gap',
+        authority_topics: 'authority topic',
+        expertise_demonstrations: itemType.toLowerCase(),
+        trust_signals: 'trust signal',
+      };
+
+      // For 'add_more' type, use plural forms
+      const typeLabelPlurals = {
+        content_gaps: 'Content Opportunities',
+        authority_topics: 'Authority Topics',
+        expertise_demonstrations: 'Expertise',
+        trust_signals: 'Trust-Building Elements',
+      };
+
+      const label = type === 'add_more' ? typeLabelPlurals[section] : typeLabels[section];
+      return Drupal.formatString(text, {
+        '%type': label,
+        '%types': label,
+      });
     }
   };
 
@@ -48,18 +75,26 @@
   function createAjaxHandler({
     element,
     url,
-    loadingText = settings?.aiContentStrategy?.buttonText?.main?.loading,
-    successText = settings?.aiContentStrategy?.buttonText?.main?.refresh,
-    errorText = settings?.aiContentStrategy?.buttonText?.main?.refresh,
+    loadingText,
+    successText,
+    errorText,
     onSuccess,
     method = 'html'
-  }) {
+  }, drupalSettings) {
+    if (!drupalSettings?.aiContentStrategy?.buttonText) {
+      throw new Error('Button text settings are not available. Make sure aiContentStrategy.buttonText is properly initialized in drupalSettings.');
+    }
+
+    if (!loadingText || !successText || !errorText) {
+      throw new Error('Required button texts are missing. Make sure all text parameters are provided.');
+    }
+
     DOMUtils.ensureElementId(element, 'content-strategy');
 
-    const settings = {
+    const ajaxSettings = {
       base: element.id,
       element: element,
-      url: Drupal.url(url),
+      url: drupalSettings.path.baseUrl + url,
       submit: { js: true },
       progress: { type: 'throbber' },
       beforeSend: function(xhr, settings) {
@@ -127,7 +162,7 @@
       }
     };
 
-    return settings;
+    return ajaxSettings;
   }
 
   // Attach generate more behavior
@@ -144,6 +179,7 @@
     }
     
     try {
+      DOMUtils.ensureElementId(link, 'content-strategy');
       const ajaxHandler = new Drupal.Ajax(
         link.id,
         link,
@@ -154,7 +190,7 @@
           successText: buttonText || link.textContent,
           errorText: buttonText || link.textContent,
           method: 'append'
-        })
+        }, settings)
       );
 
       link.addEventListener('click', function(event) {
@@ -199,7 +235,7 @@
               attachGenerateMoreBehavior(newLink, index, settings);
             });
           }
-        })
+        }, settings)
       );
 
       link.addEventListener('click', function(event) {
@@ -221,6 +257,7 @@
         const hasRecommendations = initialText === settings?.aiContentStrategy?.buttonText?.main?.refresh;
 
         try {
+          DOMUtils.ensureElementId(button, 'content-strategy');
           const ajaxHandler = new Drupal.Ajax(
             button.id,
             button,
@@ -240,7 +277,7 @@
                   attachAddMoreRecommendationsBehavior(link, settings);
                 });
               }
-            })
+            }, settings)
           );
 
           button.addEventListener('click', function(event) {

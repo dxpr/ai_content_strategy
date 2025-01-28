@@ -172,6 +172,16 @@ class ContentStrategyController extends ControllerBase {
     $build = [
       '#type' => 'container',
       '#attributes' => ['class' => ['content-strategy-recommendations']],
+      '#attached' => [
+        'library' => [
+          'ai_content_strategy/content_strategy',
+        ],
+        'drupalSettings' => [
+          'aiContentStrategy' => [
+            'buttonText' => ai_content_strategy_get_button_texts(),
+          ],
+        ],
+      ],
     ];
     
     // Add description
@@ -213,11 +223,6 @@ class ContentStrategyController extends ControllerBase {
         '#attributes' => [
           'class' => ['button', 'button--primary', 'generate-recommendations'],
           'type' => 'button',
-        ],
-        '#attached' => [
-          'library' => [
-            'ai_content_strategy/content_strategy',
-          ],
         ],
       ],
     ];
@@ -689,6 +694,12 @@ EOT;
         '#theme' => 'ai_content_strategy_recommendations_items',
         '#items' => $data[$section],
         '#section' => $section,
+        '#section_config' => [
+          'title' => $this->getSectionTitle($section),
+          'item_key' => $this->getSectionItemKey($section),
+          'description_key' => $this->getSectionDescriptionKey($section),
+        ],
+        '#button_text' => $this->config('ai_content_strategy.settings')->get('button_text')['main'],
       ];
 
       // Render the new recommendations
@@ -749,6 +760,63 @@ EOT;
       '{{ existing_recommendations }}' => $context['existing_recommendations'],
     ]);
     return $text;
+  }
+
+  /**
+   * Gets the section title.
+   *
+   * @param string $section
+   *   The section identifier.
+   *
+   * @return string
+   *   The human-readable section title.
+   */
+  protected function getSectionTitle($section) {
+    $titles = [
+      'content_gaps' => $this->t('Content Gap'),
+      'authority_topics' => $this->t('Authority Topic'),
+      'expertise_demonstrations' => $this->t('Expertise Demonstration'),
+      'trust_signals' => $this->t('Trust Signal'),
+    ];
+    return $titles[$section] ?? $section;
+  }
+
+  /**
+   * Gets the section item key.
+   *
+   * @param string $section
+   *   The section identifier.
+   *
+   * @return string
+   *   The key used to identify items in this section.
+   */
+  protected function getSectionItemKey($section) {
+    $keys = [
+      'content_gaps' => 'title',
+      'authority_topics' => 'topic',
+      'expertise_demonstrations' => 'content_type',
+      'trust_signals' => 'signal',
+    ];
+    return $keys[$section] ?? $section;
+  }
+
+  /**
+   * Gets the section description key.
+   *
+   * @param string $section
+   *   The section identifier.
+   *
+   * @return string
+   *   The key used for descriptions in this section.
+   */
+  protected function getSectionDescriptionKey($section) {
+    $keys = [
+      'content_gaps' => 'description',
+      'authority_topics' => 'rationale',
+      'expertise_demonstrations' => 'description',
+      'trust_signals' => 'implementation',
+    ];
+    return $keys[$section] ?? $section;
   }
 
 } 

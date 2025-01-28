@@ -1,6 +1,66 @@
 <?php
 
 /**
+ * @file
+ * AI Content Strategy module.
+ */
+
+/**
+ * Main button states.
+ */
+const AI_CONTENT_STRATEGY_BUTTON_MAIN = [
+  'generate' => 'Generate Recommendations',
+  'refresh' => 'Refresh Recommendations',
+  'loading' => 'Generating recommendations...',
+  'loading_more' => 'Adding more recommendations...',
+];
+
+/**
+ * Generate ideas for new items.
+ */
+const AI_CONTENT_STRATEGY_BUTTON_GENERATE = [
+  'content_gaps' => 'Generate ideas for this %type',
+  'authority_topics' => 'Generate ideas for this %type',
+  'expertise_demonstrations' => 'Generate ideas for this %type',
+  'trust_signals' => 'Generate ideas for this %type',
+];
+
+/**
+ * Generate more ideas for existing items.
+ */
+const AI_CONTENT_STRATEGY_BUTTON_GENERATE_MORE = [
+  'content_gaps' => 'Generate more ideas for this %type',
+  'authority_topics' => 'Generate more ideas for this %type',
+  'expertise_demonstrations' => 'Generate more ideas for this %type',
+  'trust_signals' => 'Generate more ideas for this %type',
+];
+
+/**
+ * Add more recommendations buttons.
+ */
+const AI_CONTENT_STRATEGY_BUTTON_ADD_MORE = [
+  'content_gaps' => 'Discover More %types',
+  'authority_topics' => 'Explore More %types',
+  'expertise_demonstrations' => 'Add More Ways to Showcase %types',
+  'trust_signals' => 'Find More %types',
+];
+
+/**
+ * Gets translated button texts.
+ *
+ * @return array
+ *   Array of translated button texts.
+ */
+function ai_content_strategy_get_button_texts() {
+  return [
+    'main' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_MAIN),
+    'generate' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_GENERATE),
+    'generate_more' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_GENERATE_MORE),
+    'add_more' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_ADD_MORE),
+  ];
+}
+
+/**
  * Implements hook_theme().
  */
 function ai_content_strategy_theme() {
@@ -29,37 +89,8 @@ function ai_content_strategy_theme() {
  * Implements hook_preprocess_HOOK().
  */
 function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$variables) {
-  // Define ALL button text in one central place
-  $button_text = [
-    // Main button states
-    'main' => [
-      'generate' => t('Generate Recommendations'),
-      'refresh' => t('Refresh Recommendations'),
-      'loading' => t('Generating recommendations...'),
-      'loading_more' => t('Adding more recommendations...'),
-    ],
-    // Generate ideas for new items
-    'generate' => [
-      'content_gaps' => t('Generate ideas for this content gap'),
-      'authority_topics' => t('Generate ideas for this authority topic'),
-      'expertise_demonstrations' => t('Generate ideas for this %type'),
-      'trust_signals' => t('Generate ideas for this trust signal'),
-    ],
-    // Generate more ideas for existing items
-    'generate_more' => [
-      'content_gaps' => t('Generate more ideas for this content gap'),
-      'authority_topics' => t('Generate more ideas for this authority topic'),
-      'expertise_demonstrations' => t('Generate more ideas for this %type'),
-      'trust_signals' => t('Generate more ideas for this trust signal'),
-    ],
-    // Add more recommendations buttons
-    'add_more' => [
-      'content_gaps' => t('Discover More Content Opportunities'),
-      'authority_topics' => t('Explore More Authority Topics'),
-      'expertise_demonstrations' => t('Add More Ways to Showcase Expertise'),
-      'trust_signals' => t('Find More Trust-Building Elements'),
-    ],
-  ];
+  // Get translated button texts
+  $button_text = ai_content_strategy_get_button_texts();
 
   // Add to template variables
   $variables['button_text'] = $button_text;
