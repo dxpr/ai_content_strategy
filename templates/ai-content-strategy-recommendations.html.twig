@@ -8,6 +8,7 @@
  * - authority_topics: Array of authority topic recommendations.
  * - expertise_demonstrations: Array of expertise demonstration recommendations.
  * - trust_signals: Array of trust signal recommendations.
+ * - button_text: Button text configuration.
  *
  * @ingroup themeable
  */
@@ -15,89 +16,57 @@
 {{ attach_library('ai_content_strategy/recommendations') }}
 
 <div{{ attributes.addClass('content-strategy-recommendations') }}>
-  
-  {# Content Gaps #}
-  <div class="recommendation-section" data-section="content_gaps">
-    <h3>{{ 'Content Gaps'|t }}</h3>
-    {% if content_gaps is not empty %}
-      <div class="recommendation-items">
-        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
-          'items': content_gaps,
-          'section': 'content_gaps',
-          'button_text': button_text
-        } %}
-      </div>
-      <div class="add-more-recommendations-wrapper">
-        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="content_gaps">
-          {{ button_text.add_more.content_gaps }}
-        </a>
-      </div>
-    {% else %}
-      <p>{{ 'No content gaps identified.'|t }}</p>
-    {% endif %}
-  </div>
+  {% set sections = {
+    'content_gaps': {
+      'title': 'Content Gaps'|t,
+      'items': content_gaps,
+      'empty_message': 'No content gaps identified.'|t,
+      'item_key': 'title',
+      'description_key': 'description'
+    },
+    'authority_topics': {
+      'title': 'Authority Topics'|t,
+      'items': authority_topics,
+      'empty_message': 'No authority topics identified.'|t,
+      'item_key': 'topic',
+      'description_key': 'rationale'
+    },
+    'expertise_demonstrations': {
+      'title': 'Expertise Demonstrations'|t,
+      'items': expertise_demonstrations,
+      'empty_message': 'No expertise demonstrations identified.'|t,
+      'item_key': 'content_type',
+      'description_key': 'description'
+    },
+    'trust_signals': {
+      'title': 'Trust Signals'|t,
+      'items': trust_signals,
+      'empty_message': 'No trust signals identified.'|t,
+      'item_key': 'signal',
+      'description_key': 'implementation'
+    }
+  } %}
 
-  {# Authority Topics #}
-  <div class="recommendation-section" data-section="authority_topics">
-    <h3>{{ 'Authority Topics'|t }}</h3>
-    {% if authority_topics is not empty %}
-      <div class="recommendation-items">
-        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
-          'items': authority_topics,
-          'section': 'authority_topics',
-          'button_text': button_text
-        } %}
-      </div>
-      <div class="add-more-recommendations-wrapper">
-        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="authority_topics">
-          {{ button_text.add_more.authority_topics }}
-        </a>
-      </div>
-    {% else %}
-      <p>{{ 'No authority topics identified.'|t }}</p>
-    {% endif %}
-  </div>
-
-  {# Expertise Demonstrations #}
-  <div class="recommendation-section" data-section="expertise_demonstrations">
-    <h3>{{ 'Expertise Demonstrations'|t }}</h3>
-    {% if expertise_demonstrations is not empty %}
-      <div class="recommendation-items">
-        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
-          'items': expertise_demonstrations,
-          'section': 'expertise_demonstrations',
-          'button_text': button_text
-        } %}
-      </div>
-      <div class="add-more-recommendations-wrapper">
-        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="expertise_demonstrations">
-          {{ button_text.add_more.expertise_demonstrations }}
-        </a>
-      </div>
-    {% else %}
-      <p>{{ 'No expertise demonstrations identified.'|t }}</p>
-    {% endif %}
-  </div>
-
-  {# Trust Signals #}
-  <div class="recommendation-section" data-section="trust_signals">
-    <h3>{{ 'Trust Signals'|t }}</h3>
-    {% if trust_signals is not empty %}
-      <div class="recommendation-items">
-        {% include 'ai-content-strategy-recommendations-items.html.twig' with {
-          'items': trust_signals,
-          'section': 'trust_signals',
-          'button_text': button_text
-        } %}
-      </div>
-      <div class="add-more-recommendations-wrapper">
-        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="trust_signals">
-          {{ button_text.add_more.trust_signals }}
-        </a>
-      </div>
-    {% else %}
-      <p>{{ 'No trust signals identified.'|t }}</p>
-    {% endif %}
-  </div>
-
+  {% for section_id, section_config in sections %}
+    <div class="recommendation-section" data-section="{{ section_id }}">
+      <h3>{{ section_config.title }}</h3>
+      {% if section_config.items is not empty %}
+        <div class="recommendation-items">
+          {% include 'ai-content-strategy-recommendations-items.html.twig' with {
+            'items': section_config.items,
+            'section': section_id,
+            'section_config': section_config,
+            'button_text': button_text
+          } %}
+        </div>
+        <div class="add-more-recommendations-wrapper">
+          <a href="#" class="add-more-recommendations-link button button--secondary" data-section="{{ section_id }}">
+            {{ button_text.add_more[section_id] }}
+          </a>
+        </div>
+      {% else %}
+        <p>{{ section_config.empty_message }}</p>
+      {% endif %}
+    </div>
+  {% endfor %}
 </div> 

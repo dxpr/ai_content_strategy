@@ -1,27 +1,6 @@
 ((Drupal, once) => {
   'use strict';
 
-  // Button text constants
-  const ButtonText = {
-    GENERATE: Drupal.t('Generate Recommendations'),
-    REFRESH: Drupal.t('Refresh Recommendations'),
-    LOADING: Drupal.t('Generating recommendations...'),
-    LOADING_MORE: Drupal.t('Adding more recommendations...'),
-    // Generate more ideas button text per section
-    GENERATE_MORE_CONTENT_GAP: Drupal.t('Generate more ideas for this content gap'),
-    GENERATE_MORE_AUTHORITY_TOPIC: Drupal.t('Generate more ideas for this authority topic'),
-    GENERATE_MORE_EXPERTISE: (type) => Drupal.t('Generate more ideas for this @type', {'@type': type.toLowerCase()}),
-    GENERATE_MORE_TRUST_SIGNAL: Drupal.t('Generate more ideas for this trust signal'),
-    // Add more recommendations button text per section
-    ADD_MORE_CONTENT_GAPS: Drupal.t('Discover More Content Opportunities'),
-    ADD_MORE_AUTHORITY_TOPICS: Drupal.t('Explore More Authority Topics'),
-    ADD_MORE_EXPERTISE: Drupal.t('Add More Ways to Showcase Expertise'),
-    ADD_MORE_TRUST_SIGNALS: Drupal.t('Find More Trust-Building Elements')
-  };
-
-  // Get button text from settings
-  const buttonText = drupalSettings.aiContentStrategy.buttonText;
-
   // DOM utility functions
   const DOMUtils = {
     ensureElementId(element, prefix, index = '') {
@@ -50,11 +29,18 @@
       return true;
     },
 
-    getButtonText(type, section, itemType = '') {
-      const text = buttonText[type][section];
-      return type === 'generate_more' && section === 'expertise_demonstrations'
-        ? Drupal.formatString(text, {'%type': itemType.toLowerCase()})
-        : text;
+    getButtonText(settings, type, section, itemType = '') {
+      try {
+        const text = settings?.aiContentStrategy?.buttonText?.[type]?.[section];
+        if (!text) return '';
+        
+        return type === 'generate_more' && section === 'expertise_demonstrations'
+          ? Drupal.formatString(text, {'%type': itemType.toLowerCase()})
+          : text;
+      } catch (e) {
+        console.warn('Button text not available yet');
+        return '';
+      }
     }
   };
 
@@ -62,9 +48,9 @@
   function createAjaxHandler({
     element,
     url,
-    loadingText = ButtonText.LOADING,
-    successText = ButtonText.REFRESH,
-    errorText = ButtonText.REFRESH,
+    loadingText = settings?.aiContentStrategy?.buttonText?.main?.loading,
+    successText = settings?.aiContentStrategy?.buttonText?.main?.refresh,
+    errorText = settings?.aiContentStrategy?.buttonText?.main?.refresh,
     onSuccess,
     method = 'html'
   }) {
@@ -145,20 +131,17 @@
   }
 
   // Attach generate more behavior
-  function attachGenerateMoreBehavior(link, index) {
+  function attachGenerateMoreBehavior(link, index, settings) {
     const { section, title } = DOMUtils.getItemData(link);
     if (!section || !title) {
       console.error('Missing required data attributes:', { section, title });
       return;
     }
 
-    const buttonText = DOMUtils.getButtonText('generate_more', section, title);
-    if (!buttonText) {
-      console.error('Unknown section:', section);
-      return;
+    const buttonText = DOMUtils.getButtonText(settings, 'generate_more', section, title);
+    if (buttonText) {
+      link.textContent = buttonText;
     }
-    
-    link.textContent = buttonText;
     
     try {
       const ajaxHandler = new Drupal.Ajax(
@@ -167,9 +150,9 @@
         createAjaxHandler({
           element: link,
           url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
-          loadingText: ButtonText.LOADING,
-          successText: buttonText,
-          errorText: buttonText,
+          loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
+          successText: buttonText || link.textContent,
+          errorText: buttonText || link.textContent,
           method: 'append'
         })
       );
@@ -184,20 +167,20 @@
   }
 
   // Attach add more recommendations behavior
-  function attachAddMoreRecommendationsBehavior(link) {
+  function attachAddMoreRecommendationsBehavior(link, settings) {
     const section = link.dataset.section;
     if (!section) {
       console.error('Missing required data attribute: section');
       return;
     }
 
-    const buttonText = DOMUtils.getButtonText('add_more', section);
-    if (!buttonText) {
-      console.error('Unknown section:', section);
-      return;
+    // Ensure the link has an ID for Drupal.Ajax
+    DOMUtils.ensureElementId(link, 'content-strategy');
+
+    const buttonText = DOMUtils.getButtonText(settings, 'add_more', section);
+    if (buttonText) {
+      link.textContent = buttonText;
     }
-    
-    link.textContent = buttonText;
     
     try {
       const ajaxHandler = new Drupal.Ajax(
@@ -206,14 +189,14 @@
         createAjaxHandler({
           element: link,
           url: `admin/reports/ai/content-strategy/add-more/${section}`,
-          loadingText: ButtonText.LOADING_MORE,
-          successText: buttonText,
-          errorText: buttonText,
+          loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading_more,
+          successText: buttonText || link.textContent,
+          errorText: buttonText || link.textContent,
           method: 'append',
           onSuccess: (target) => {
             // Find and attach behaviors to any new generate more links
             target.querySelectorAll('.generate-more-link').forEach((newLink, index) => {
-              attachGenerateMoreBehavior(newLink, index);
+              attachGenerateMoreBehavior(newLink, index, settings);
             });
           }
         })
@@ -235,7 +218,7 @@
       once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
         // Don't override the initial button text from server
         const initialText = button.textContent.trim();
-        const hasRecommendations = initialText === ButtonText.REFRESH;
+        const hasRecommendations = initialText === settings?.aiContentStrategy?.buttonText?.main?.refresh;
 
         try {
           const ajaxHandler = new Drupal.Ajax(
@@ -244,12 +227,17 @@
             createAjaxHandler({
               element: button,
               url: 'admin/reports/ai/content-strategy/generate',
-              loadingText: ButtonText.LOADING,
-              successText: ButtonText.REFRESH,
-              errorText: hasRecommendations ? ButtonText.REFRESH : ButtonText.GENERATE,
+              loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
+              successText: settings?.aiContentStrategy?.buttonText?.main?.refresh,
+              errorText: hasRecommendations ? settings?.aiContentStrategy?.buttonText?.main?.refresh : settings?.aiContentStrategy?.buttonText?.main?.generate,
               onSuccess: (target) => {
+                // Reattach behaviors to all generate more links
                 target.querySelectorAll('.generate-more-link').forEach((link, index) => {
-                  attachGenerateMoreBehavior(link, index);
+                  attachGenerateMoreBehavior(link, index, settings);
+                });
+                // Reattach behaviors to all add more recommendations links
+                target.querySelectorAll('.add-more-recommendations-link').forEach((link) => {
+                  attachAddMoreRecommendationsBehavior(link, settings);
                 });
               }
             })
@@ -266,12 +254,12 @@
 
       // Handle generate more links
       once('content-ideas', '.generate-more-link', context).forEach((link, index) => {
-        attachGenerateMoreBehavior(link, index);
+        attachGenerateMoreBehavior(link, index, settings);
       });
 
       // Handle add more recommendations links
       once('content-ideas', '.add-more-recommendations-link', context).forEach((link) => {
-        attachAddMoreRecommendationsBehavior(link);
+        attachAddMoreRecommendationsBehavior(link, settings);
       });
     }
   };

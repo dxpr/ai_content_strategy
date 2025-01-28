@@ -5,51 +5,56 @@
  *
  * Available variables:
  * - items: Array of recommendation items.
- * - section: The section these items belong to (content_gaps, authority_topics, etc.).
+ * - section: The section identifier.
+ * - section_config: Configuration for the section.
+ * - button_text: Button text configuration.
  *
  * @ingroup themeable
  */
 #}
 
 {% for item in items %}
-  <div class="recommendation-item recommendation-priority-{{ item.priority }}" data-section="{{ section }}" data-title="{{ item.title|default(item.topic|default(item.content_type|default(item.signal))) }}">
-    {% if section == 'content_gaps' %}
-      <h4>{{ item.title }}</h4>
-      <p>{{ item.description }}</p>
-    {% elseif section == 'authority_topics' %}
-      <h4>{{ item.topic }}</h4>
-      <p>{{ item.rationale }}</p>
-    {% elseif section == 'expertise_demonstrations' %}
-      <h4>{{ item.content_type }}</h4>
-      <p>{{ item.description }}</p>
-    {% elseif section == 'trust_signals' %}
-      <h4>{{ item.signal }}</h4>
-      <p>{{ item.implementation }}</p>
-    {% endif %}
-    
-    <span class="priority-badge {{ item.priority }}">{{ item.priority|title|t }}</span>
-    
-    {% if item.content_ideas is not empty %}
-      <table class="content-ideas-table">
-        <thead>
-          <tr>
-            <th>{{ 'Content Ideas'|t }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for idea in item.content_ideas %}
+  {% set item_value = item[section_config.item_key] %}
+  {% set item_title = item_value is iterable and item_value['#markup'] is defined ? item_value['#markup'] : (item_value is iterable ? item_value|first : item_value|default(item)) %}
+  <div class="recommendation-item recommendation-priority-{{ item.priority }}" data-section="{{ section }}" data-title="{{ item_title }}">
+    <div class="recommendation-content">
+      <h4>{{ item_title }}</h4>
+      {% if section_config.description_key and item[section_config.description_key] %}
+        {% set description = item[section_config.description_key] %}
+        <p>{{ description is iterable and description['#markup'] is defined ? description['#markup'] : description }}</p>
+      {% endif %}
+      
+      {% if item.priority %}
+        <span class="priority-badge {{ item.priority }}">{{ item.priority|title|t }}</span>
+      {% endif %}
+
+      {% if item.content_ideas is not empty %}
+        <table class="content-ideas-table">
+          <thead>
             <tr>
-              <td>{{ idea }}</td>
+              <th>{{ 'Content Ideas'|t }}</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% set item_name = item.title|default(item.topic|default(item.content_type|default(item.signal))) %}
-      {% set link_text = section == 'expertise_demonstrations' 
-        ? button_text.generate_more[section]|replace({'%type': item.content_type|lower})
-        : button_text.generate_more[section]
-      %}
-      <a href="#" class="generate-more-link" data-section="{{ section }}" data-title="{{ item_name }}">{{ link_text }}</a>
-    {% endif %}
+          </thead>
+          <tbody>
+            {% for idea in item.content_ideas %}
+              <tr>
+                <td>{{ idea is iterable and idea['#markup'] is defined ? idea['#markup'] : idea }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+    <div class="recommendation-actions">
+      {% if item.content_ideas is not empty %}
+        <a href="#" class="generate-more-link" data-section="{{ section }}" data-title="{{ item_title }}">
+          {{ button_text.generate_more[section] }}
+        </a>
+      {% else %}
+        <a href="#" class="generate-ideas-link button button--primary" data-section="{{ section }}" data-item="{{ item|json_encode }}">
+          {{ button_text.generate[section] }}
+        </a>
+      {% endif %}
+    </div>
   </div>
 {% endfor %} 
