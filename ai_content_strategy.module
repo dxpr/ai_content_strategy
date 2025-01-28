@@ -13,5 +13,11 @@ function ai_content_strategy_theme() {
         'trust_signals' => [],
       ],
     ],
+    'ai_content_strategy_recommendations_items' => [
+      'variables' => [
+        'items' => [],
+        'section' => NULL,
+      ],
+    ],
   ];
 } 

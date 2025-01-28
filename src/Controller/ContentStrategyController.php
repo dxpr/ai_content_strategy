@@ -23,6 +23,7 @@ use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\AppendCommand;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
+use Drupal\Core\Ajax\InsertCommand;
 
 /**
  * Controller for content strategy functionality.
@@ -581,6 +582,173 @@ EOT;
       $output[] = "- {$url}";
     }
     return implode("\n", $output);
+  }
+
+  /**
+   * Formats existing recommendations for the prompt.
+   *
+   * @param array $recommendations
+   *   Array of existing recommendations.
+   *
+   * @return string
+   *   Formatted recommendations string.
+   */
+  protected function formatExistingRecommendations(array $recommendations): string {
+    $output = [];
+    foreach ($recommendations as $item) {
+      if (isset($item['title'])) {
+        $output[] = "- {$item['title']}: {$item['description']}";
+      } elseif (isset($item['topic'])) {
+        $output[] = "- {$item['topic']}: {$item['rationale']}";
+      } elseif (isset($item['content_type'])) {
+        $output[] = "- {$item['content_type']}: {$item['description']}";
+      } elseif (isset($item['signal'])) {
+        $output[] = "- {$item['signal']}: {$item['implementation']}";
+      }
+    }
+    return implode("\n", $output);
+  }
+
+  /**
+   * Generates additional recommendations for a specific section.
+   *
+   * @param string $section
+   *   The section to generate more recommendations for.
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   The AJAX response containing the new recommendations.
+   */
+  public function addMoreRecommendations($section) {
+    $response = new AjaxResponse();
+    
+    try {
+      // Get site data for context
+      $site_structure = $this->contentAnalyzer->getSiteStructure();
+      $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
+      $front_page_content = $this->getFrontPageContent();
+
+      // Get the prompt configuration
+      $config = $this->config('ai_content_strategy.prompts');
+      $prompts = $config->get('add_more_recommendations');
+      
+      if (!isset($prompts[$section])) {
+        throw new \InvalidArgumentException('Invalid section specified');
+      }
+
+      // Get existing recommendations
+      $stored_data = $this->keyValue->get(self::KV_KEY);
+      $existing_recommendations = '';
+      if ($stored_data && isset($stored_data['data'][$section])) {
+        $existing_recommendations = $this->formatExistingRecommendations($stored_data['data'][$section]);
+      }
+
+      // Prepare the context variables
+      $context = [
+        'homepage' => [
+          'title' => $site_structure['homepage']['title'],
+          'content' => $front_page_content,
+        ],
+        'navigation' => $this->formatMenuItems($site_structure['primary_menu']),
+        'content_urls' => $this->formatUrls($sitemap_urls['urls']),
+        'existing_recommendations' => $existing_recommendations,
+      ];
+
+      // Get default provider and model
+      $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
+      $provider = $this->aiProvider->createInstance($defaults['provider_id']);
+
+      // Create chat input with proper format
+      $messages = new ChatInput([
+        new ChatMessage('system', $this->replaceTokens($prompts[$section]['system'], $context)),
+        new ChatMessage('user', $this->replaceTokens($prompts[$section]['user'], $context)),
+      ]);
+
+      // Generate recommendations
+      $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
+      $message = $chat_response->getNormalized();
+      
+      // Use the prompt JSON decoder to parse the response
+      $data = $this->promptJsonDecoder->decode($message);
+      
+      if (!isset($data[$section])) {
+        throw new \RuntimeException('Invalid response format from AI provider');
+      }
+
+      // Update stored recommendations
+      if ($stored_data && isset($stored_data['data'][$section])) {
+        $stored_data['data'][$section] = array_merge(
+          $stored_data['data'][$section],
+          $data[$section]
+        );
+        $stored_data['timestamp'] = \Drupal::time()->getCurrentTime();
+        $this->keyValue->set(self::KV_KEY, $stored_data);
+      }
+
+      // Build the render array for new recommendations
+      $build = [
+        '#theme' => 'ai_content_strategy_recommendations_items',
+        '#items' => $data[$section],
+        '#section' => $section,
+      ];
+
+      // Render the new recommendations
+      $html = $this->renderer->render($build);
+
+      // Update the recommendations section
+      $response->addCommand(
+        new AppendCommand(
+          ".recommendation-section[data-section='$section'] .recommendation-items",
+          $html
+        )
+      );
+
+      // Update the last run time
+      $response->addCommand(
+        new HtmlCommand(
+          '.last-run-time',
+          $this->t('Last generated: @time ago', [
+            '@time' => $this->dateFormatter->formatTimeDiffSince($stored_data['timestamp']),
+          ])
+        )
+      );
+
+    } catch (\Exception $e) {
+      watchdog_exception('ai_content_strategy', $e);
+      
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('An error occurred while generating additional recommendations: @error', [
+            '@error' => $e->getMessage()
+          ]),
+          null,
+          ['type' => 'error']
+        )
+      );
+    }
+    
+    return $response;
+  }
+
+  /**
+   * Replaces tokens in a string with their values.
+   *
+   * @param string $text
+   *   The text containing tokens.
+   * @param array $context
+   *   The context array containing token values.
+   *
+   * @return string
+   *   The text with tokens replaced.
+   */
+  protected function replaceTokens($text, array $context) {
+    $text = strtr($text, [
+      '{{ homepage.title }}' => $context['homepage']['title'],
+      '{{ homepage.content }}' => $context['homepage']['content'],
+      '{{ navigation }}' => $context['navigation'],
+      '{{ content_urls }}' => $context['content_urls'],
+      '{{ existing_recommendations }}' => $context['existing_recommendations'],
+    ]);
+    return $text;
   }
 
 } 

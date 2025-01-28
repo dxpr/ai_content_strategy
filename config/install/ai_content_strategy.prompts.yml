@@ -212,4 +212,209 @@ generate_more:
     <instructions>
     Based on the above context, generate 5 additional, unique content ideas for the specified topic.
     Return ONLY a JSON array of strings, each being a new content idea.
-    </instructions> 
+    </instructions>
+
+add_more_recommendations:
+  content_gaps:
+    system: |
+      You are an AI content strategist analyzing a website's content structure.
+      Based on the provided site information, generate 2 new content gap recommendations.
+      Each recommendation should identify missing content opportunities that would improve the site's value to users.
+      Focus on actionable, specific suggestions that align with the site's purpose and audience.
+      Ensure recommendations are unique and complementary to existing ones.
+    user: |
+      <context>
+      <site_info>
+        <homepage>
+          <title>{{ homepage.title }}</title>
+          <content>{{ homepage.content }}</content>
+        </homepage>
+        <navigation>
+          {{ navigation }}
+        </navigation>
+        <content_urls>
+          {{ content_urls }}
+        </content_urls>
+      </site_info>
+      <existing_recommendations>
+        {{ existing_recommendations }}
+      </existing_recommendations>
+      </context>
+
+      Generate 2 new content gap recommendations that are distinctly different from the existing ones shown above.
+      Each recommendation should include:
+      - A specific title identifying the gap (must be unique from existing ones)
+      - A clear description of why this content is needed
+      - A priority level (high/medium/low) based on potential impact
+      - 3-5 specific content ideas to fill this gap
+
+      Return the response in this exact JSON format:
+      {
+        "content_gaps": [
+          {
+            "title": "First New Gap Title",
+            "description": "Description of first gap",
+            "priority": "high",
+            "content_ideas": ["string"]
+          },
+          {
+            "title": "Second New Gap Title",
+            "description": "Description of second gap",
+            "priority": "medium",
+            "content_ideas": ["string"]
+          }
+        ]
+      }
+
+  authority_topics:
+    system: |
+      You are an AI content strategist analyzing a website's content structure.
+      Based on the provided site information, generate 2 new authority topic recommendations.
+      Each recommendation should identify topics where the site can establish domain authority.
+      Focus on topics that align with the site's expertise and target audience.
+      Ensure recommendations are unique and complementary to existing ones.
+    user: |
+      <context>
+      <site_info>
+        <homepage>
+          <title>{{ homepage.title }}</title>
+          <content>{{ homepage.content }}</content>
+        </homepage>
+        <navigation>
+          {{ navigation }}
+        </navigation>
+        <content_urls>
+          {{ content_urls }}
+        </content_urls>
+      </site_info>
+      <existing_recommendations>
+        {{ existing_recommendations }}
+      </existing_recommendations>
+      </context>
+
+      Generate 2 new authority topic recommendations that are distinctly different from the existing ones shown above.
+      Each recommendation should include:
+      - A topic name that represents an area of expertise (must be unique from existing ones)
+      - A rationale explaining why this topic matters
+      - A priority level (high/medium/low) based on potential impact
+      - 3-5 specific content ideas for this topic
+
+      Return the response in this exact JSON format:
+      {
+        "authority_topics": [
+          {
+            "topic": "First New Authority Topic",
+            "rationale": "Rationale for first topic",
+            "priority": "high",
+            "content_ideas": ["string"]
+          },
+          {
+            "topic": "Second New Authority Topic",
+            "rationale": "Rationale for second topic",
+            "priority": "medium",
+            "content_ideas": ["string"]
+          }
+        ]
+      }
+
+  expertise_demonstrations:
+    system: |
+      You are an AI content strategist analyzing a website's content structure.
+      Based on the provided site information, generate 2 new expertise demonstration recommendations.
+      Each recommendation should suggest ways to showcase the site's expertise and knowledge.
+      Focus on content types that build credibility and trust.
+      Ensure recommendations are unique and complementary to existing ones.
+    user: |
+      <context>
+      <site_info>
+        <homepage>
+          <title>{{ homepage.title }}</title>
+          <content>{{ homepage.content }}</content>
+        </homepage>
+        <navigation>
+          {{ navigation }}
+        </navigation>
+        <content_urls>
+          {{ content_urls }}
+        </content_urls>
+      </site_info>
+      <existing_recommendations>
+        {{ existing_recommendations }}
+      </existing_recommendations>
+      </context>
+
+      Generate 2 new expertise demonstration recommendations that are distinctly different from the existing ones shown above.
+      Each recommendation should include:
+      - A content type for demonstrating expertise (must be unique from existing ones)
+      - A description of how it builds credibility
+      - A priority level (high/medium/low) based on potential impact
+      - 3-5 specific content ideas using this format
+
+      Return the response in this exact JSON format:
+      {
+        "expertise_demonstrations": [
+          {
+            "content_type": "First New Expertise Format",
+            "description": "Description of first format",
+            "priority": "high",
+            "content_ideas": ["string"]
+          },
+          {
+            "content_type": "Second New Expertise Format",
+            "description": "Description of second format",
+            "priority": "medium",
+            "content_ideas": ["string"]
+          }
+        ]
+      }
+
+  trust_signals:
+    system: |
+      You are an AI content strategist analyzing a website's content structure.
+      Based on the provided site information, generate 2 new trust signal recommendations.
+      Each recommendation should suggest ways to build trust and credibility with the audience.
+      Focus on concrete elements that demonstrate reliability and authority.
+      Ensure recommendations are unique and complementary to existing ones.
+    user: |
+      <context>
+      <site_info>
+        <homepage>
+          <title>{{ homepage.title }}</title>
+          <content>{{ homepage.content }}</content>
+        </homepage>
+        <navigation>
+          {{ navigation }}
+        </navigation>
+        <content_urls>
+          {{ content_urls }}
+        </content_urls>
+      </site_info>
+      <existing_recommendations>
+        {{ existing_recommendations }}
+      </existing_recommendations>
+      </context>
+
+      Generate 2 new trust signal recommendations that are distinctly different from the existing ones shown above.
+      Each recommendation should include:
+      - A specific trust signal element (must be unique from existing ones)
+      - Implementation guidance
+      - A priority level (high/medium/low) based on potential impact
+      - 3-5 specific content ideas to support this signal
+
+      Return the response in this exact JSON format:
+      {
+        "trust_signals": [
+          {
+            "signal": "First New Trust Signal",
+            "implementation": "Implementation of first signal",
+            "priority": "high",
+            "content_ideas": ["string"]
+          },
+          {
+            "signal": "Second New Trust Signal",
+            "implementation": "Implementation of second signal",
+            "priority": "medium",
+            "content_ideas": ["string"]
+          }
+        ]
+      } 

@@ -28,4 +28,14 @@ ai_content_strategy.generate_more:
       section:
         type: string
       title:
-        type: string 
+        type: string
+
+ai_content_strategy.add_more_recommendations:
+  path: '/admin/reports/ai/content-strategy/add-more/{section}'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::addMoreRecommendations'
+    _title: 'Add More Recommendations'
+  requirements:
+    _permission: 'access content strategy'
+  options:
+    _admin_route: TRUE 

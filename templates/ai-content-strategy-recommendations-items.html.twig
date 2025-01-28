@@ -1,0 +1,62 @@
+{#
+/**
+ * @file
+ * Default theme implementation for content strategy recommendation items.
+ *
+ * Available variables:
+ * - items: Array of recommendation items.
+ * - section: The section these items belong to (content_gaps, authority_topics, etc.).
+ *
+ * @ingroup themeable
+ */
+#}
+
+{% for item in items %}
+  <div class="recommendation-item recommendation-priority-{{ item.priority }}" data-section="{{ section }}" data-title="{{ item.title|default(item.topic|default(item.content_type|default(item.signal))) }}">
+    {% if section == 'content_gaps' %}
+      <h4>{{ item.title }}</h4>
+      <p>{{ item.description }}</p>
+    {% elseif section == 'authority_topics' %}
+      <h4>{{ item.topic }}</h4>
+      <p>{{ item.rationale }}</p>
+    {% elseif section == 'expertise_demonstrations' %}
+      <h4>{{ item.content_type }}</h4>
+      <p>{{ item.description }}</p>
+    {% elseif section == 'trust_signals' %}
+      <h4>{{ item.signal }}</h4>
+      <p>{{ item.implementation }}</p>
+    {% endif %}
+    
+    <span class="priority-badge {{ item.priority }}">{{ item.priority|title|t }}</span>
+    
+    {% if item.content_ideas is not empty %}
+      <table class="content-ideas-table">
+        <thead>
+          <tr>
+            <th>{{ 'Content Ideas'|t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for idea in item.content_ideas %}
+            <tr>
+              <td>{{ idea }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% set item_name = item.title|default(item.topic|default(item.content_type|default(item.signal))) %}
+      {% set link_text %}
+        {% if section == 'content_gaps' %}
+          {{ 'Generate more ideas for this content gap'|t }}
+        {% elseif section == 'authority_topics' %}
+          {{ 'Generate more ideas for this authority topic'|t }}
+        {% elseif section == 'expertise_demonstrations' %}
+          {{ 'Generate more ideas for this %type'|t({'%type': item.content_type|lower}) }}
+        {% elseif section == 'trust_signals' %}
+          {{ 'Generate more ideas for this trust signal'|t }}
+        {% endif %}
+      {% endset %}
+      <a href="#" class="generate-more-link" data-section="{{ section }}" data-title="{{ item_name }}">{{ link_text }}</a>
+    {% endif %}
+  </div>
+{% endfor %} 

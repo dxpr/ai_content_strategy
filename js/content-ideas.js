@@ -6,7 +6,9 @@
     GENERATE: Drupal.t('Generate Recommendations'),
     REFRESH: Drupal.t('Refresh Recommendations'),
     GENERATE_MORE: Drupal.t('Generate More Ideas'),
-    LOADING: Drupal.t('Generating recommendations...')
+    ADD_MORE: Drupal.t('Add More Recommendations'),
+    LOADING: Drupal.t('Generating recommendations...'),
+    LOADING_MORE: Drupal.t('Adding more recommendations...')
   };
 
   // DOM utility functions
@@ -157,6 +159,45 @@
     }
   }
 
+  // Attach add more recommendations behavior
+  function attachAddMoreRecommendationsBehavior(link) {
+    const section = link.dataset.section;
+    if (!section) {
+      console.error('Missing required data attribute: section');
+      return;
+    }
+
+    link.textContent = ButtonText.ADD_MORE;
+    
+    try {
+      const ajaxHandler = new Drupal.Ajax(
+        link.id,
+        link,
+        createAjaxHandler({
+          element: link,
+          url: `admin/reports/ai/content-strategy/add-more/${section}`,
+          loadingText: ButtonText.LOADING_MORE,
+          successText: ButtonText.ADD_MORE,
+          errorText: ButtonText.ADD_MORE,
+          method: 'append',
+          onSuccess: (target) => {
+            // Find and attach behaviors to any new generate more links
+            target.querySelectorAll('.generate-more-link').forEach((newLink, index) => {
+              attachGenerateMoreBehavior(newLink, index);
+            });
+          }
+        })
+      );
+
+      link.addEventListener('click', function(event) {
+        event.preventDefault();
+        ajaxHandler.execute();
+      });
+    } catch (e) {
+      console.error('Error setting up add more recommendations link:', e);
+    }
+  }
+
   // Main behavior
   Drupal.behaviors.contentIdeas = {
     attach: function (context, settings) {
@@ -196,6 +237,11 @@
       // Handle generate more links
       once('content-ideas', '.generate-more-link', context).forEach((link, index) => {
         attachGenerateMoreBehavior(link, index);
+      });
+
+      // Handle add more recommendations links
+      once('content-ideas', '.add-more-recommendations-link', context).forEach((link) => {
+        attachAddMoreRecommendationsBehavior(link);
       });
     }
   };

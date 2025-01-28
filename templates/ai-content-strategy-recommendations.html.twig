@@ -17,34 +17,16 @@
 <div{{ attributes.addClass('content-strategy-recommendations') }}>
   
   {# Content Gaps #}
-  <div class="recommendation-section">
+  <div class="recommendation-section" data-section="content_gaps">
     <h3>{{ 'Content Gaps'|t }}</h3>
     {% if content_gaps is not empty %}
       <div class="recommendation-items">
-        {% for gap in content_gaps %}
-          <div class="recommendation-item recommendation-priority-{{ gap.priority }}" data-section="content_gaps" data-title="{{ gap.title }}">
-            <h4>{{ gap.title }}</h4>
-            <p>{{ gap.description }}</p>
-            <span class="priority-badge {{ gap.priority }}">{{ gap.priority|title|t }}</span>
-            {% if gap.content_ideas is not empty %}
-              <table class="content-ideas-table">
-                <thead>
-                  <tr>
-                    <th>{{ 'Content Ideas'|t }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for idea in gap.content_ideas %}
-                    <tr>
-                      <td>{{ idea }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-              <a href="#" class="generate-more-link" data-section="content_gaps" data-title="{{ gap.title }}">{{ 'Generate More Ideas'|t }}</a>
-            {% endif %}
-          </div>
-        {% endfor %}
+        {{ content_gaps|theme('ai_content_strategy_recommendations_items', {'section': 'content_gaps'}) }}
+      </div>
+      <div class="add-more-recommendations-wrapper">
+        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="content_gaps">
+          {{ 'Discover More Content Opportunities'|t }}
+        </a>
       </div>
     {% else %}
       <p>{{ 'No content gaps identified.'|t }}</p>
@@ -52,34 +34,16 @@
   </div>
 
   {# Authority Topics #}
-  <div class="recommendation-section">
+  <div class="recommendation-section" data-section="authority_topics">
     <h3>{{ 'Authority Topics'|t }}</h3>
     {% if authority_topics is not empty %}
       <div class="recommendation-items">
-        {% for topic in authority_topics %}
-          <div class="recommendation-item recommendation-priority-{{ topic.priority }}" data-section="authority_topics" data-title="{{ topic.topic }}">
-            <h4>{{ topic.topic }}</h4>
-            <p>{{ topic.rationale }}</p>
-            <span class="priority-badge {{ topic.priority }}">{{ topic.priority|title|t }}</span>
-            {% if topic.content_ideas is not empty %}
-              <table class="content-ideas-table">
-                <thead>
-                  <tr>
-                    <th>{{ 'Content Ideas'|t }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for idea in topic.content_ideas %}
-                    <tr>
-                      <td>{{ idea }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-              <a href="#" class="generate-more-link" data-section="authority_topics" data-title="{{ topic.topic }}">{{ 'Generate More Ideas'|t }}</a>
-            {% endif %}
-          </div>
-        {% endfor %}
+        {{ authority_topics|theme('ai_content_strategy_recommendations_items', {'section': 'authority_topics'}) }}
+      </div>
+      <div class="add-more-recommendations-wrapper">
+        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="authority_topics">
+          {{ 'Explore More Authority Topics'|t }}
+        </a>
       </div>
     {% else %}
       <p>{{ 'No authority topics identified.'|t }}</p>
@@ -87,34 +51,16 @@
   </div>
 
   {# Expertise Demonstrations #}
-  <div class="recommendation-section">
+  <div class="recommendation-section" data-section="expertise_demonstrations">
     <h3>{{ 'Expertise Demonstrations'|t }}</h3>
     {% if expertise_demonstrations is not empty %}
       <div class="recommendation-items">
-        {% for demonstration in expertise_demonstrations %}
-          <div class="recommendation-item recommendation-priority-{{ demonstration.priority }}" data-section="expertise_demonstrations" data-title="{{ demonstration.content_type }}">
-            <h4>{{ demonstration.content_type }}</h4>
-            <p>{{ demonstration.description }}</p>
-            <span class="priority-badge {{ demonstration.priority }}">{{ demonstration.priority|title|t }}</span>
-            {% if demonstration.content_ideas is not empty %}
-              <table class="content-ideas-table">
-                <thead>
-                  <tr>
-                    <th>{{ 'Content Ideas'|t }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for idea in demonstration.content_ideas %}
-                    <tr>
-                      <td>{{ idea }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-              <a href="#" class="generate-more-link" data-section="expertise_demonstrations" data-title="{{ demonstration.content_type }}">{{ 'Generate More Ideas'|t }}</a>
-            {% endif %}
-          </div>
-        {% endfor %}
+        {{ expertise_demonstrations|theme('ai_content_strategy_recommendations_items', {'section': 'expertise_demonstrations'}) }}
+      </div>
+      <div class="add-more-recommendations-wrapper">
+        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="expertise_demonstrations">
+          {{ 'Add More Ways to Showcase Expertise'|t }}
+        </a>
       </div>
     {% else %}
       <p>{{ 'No expertise demonstrations identified.'|t }}</p>
@@ -122,34 +68,16 @@
   </div>
 
   {# Trust Signals #}
-  <div class="recommendation-section">
+  <div class="recommendation-section" data-section="trust_signals">
     <h3>{{ 'Trust Signals'|t }}</h3>
     {% if trust_signals is not empty %}
       <div class="recommendation-items">
-        {% for signal in trust_signals %}
-          <div class="recommendation-item recommendation-priority-{{ signal.priority }}" data-section="trust_signals" data-title="{{ signal.signal }}">
-            <h4>{{ signal.signal }}</h4>
-            <p>{{ signal.implementation }}</p>
-            <span class="priority-badge {{ signal.priority }}">{{ signal.priority|title|t }}</span>
-            {% if signal.content_ideas is not empty %}
-              <table class="content-ideas-table">
-                <thead>
-                  <tr>
-                    <th>{{ 'Content Ideas'|t }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for idea in signal.content_ideas %}
-                    <tr>
-                      <td>{{ idea }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-              <a href="#" class="generate-more-link" data-section="trust_signals" data-title="{{ signal.signal }}">{{ 'Generate More Ideas'|t }}</a>
-            {% endif %}
-          </div>
-        {% endfor %}
+        {{ trust_signals|theme('ai_content_strategy_recommendations_items', {'section': 'trust_signals'}) }}
+      </div>
+      <div class="add-more-recommendations-wrapper">
+        <a href="#" class="add-more-recommendations-link button button--secondary" data-section="trust_signals">
+          {{ 'Find More Trust-Building Elements'|t }}
+        </a>
       </div>
     {% else %}
       <p>{{ 'No trust signals identified.'|t }}</p>
