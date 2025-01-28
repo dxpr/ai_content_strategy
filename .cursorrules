@@ -1,1 +1,2 @@
 Respect DRY and single source of truth principles.
+Prefer failing draconically over failing silently. Don't set unneccesary defaults, it's better to fail than to have a default that may not be what the user wants.

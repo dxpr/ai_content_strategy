@@ -41,6 +41,7 @@
       {{ 'Click the button above to generate content recommendations.'|t }}
     </div>
   {% else %}
+    <div class="recommendations-wrapper">
     {% set sections = {
       'content_gaps': {
         'title': 'Content Gaps'|t,
@@ -94,5 +95,6 @@
         {% endif %}
       </div>
     {% endfor %}
+    </div>
   {% endif %}
 </div> 

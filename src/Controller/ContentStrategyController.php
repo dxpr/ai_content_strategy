@@ -248,7 +248,20 @@ class ContentStrategyController extends ControllerBase {
         )
       );
 
-      // For each section, build and update its content separately
+      // Remove empty state message if it exists
+      $response->addCommand(
+        new RemoveCommand('.empty-recommendations')
+      );
+
+      // Create the recommendations wrapper first
+      $wrapper = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['recommendations-wrapper'],
+        ],
+      ];
+
+      // Build the sections HTML
       $sections = [
         'content_gaps',
         'authority_topics',
@@ -257,37 +270,66 @@ class ContentStrategyController extends ControllerBase {
       ];
 
       foreach ($sections as $section) {
+        $section_build = [
+          '#theme' => 'ai_content_strategy_recommendations_items',
+          '#items' => $recommendations[$section] ?? [],
+          '#section' => $section,
+          '#section_config' => [
+            'title' => $this->getSectionTitle($section),
+            'item_key' => $this->getSectionItemKey($section),
+            'description_key' => $this->getSectionDescriptionKey($section),
+          ],
+          '#button_text' => ai_content_strategy_get_button_texts(),
+        ];
+
+        $section_html = $this->renderer->render($section_build);
+
+        // For empty state, we need to create the section container first
+        $section_container = [
+          '#type' => 'container',
+          '#attributes' => [
+            'class' => ['recommendation-section'],
+            'data-section' => $section,
+          ],
+          'title' => [
+            '#type' => 'html_tag',
+            '#tag' => 'h3',
+            '#value' => $this->getSectionTitle($section),
+          ],
+          'items' => [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['recommendation-items']],
+            'content' => ['#markup' => $section_html],
+          ],
+        ];
+
         if (!empty($recommendations[$section])) {
-          $section_build = [
-            '#theme' => 'ai_content_strategy_recommendations_items',
-            '#items' => $recommendations[$section],
-            '#section' => $section,
-            '#section_config' => [
-              'title' => $this->getSectionTitle($section),
-              'item_key' => $this->getSectionItemKey($section),
-              'description_key' => $this->getSectionDescriptionKey($section),
+          $section_container['add_more'] = [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
+            'link' => [
+              '#type' => 'html_tag',
+              '#tag' => 'a',
+              '#attributes' => [
+                'href' => '#',
+                'class' => ['add-more-recommendations-link', 'button', 'button--secondary'],
+                'data-section' => $section,
+              ],
+              '#value' => ai_content_strategy_get_button_texts()['add_more'][$section],
             ],
-            '#button_text' => ai_content_strategy_get_button_texts(),
           ];
-
-          $section_html = $this->renderer->render($section_build);
-
-          $response->addCommand(
-            new HtmlCommand(
-              ".recommendation-section[data-section='$section'] .recommendation-items",
-              $section_html
-            )
-          );
-        } else {
-          // If section is empty, show empty message
-          $response->addCommand(
-            new HtmlCommand(
-              ".recommendation-section[data-section='$section'] .recommendation-items",
-              '<p>' . $this->t('No @section identified.', ['@section' => $this->getSectionTitle($section)]) . '</p>'
-            )
-          );
         }
+
+        $wrapper[$section] = $section_container;
       }
+
+      // Add the wrapper with all sections
+      $response->addCommand(
+        new AppendCommand(
+          '.content-strategy-recommendations',
+          $this->renderer->render($wrapper)
+        )
+      );
 
       return $response;
     }
