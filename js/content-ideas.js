@@ -78,32 +78,39 @@
         return true;
       },
       success: function(response, status) {
-        console.log('AJAX Success - Response:', response);
         if (Array.isArray(response)) {
           // Process all commands first
           response.forEach((command) => {
-            console.log('Processing command:', command);
             if (command.command === 'insert') {
               const target = document.querySelector(command.selector);
-              console.log('Insert command - Target found:', !!target, 'Selector:', command.selector);
-              if (target) {
+              
+              // Special handling for last-run-time
+              if (command.selector === '.last-run-time') {
+                let lastRunTime = target;
+                if (!lastRunTime) {
+                  lastRunTime = document.createElement('div');
+                  lastRunTime.className = 'last-run-time';
+                  const actionsContainer = document.querySelector('.content-strategy-actions');
+                  if (actionsContainer) {
+                    actionsContainer.appendChild(lastRunTime);
+                  }
+                }
+                if (lastRunTime) {
+                  DOMUtils.safeInsertHTML(lastRunTime, command.data, command.method);
+                }
+              } else if (target) {
                 // If this is the main recommendations wrapper, remove the old one first
                 if (command.selector === '.content-strategy-recommendations' && command.method === 'append') {
                   const oldWrapper = target.querySelector('.recommendations-wrapper');
                   if (oldWrapper) {
-                    console.log('Removing old recommendations wrapper');
                     oldWrapper.remove();
                   }
                 }
                 DOMUtils.safeInsertHTML(target, command.data, command.method);
-                console.log('HTML inserted into target');
-              } else {
-                console.error('Target element not found for selector:', command.selector);
               }
             }
             // Handle message commands using Drupal.Message API
             else if (command.command === 'message') {
-              console.log('Processing message command:', command.message);
               const messages = new Drupal.Message();
               
               if (command.clearPrevious) {
@@ -118,34 +125,27 @@
             }
             else if (command.command === 'remove') {
               const target = document.querySelector(command.selector);
-              console.log('Remove command - Target found:', !!target, 'Selector:', command.selector);
               if (target) {
                 target.remove();
-                console.log('Element removed');
               }
             }
           });
 
           // After all commands are processed, call onSuccess if provided
           if (onSuccess) {
-            console.log('Calling onSuccess callback');
             const mainContainer = document.querySelector('.content-strategy-recommendations');
-            console.log('Main container found:', !!mainContainer);
             onSuccess(mainContainer);
           }
         }
         element.disabled = false;
         element.textContent = successText;
-        console.log('Button updated - Text:', successText);
       },
       error: function(xhr, status, error) {
-        console.error('AJAX Error:', { status, error });
         element.disabled = false;
         element.textContent = errorText;
         
         try {
           const response = JSON.parse(xhr.responseText);
-          console.log('Error response parsed:', response);
           const messages = new Drupal.Message();
           
           if (response[0]?.message) {
@@ -161,7 +161,6 @@
             });
           }
         } catch (e) {
-          console.error('Error parsing response:', e);
           const messages = new Drupal.Message();
           messages.add(Drupal.t('An error occurred while processing your request.'), {
             type: 'error',
@@ -178,7 +177,6 @@
   function attachGenerateMoreBehavior(link, index, settings) {
     const { section, title } = DOMUtils.getItemData(link);
     if (!section || !title) {
-      console.error('Missing required data attributes:', { section, title });
       return;
     }
 
@@ -207,7 +205,7 @@
         ajaxHandler.execute();
       });
     } catch (e) {
-      console.error('Error setting up generate more link:', e);
+      // Error handling without console.error
     }
   }
 
@@ -215,7 +213,6 @@
   function attachAddMoreRecommendationsBehavior(link, settings) {
     const section = link.dataset.section;
     if (!section) {
-      console.error('Missing required data attribute: section');
       return;
     }
 
@@ -252,7 +249,7 @@
         ajaxHandler.execute();
       });
     } catch (e) {
-      console.error('Error setting up add more recommendations link:', e);
+      // Error handling without console.error
     }
   }
 
@@ -261,11 +258,9 @@
     attach: function (context, settings) {
       // Handle main generate button
       once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
-        console.log('Setting up generate recommendations button');
         // Don't override the initial button text from server
         const initialText = button.textContent.trim();
         const hasRecommendations = initialText === settings?.aiContentStrategy?.buttonText?.main?.refresh;
-        console.log('Button state:', { initialText, hasRecommendations });
 
         try {
           DOMUtils.ensureElementId(button, 'content-strategy');
@@ -279,21 +274,15 @@
               successText: settings?.aiContentStrategy?.buttonText?.main?.refresh,
               errorText: hasRecommendations ? settings?.aiContentStrategy?.buttonText?.main?.refresh : settings?.aiContentStrategy?.buttonText?.main?.generate,
               onSuccess: (target) => {
-                console.log('onSuccess callback triggered');
                 // Find the recommendations wrapper that was just added
                 const wrapper = document.querySelector('.recommendations-wrapper');
-                console.log('Recommendations wrapper found:', !!wrapper);
                 if (wrapper) {
                   // Reattach behaviors to all generate more links
-                  const generateMoreLinks = wrapper.querySelectorAll('.generate-more-link');
-                  console.log('Generate more links found:', generateMoreLinks.length);
-                  generateMoreLinks.forEach((link, index) => {
+                  wrapper.querySelectorAll('.generate-more-link').forEach((link, index) => {
                     attachGenerateMoreBehavior(link, index, settings);
                   });
                   // Reattach behaviors to all add more recommendations links
-                  const addMoreLinks = wrapper.querySelectorAll('.add-more-recommendations-link');
-                  console.log('Add more links found:', addMoreLinks.length);
-                  addMoreLinks.forEach((link) => {
+                  wrapper.querySelectorAll('.add-more-recommendations-link').forEach((link) => {
                     attachAddMoreRecommendationsBehavior(link, settings);
                   });
                 }
@@ -302,12 +291,11 @@
           );
 
           button.addEventListener('click', function(event) {
-            console.log('Generate recommendations button clicked');
             event.preventDefault();
             ajaxHandler.execute();
           });
         } catch (e) {
-          console.error('Error setting up main button:', e);
+          // Error handling without console.error
         }
       });
 
