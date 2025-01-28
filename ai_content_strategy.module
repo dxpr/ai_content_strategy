@@ -15,7 +15,7 @@ function ai_content_strategy_get_button_texts() {
   return [
     'main' => [
       'generate' => t('Generate recommendations'),
-      'refresh' => t('Refresh recommendations'),
+      'refresh' => t('Regenerate report'),
       'loading' => t('Adding recommendations here...'),
       'loading_more' => t('Adding more recommendations here...'),
     ],

@@ -230,11 +230,11 @@ class ContentStrategyController extends ControllerBase {
       // Create AJAX response
       $response = new AjaxResponse();
 
-      // Update the button text to "Refresh recommendations"
+      // Update the button text to "Regenerate report"
       $response->addCommand(
         new HtmlCommand(
           '.generate-recommendations',
-          $this->t('Refresh recommendations')
+          $this->t('Regenerate report')
         )
       );
       
