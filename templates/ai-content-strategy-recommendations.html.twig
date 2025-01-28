@@ -16,6 +16,21 @@
 {{ attach_library('ai_content_strategy/recommendations') }}
 
 <div{{ attributes.addClass('content-strategy-recommendations') }}>
+  <div class="content-strategy-description">
+    <p>{{ 'AI-powered content strategy recommendations based on your site structure.'|t }}</p>
+  </div>
+
+  <div class="content-strategy-actions">
+    <button class="generate-recommendations button button--primary">
+      {{ button_text.main.generate }}
+    </button>
+    <div class="last-run-time">
+      {% if last_run %}
+        {{ 'Last generated: @time'|t({'@time': last_run}) }}
+      {% endif %}
+    </div>
+  </div>
+
   {% set sections = {
     'content_gaps': {
       'title': 'Content Gaps'|t,

@@ -19,20 +19,20 @@ const AI_CONTENT_STRATEGY_BUTTON_MAIN = [
  * Generate ideas for new items.
  */
 const AI_CONTENT_STRATEGY_BUTTON_GENERATE = [
-  'content_gaps' => 'Generate ideas for this %type',
-  'authority_topics' => 'Generate ideas for this %type',
-  'expertise_demonstrations' => 'Generate ideas for this %type',
-  'trust_signals' => 'Generate ideas for this %type',
+  'content_gaps' => 'Generate ideas',
+  'authority_topics' => 'Generate ideas',
+  'expertise_demonstrations' => 'Generate ideas',
+  'trust_signals' => 'Generate ideas',
 ];
 
 /**
  * Generate more ideas for existing items.
  */
 const AI_CONTENT_STRATEGY_BUTTON_GENERATE_MORE = [
-  'content_gaps' => 'Generate more ideas for this %type',
-  'authority_topics' => 'Generate more ideas for this %type',
-  'expertise_demonstrations' => 'Generate more ideas for this %type',
-  'trust_signals' => 'Generate more ideas for this %type',
+  'content_gaps' => 'Generate more ideas',
+  'authority_topics' => 'Generate more ideas',
+  'expertise_demonstrations' => 'Generate more ideas',
+  'trust_signals' => 'Generate more ideas',
 ];
 
 /**
@@ -53,10 +53,30 @@ const AI_CONTENT_STRATEGY_BUTTON_ADD_MORE = [
  */
 function ai_content_strategy_get_button_texts() {
   return [
-    'main' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_MAIN),
-    'generate' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_GENERATE),
-    'generate_more' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_GENERATE_MORE),
-    'add_more' => array_map('t', AI_CONTENT_STRATEGY_BUTTON_ADD_MORE),
+    'main' => [
+      'generate' => t('Generate recommendations'),
+      'refresh' => t('Refresh recommendations'),
+      'loading' => t('Generating recommendations...'),
+      'loading_more' => t('Adding more recommendations...'),
+    ],
+    'generate' => [
+      'content_gaps' => t('Generate @type', ['@type' => t('ideas')]),
+      'authority_topics' => t('Generate @type', ['@type' => t('ideas')]),
+      'expertise_demonstrations' => t('Generate @type', ['@type' => t('ideas')]),
+      'trust_signals' => t('Generate @type', ['@type' => t('ideas')]),
+    ],
+    'generate_more' => [
+      'content_gaps' => t('Generate more @type', ['@type' => t('ideas')]),
+      'authority_topics' => t('Generate more @type', ['@type' => t('ideas')]),
+      'expertise_demonstrations' => t('Generate more @type', ['@type' => t('ideas')]),
+      'trust_signals' => t('Generate more @type', ['@type' => t('ideas')]),
+    ],
+    'add_more' => [
+      'content_gaps' => t('Generate more @type', ['@type' => t('cards')]),
+      'authority_topics' => t('Generate more @type', ['@type' => t('cards')]),
+      'expertise_demonstrations' => t('Generate more @type', ['@type' => t('cards')]),
+      'trust_signals' => t('Generate more @type', ['@type' => t('cards')]),
+    ],
   ];
 }
 
@@ -72,6 +92,7 @@ function ai_content_strategy_theme() {
         'expertise_demonstrations' => [],
         'trust_signals' => [],
         'button_text' => [],
+        'last_run' => NULL,
       ],
     ],
     'ai_content_strategy_recommendations_items' => [
@@ -90,13 +111,16 @@ function ai_content_strategy_theme() {
  */
 function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$variables) {
   // Get translated button texts
-  $button_text = ai_content_strategy_get_button_texts();
+  $variables['button_text'] = ai_content_strategy_get_button_texts();
 
-  // Add to template variables
-  $variables['button_text'] = $button_text;
+  // Get last run time from state if available
+  $last_run = \Drupal::state()->get('ai_content_strategy.last_run');
+  if ($last_run) {
+    $variables['last_run'] = \Drupal::service('date.formatter')->formatTimeDiffSince($last_run);
+  }
 
   // Add to JavaScript settings
   $variables['#attached']['drupalSettings']['aiContentStrategy'] = [
-    'buttonText' => $button_text,
+    'buttonText' => $variables['button_text'],
   ];
 } 

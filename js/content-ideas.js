@@ -29,7 +29,7 @@
       return true;
     },
 
-    getButtonText(settings, type, section, itemType = '') {
+    getButtonText(settings, type, section) {
       if (!settings?.aiContentStrategy?.buttonText) {
         throw new Error('Button text settings are not available. Make sure aiContentStrategy.buttonText is properly initialized in drupalSettings.');
       }
@@ -42,32 +42,7 @@
         throw new Error(`Button text for section "${section}" is not defined in type "${type}".`);
       }
 
-      const text = type === 'main' ? buttonTexts[type][section] : buttonTexts[type][section];
-      if (!text) {
-        throw new Error(`Button text is empty for type "${type}" and section "${section}".`);
-      }
-
-      // Get the appropriate type label based on section
-      const typeLabels = {
-        content_gaps: 'content gap',
-        authority_topics: 'authority topic',
-        expertise_demonstrations: itemType.toLowerCase(),
-        trust_signals: 'trust signal',
-      };
-
-      // For 'add_more' type, use plural forms
-      const typeLabelPlurals = {
-        content_gaps: 'Content Opportunities',
-        authority_topics: 'Authority Topics',
-        expertise_demonstrations: 'Expertise',
-        trust_signals: 'Trust-Building Elements',
-      };
-
-      const label = type === 'add_more' ? typeLabelPlurals[section] : typeLabels[section];
-      return Drupal.formatString(text, {
-        '%type': label,
-        '%types': label,
-      });
+      return buttonTexts[type][section];
     }
   };
 
@@ -173,7 +148,7 @@
       return;
     }
 
-    const buttonText = DOMUtils.getButtonText(settings, 'generate_more', section, title);
+    const buttonText = DOMUtils.getButtonText(settings, 'generate_more', section);
     if (buttonText) {
       link.textContent = buttonText;
     }
