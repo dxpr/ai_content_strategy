@@ -4,7 +4,7 @@ ai_content_strategy.recommendations:
     _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::recommendations'
     _title: 'Content Strategy'
   requirements:
-    _permission: 'access content strategy'
+    _permission: 'access ai content strategy'
 
 ai_content_strategy.recommendations.generate:
   path: '/admin/reports/ai/content-strategy/generate'
@@ -12,7 +12,7 @@ ai_content_strategy.recommendations.generate:
     _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::generateRecommendationsAjax'
     _title: 'Generate Recommendations'
   requirements:
-    _permission: 'access content strategy'
+    _permission: 'access ai content strategy'
   options:
     _admin_route: TRUE
 
@@ -36,6 +36,6 @@ ai_content_strategy.add_more_recommendations:
     _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::addMoreRecommendations'
     _title: 'Add More Recommendations'
   requirements:
-    _permission: 'access content strategy'
+    _permission: 'access ai content strategy'
   options:
     _admin_route: TRUE 
