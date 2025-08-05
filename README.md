@@ -1,29 +1,44 @@
 # AI Content Strategy
 
-This module provides AI-powered content strategy recommendations based on existing site content and the EEAT (Experience, Expertise, Authoritativeness, Trustworthiness) framework.
+AI-powered content strategy recommendations based on your existing content and EEAT framework.
 
 ## Features
 
-* Content Gap Analysis - Identifies missing content opportunities based on site structure
-* Authority Topics - Suggests topics to establish domain authority
-* Expertise Demonstrations - Recommends content formats to showcase expertise
-* Trust Signals - Suggests ways to build trust with your audience
-* Priority-based Recommendations - Each suggestion includes a priority level (high/medium/low)
-* Content Ideas Generation - Provides specific content ideas for each recommendation
+- **Content Gap Analysis**: Identifies missing content opportunities
+- **Authority Topics**: Suggests topics for domain expertise
+- **Expertise Demonstrations**: Recommends content formats to showcase knowledge
+- **Trust Signals**: Builds credibility with your audience
+- **Priority-based Recommendations**: High/medium/low prioritization
+- **Dynamic Idea Generation**: "Generate More Ideas" for each recommendation
 
 ## Requirements
 
-* Drupal 10.2 or higher
-* AI module
-* Menu UI module (used to analyze site navigation structure for better content recommendations)
+- Drupal 10.2+
+- [AI module](https://www.drupal.org/project/ai)
+- Menu UI module (core)
 
 ## Installation
 
-Install as you would normally install a contributed Drupal module. Visit
-`https://www.drupal.org/node/1897420` for further information.
+```bash
+composer require drupal/ai_content_strategy
+drush en ai_content_strategy
+```
 
 ## Configuration
 
-1. Enable the module at Administration » Extend
-2. Configure permissions at Administration » People » Permissions
-3. Access the content strategy tools at Administration » Reports » Content Strategy 
+1. Configure AI provider at `/admin/config/ai/providers`
+2. Set permissions at `/admin/people/permissions`
+3. Access recommendations at `/admin/reports/ai/content-strategy`
+4. Click "Generate Recommendations" to analyze your site
+5. Use "Generate More Ideas" for specific content suggestions
+
+## Usage
+
+The module analyzes your site structure, navigation, and existing content to recommend:
+
+- Missing content types for comprehensive coverage
+- Topics that establish your authority
+- Content formats that demonstrate expertise
+- Trust-building elements for credibility
+
+Each recommendation includes priority level and specific content ideas. 

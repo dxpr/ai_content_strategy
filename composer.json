@@ -4,7 +4,6 @@
     "type": "drupal-module",
     "require": {
         "drupal/ai": "^1.0",
-        "drupal/core": "^10.2 || ^11"
     },
     "suggest": {
         "drupal/menu_ui": "Enhances content strategy recommendations by analyzing site navigation structure"
