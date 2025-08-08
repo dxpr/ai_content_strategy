@@ -71,7 +71,7 @@ class ContentAnalyzer {
     MenuActiveTrailInterface $menu_active_trail,
     ClientInterface $http_client,
     ConfigFactoryInterface $config_factory,
-    RendererInterface $renderer
+    RendererInterface $renderer,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->menuActiveTrail = $menu_active_trail;
@@ -87,36 +87,36 @@ class ContentAnalyzer {
    *   The front page content as plain text.
    */
   protected function getFrontPageContent(): string {
-    // Get the front page path from configuration
+    // Get the front page path from configuration.
     $front_uri = $this->configFactory->get('system.site')->get('page.front');
-    
+
     if (empty($front_uri)) {
       return '';
     }
 
-    // Extract node ID if front page is a node
+    // Extract node ID if front page is a node.
     if (preg_match('/node\/(\d+)/', $front_uri, $matches)) {
       $nid = $matches[1];
       try {
         $node = $this->entityTypeManager->getStorage('node')->load($nid);
         if ($node) {
-          // Build the node view
+          // Build the node view.
           $view_builder = $this->entityTypeManager->getViewBuilder('node');
           $build = $view_builder->view($node);
-          
-          // Render the node
+
+          // Render the node.
           $html = $this->renderer->renderPlain($build);
-          
-          // Convert HTML to plain text
+
+          // Convert HTML to plain text.
           return strip_tags($html);
         }
       }
       catch (\Exception $e) {
-        // Log error but continue with empty content
+        // Log error but continue with empty content.
         watchdog_exception('ai_content_strategy', $e);
       }
     }
-    
+
     return '';
   }
 
@@ -128,20 +128,20 @@ class ContentAnalyzer {
    */
   public function getSiteStructure(): array {
     try {
-      // Get front page content
+      // Get front page content.
       $front_content = $this->getFrontPageContent();
-      
-      // Get primary menu if Menu UI module is available
+
+      // Get primary menu if Menu UI module is available.
       $menu_items = [];
       if ($this->menuActiveTrail && \Drupal::moduleHandler()->moduleExists('menu_ui')) {
         try {
           $menu_tree = $this->menuActiveTrail->getActiveTrailIds('main');
-          
+
           foreach ($menu_tree as $id => $active) {
             if ($id === 'main:') {
               continue;
             }
-            
+
             $parts = explode(':', $id);
             $menu_items[] = [
               'title' => end($parts),
@@ -179,14 +179,14 @@ class ContentAnalyzer {
    */
   public function getSitemapUrls(): array {
     try {
-      // Generate absolute URL for sitemap.xml
+      // Generate absolute URL for sitemap.xml.
       $sitemap_url = Url::fromUserInput('/sitemap.xml')
         ->setAbsolute()
         ->toString();
 
       $response = $this->httpClient->request('GET', $sitemap_url);
       $xml_content = $response->getBody()->getContents();
-      
+
       if ($xml = simplexml_load_string($xml_content)) {
         $urls = [];
         foreach ($xml->url as $url) {
@@ -197,7 +197,7 @@ class ContentAnalyzer {
           'error' => NULL,
         ];
       }
-      
+
       return [
         'urls' => [],
         'error' => $this->t('The sitemap.xml file could not be parsed. Please ensure it contains valid XML.'),
@@ -216,4 +216,5 @@ class ContentAnalyzer {
       ];
     }
   }
-} 
+
+}

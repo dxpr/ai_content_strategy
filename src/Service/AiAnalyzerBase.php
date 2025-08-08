@@ -47,7 +47,7 @@ abstract class AiAnalyzerBase {
   public function __construct(
     AiProviderPluginManager $ai_provider,
     PromptJsonDecoderInterface $prompt_json_decoder,
-    ContentAnalyzer $content_analyzer
+    ContentAnalyzer $content_analyzer,
   ) {
     $this->aiProvider = $ai_provider;
     $this->promptJsonDecoder = $prompt_json_decoder;
@@ -139,14 +139,14 @@ abstract class AiAnalyzerBase {
    *   If the response cannot be parsed into valid JSON.
    */
   protected function processAiResponse($response): array {
-    // Decode JSON response
+    // Decode JSON response.
     $decoded = $this->promptJsonDecoder->decode($response);
-    
+
     if (is_array($decoded)) {
       return $decoded;
     }
-    
-    // If decoding failed, try to extract JSON from the response text
+
+    // If decoding failed, try to extract JSON from the response text.
     $text = $response->getText();
     if (preg_match('/\{(?:[^{}]|(?R))*\}/', $text, $matches)) {
       $json = json_decode($matches[0], TRUE);
@@ -154,7 +154,8 @@ abstract class AiAnalyzerBase {
         return $json;
       }
     }
-    
+
     throw new \RuntimeException($this->t('Failed to parse AI response into valid JSON')->render());
   }
-} 
+
+}

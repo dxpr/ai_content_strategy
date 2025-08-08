@@ -3,9 +3,9 @@
     "description": "Provides AI-powered content strategy recommendations based on existing site content and EEAT framework.",
     "type": "drupal-module",
     "require": {
-        "drupal/ai": "^1.0",
+        "drupal/ai": "^1.0"
     },
     "suggest": {
         "drupal/menu_ui": "Enhances content strategy recommendations by analyzing site navigation structure"
     }
-} 
+}

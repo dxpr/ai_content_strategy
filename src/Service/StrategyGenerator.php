@@ -71,7 +71,7 @@ class StrategyGenerator extends AnalyzerBase {
     ContentAnalyzer $content_analyzer,
     PromptJsonDecoderInterface $prompt_json_decoder,
     MessengerInterface $messenger,
-    ConfigFactoryInterface $config_factory
+    ConfigFactoryInterface $config_factory,
   ) {
     $this->aiProvider = $ai_provider;
     $this->contentAnalyzer = $content_analyzer;
@@ -170,13 +170,13 @@ class StrategyGenerator extends AnalyzerBase {
 
       // Get response.
       $response = $provider->chat($messages, $defaults['model_id'], ['content_strategy'])->getNormalized();
-      
+
       // Decode JSON response.
       $decoded = $this->promptJsonDecoder->decode($response);
       if (is_array($decoded)) {
         return $decoded;
       }
-      
+
       throw new \RuntimeException($this->t('Failed to parse AI response into valid JSON')->render());
     }
     catch (\Exception $e) {
@@ -217,4 +217,4 @@ class StrategyGenerator extends AnalyzerBase {
     ]);
   }
 
-} 
+}

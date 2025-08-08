@@ -8,22 +8,17 @@ use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\ai\OperationType\Chat\ChatInput;
 use Drupal\ai\OperationType\Chat\ChatMessage;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Ajax\MessageCommand;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\RemoveCommand;
-use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\AppendCommand;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
-use Drupal\Core\Ajax\InsertCommand;
 
 /**
  * Controller for content strategy functionality.
@@ -124,7 +119,7 @@ class ContentStrategyController extends ControllerBase {
     RendererInterface $renderer,
     CacheBackendInterface $cache,
     DateFormatterInterface $date_formatter,
-    KeyValueFactoryInterface $key_value_factory
+    KeyValueFactoryInterface $key_value_factory,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -169,18 +164,18 @@ class ContentStrategyController extends ControllerBase {
    *   Render array for the recommendations page.
    */
   public function recommendations() {
-    // Get stored data from key-value store
+    // Get stored data from key-value store.
     $stored_data = $this->keyValue->get(self::KV_KEY);
     $recommendations = [];
     $last_run = NULL;
-    
+
     if ($stored_data) {
       if (is_array($stored_data) && isset($stored_data['data'], $stored_data['timestamp'])) {
         $recommendations = $stored_data['data'];
         $last_run = (int) $stored_data['timestamp'];
       }
       else {
-        // Handle legacy format
+        // Handle legacy format.
         $recommendations = $stored_data;
         $last_run = \Drupal::time()->getRequestTime();
       }
@@ -207,17 +202,17 @@ class ContentStrategyController extends ControllerBase {
    */
   public function generateRecommendationsAjax() {
     try {
-      // Get recommendations
+      // Get recommendations.
       $recommendations = $this->strategyGenerator->generateRecommendations();
-      
-      // Store the results with timestamp in key-value store
+
+      // Store the results with timestamp in key-value store.
       $timestamp = (int) \Drupal::time()->getCurrentTime();
       $this->keyValue->set(self::KV_KEY, [
         'data' => $recommendations,
         'timestamp' => $timestamp,
       ]);
-      
-      // Build the response HTML
+
+      // Build the response HTML.
       $build = [
         '#theme' => 'ai_content_strategy_recommendations',
         '#content_gaps' => $recommendations['content_gaps'] ?? [],
@@ -226,19 +221,19 @@ class ContentStrategyController extends ControllerBase {
         '#trust_signals' => $recommendations['trust_signals'] ?? [],
         '#last_run' => $this->dateFormatter->formatTimeDiffSince($timestamp),
       ];
-      
-      // Create AJAX response
+
+      // Create AJAX response.
       $response = new AjaxResponse();
 
-      // Update the button text to "Regenerate report"
+      // Update the button text to "Regenerate report".
       $response->addCommand(
         new HtmlCommand(
           '.generate-recommendations',
           $this->t('Regenerate report')
         )
       );
-      
-      // Update the last run time
+
+      // Update the last run time.
       $response->addCommand(
         new HtmlCommand(
           '.last-run-time',
@@ -248,12 +243,12 @@ class ContentStrategyController extends ControllerBase {
         )
       );
 
-      // Remove empty state message if it exists
+      // Remove empty state message if it exists.
       $response->addCommand(
         new RemoveCommand('.empty-recommendations')
       );
 
-      // Create the recommendations wrapper first
+      // Create the recommendations wrapper first.
       $wrapper = [
         '#type' => 'container',
         '#attributes' => [
@@ -261,12 +256,12 @@ class ContentStrategyController extends ControllerBase {
         ],
       ];
 
-      // Build the sections HTML
+      // Build the sections HTML.
       $sections = [
         'content_gaps',
         'authority_topics',
         'expertise_demonstrations',
-        'trust_signals'
+        'trust_signals',
       ];
 
       foreach ($sections as $section) {
@@ -284,7 +279,7 @@ class ContentStrategyController extends ControllerBase {
 
         $section_html = $this->renderer->render($section_build);
 
-        // For empty state, we need to create the section container first
+        // For empty state, we need to create the section container first.
         $section_container = [
           '#type' => 'container',
           '#attributes' => [
@@ -323,7 +318,7 @@ class ContentStrategyController extends ControllerBase {
         $wrapper[$section] = $section_container;
       }
 
-      // Add the wrapper with all sections
+      // Add the wrapper with all sections.
       $response->addCommand(
         new AppendCommand(
           '.content-strategy-recommendations',
@@ -354,35 +349,35 @@ class ContentStrategyController extends ControllerBase {
    */
   protected function getFrontPageContent(): string {
     try {
-      // Use injected config factory via ControllerBase
+      // Use injected config factory via ControllerBase.
       $config = $this->config('system.site');
       $front_uri = $config->get('page.front') ?: '/node/1';
-      
-      // Extract node ID if the front page is a node
+
+      // Extract node ID if the front page is a node.
       if (preg_match('/node\/(\d+)/', $front_uri, $matches)) {
         $node = $this->entityTypeManager()->getStorage('node')->load($matches[1]);
         if ($node) {
-          // Get the rendered content
+          // Get the rendered content.
           $view_builder = $this->entityTypeManager()->getViewBuilder('node');
           $build = $view_builder->view($node);
           $html = $this->renderer()->renderPlain($build);
-          
-          // Convert HTML to plain text
+
+          // Convert HTML to plain text.
           $text = strip_tags($html);
-          // Normalize whitespace
+          // Normalize whitespace.
           $text = preg_replace('/\s+/', ' ', $text);
-          // Trim to reasonable length
+          // Trim to reasonable length.
           return substr(trim($text), 0, 1000) . (strlen($text) > 1000 ? '...' : '');
         }
       }
     }
     catch (\Exception $e) {
-      // Log error but continue without front page content
+      // Log error but continue without front page content.
       $this->getLogger('ai_content_strategy')->error('Error fetching front page content: @error', [
         '@error' => $e->getMessage(),
       ]);
     }
-    
+
     return '';
   }
 
@@ -399,23 +394,23 @@ class ContentStrategyController extends ControllerBase {
    */
   public function generateMore(string $section, string $title) {
     try {
-      // Get current stored data first
+      // Get current stored data first.
       $stored_data = $this->keyValue->get(self::KV_KEY);
       if (!$stored_data || !isset($stored_data['data'])) {
         throw new \RuntimeException('No existing recommendations found');
       }
       $recommendations = $stored_data['data'];
 
-      // Get site data for context
+      // Get site data for context.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
       $front_page_content = $this->getFrontPageContent();
 
-      // Get default provider and model
+      // Get default provider and model.
       $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
       $provider = $this->aiProvider->createInstance($defaults['provider_id']);
 
-      // Create a focused prompt for generating more ideas
+      // Create a focused prompt for generating more ideas.
       $prompt = <<<EOT
 <context>
   <site_info>
@@ -449,32 +444,34 @@ Return ONLY a JSON array of strings, each being a new content idea.
 </instructions>
 EOT;
 
-      // Create chat input with proper format
+      // Create chat input with proper format.
       $messages = new ChatInput([
         new ChatMessage('user', $prompt),
       ]);
 
-      // Generate ideas
+      // Generate ideas.
       $response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
-      
-      // Get the normalized response and try to decode it
+
+      // Get the normalized response and try to decode it.
       $message = $response->getNormalized();
       $text = $message->getText();
-      
-      // Try to extract and parse JSON array from the text
+
+      // Try to extract and parse JSON array from the text.
       if (preg_match('/\[(?:[^\[\]]|(?R))*\]/', $text, $matches)) {
         $ideas = json_decode($matches[0], TRUE);
         if (json_last_error() !== JSON_ERROR_NONE) {
           throw new \RuntimeException('Failed to parse AI response into valid JSON array');
         }
-      } else {
+      }
+      else {
         throw new \RuntimeException('Invalid response format from AI provider');
       }
 
-      // After successfully generating and parsing new ideas, update the stored data
+      // After successfully generating and parsing new ideas, update the stored
+      // data.
       $updated = FALSE;
-      
-      // Find the correct section and item to update
+
+      // Find the correct section and item to update.
       if (isset($recommendations[$section])) {
         foreach ($recommendations[$section] as $key => $item) {
           $match = FALSE;
@@ -482,19 +479,22 @@ EOT;
             case 'content_gaps':
               $match = ($item['title'] === $title);
               break;
+
             case 'authority_topics':
               $match = ($item['topic'] === $title);
               break;
+
             case 'expertise_demonstrations':
               $match = ($item['content_type'] === $title);
               break;
+
             case 'trust_signals':
               $match = ($item['signal'] === $title);
               break;
           }
-          
+
           if ($match) {
-            // Append new ideas to existing ones
+            // Append new ideas to existing ones.
             $recommendations[$section][$key]['content_ideas'] = array_merge(
               $recommendations[$section][$key]['content_ideas'],
               $ideas
@@ -506,17 +506,18 @@ EOT;
       }
 
       if ($updated) {
-        // Update the stored data with timestamp
+        // Update the stored data with timestamp.
         $timestamp = (int) \Drupal::time()->getCurrentTime();
         $this->keyValue->set(self::KV_KEY, [
           'data' => $recommendations,
           'timestamp' => $timestamp,
         ]);
-      } else {
+      }
+      else {
         throw new \RuntimeException('Failed to find matching item to update');
       }
 
-      // Build HTML for new ideas
+      // Build HTML for new ideas.
       $rows = [];
       foreach ($ideas as $idea) {
         $rows[] = [
@@ -530,13 +531,13 @@ EOT;
         ];
       }
 
-      // Create AJAX response
+      // Create AJAX response.
       $response = new AjaxResponse();
-      
-      // Build the HTML for the new rows
+
+      // Build the HTML for the new rows.
       $html = $this->renderer->renderRoot($rows);
 
-      // Update the last run time
+      // Update the last run time.
       $response->addCommand(
         new HtmlCommand(
           '.last-run-time',
@@ -545,8 +546,8 @@ EOT;
           ])
         )
       );
-      
-      // Add command to append the new rows to the table
+
+      // Add command to append the new rows to the table.
       $response->addCommand(
         new AppendCommand(
           sprintf('.recommendation-item[data-section="%s"][data-title="%s"] .content-ideas-table tbody',
@@ -559,17 +560,18 @@ EOT;
 
       return $response;
 
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       watchdog_exception('ai_content_strategy', $e);
-      
+
       $response = new AjaxResponse();
       $response->addCommand(
         new MessageCommand(
           $this->t('An error occurred while generating more ideas: @error', ['@error' => $e->getMessage()]),
-          null,
+          NULL,
           ['type' => 'error']
         )
-      );
+          );
       return $response;
     }
   }
@@ -622,11 +624,14 @@ EOT;
     foreach ($recommendations as $item) {
       if (isset($item['title'])) {
         $output[] = "- {$item['title']}: {$item['description']}";
-      } elseif (isset($item['topic'])) {
+      }
+      elseif (isset($item['topic'])) {
         $output[] = "- {$item['topic']}: {$item['rationale']}";
-      } elseif (isset($item['content_type'])) {
+      }
+      elseif (isset($item['content_type'])) {
         $output[] = "- {$item['content_type']}: {$item['description']}";
-      } elseif (isset($item['signal'])) {
+      }
+      elseif (isset($item['signal'])) {
         $output[] = "- {$item['signal']}: {$item['implementation']}";
       }
     }
@@ -644,29 +649,29 @@ EOT;
    */
   public function addMoreRecommendations($section) {
     $response = new AjaxResponse();
-    
+
     try {
-      // Get site data for context
+      // Get site data for context.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
       $front_page_content = $this->getFrontPageContent();
 
-      // Get the prompt configuration
+      // Get the prompt configuration.
       $config = $this->config('ai_content_strategy.prompts');
       $prompts = $config->get('add_more_recommendations');
-      
+
       if (!isset($prompts[$section])) {
         throw new \InvalidArgumentException('Invalid section specified');
       }
 
-      // Get existing recommendations
+      // Get existing recommendations.
       $stored_data = $this->keyValue->get(self::KV_KEY);
       $existing_recommendations = '';
       if ($stored_data && isset($stored_data['data'][$section])) {
         $existing_recommendations = $this->formatExistingRecommendations($stored_data['data'][$section]);
       }
 
-      // Prepare the context variables
+      // Prepare the context variables.
       $context = [
         'homepage' => [
           'title' => $site_structure['homepage']['title'],
@@ -677,28 +682,28 @@ EOT;
         'existing_recommendations' => $existing_recommendations,
       ];
 
-      // Get default provider and model
+      // Get default provider and model.
       $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
       $provider = $this->aiProvider->createInstance($defaults['provider_id']);
 
-      // Create chat input with proper format
+      // Create chat input with proper format.
       $messages = new ChatInput([
         new ChatMessage('system', $this->replaceTokens($prompts[$section]['system'], $context)),
         new ChatMessage('user', $this->replaceTokens($prompts[$section]['user'], $context)),
       ]);
 
-      // Generate recommendations
+      // Generate recommendations.
       $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
       $message = $chat_response->getNormalized();
-      
-      // Use the prompt JSON decoder to parse the response
+
+      // Use the prompt JSON decoder to parse the response.
       $data = $this->promptJsonDecoder->decode($message);
-      
+
       if (!isset($data[$section])) {
         throw new \RuntimeException('Invalid response format from AI provider');
       }
 
-      // Update stored recommendations
+      // Update stored recommendations.
       if ($stored_data && isset($stored_data['data'][$section])) {
         $stored_data['data'][$section] = array_merge(
           $stored_data['data'][$section],
@@ -708,7 +713,7 @@ EOT;
         $this->keyValue->set(self::KV_KEY, $stored_data);
       }
 
-      // Build the render array for new recommendations
+      // Build the render array for new recommendations.
       $build = [
         '#theme' => 'ai_content_strategy_recommendations_items',
         '#items' => $data[$section],
@@ -721,10 +726,10 @@ EOT;
         '#button_text' => $this->config('ai_content_strategy.settings')->get('button_text')['main'],
       ];
 
-      // Render the new recommendations
+      // Render the new recommendations.
       $html = $this->renderer->render($build);
 
-      // Update the recommendations section
+      // Update the recommendations section.
       $response->addCommand(
         new AppendCommand(
           ".recommendation-section[data-section='$section'] .recommendation-items",
@@ -732,7 +737,7 @@ EOT;
         )
       );
 
-      // Update the last run time
+      // Update the last run time.
       $response->addCommand(
         new HtmlCommand(
           '.last-run-time',
@@ -742,20 +747,21 @@ EOT;
         )
       );
 
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       watchdog_exception('ai_content_strategy', $e);
-      
+
       $response->addCommand(
         new MessageCommand(
           $this->t('An error occurred while generating additional recommendations: @error', [
-            '@error' => $e->getMessage()
+            '@error' => $e->getMessage(),
           ]),
-          null,
+          NULL,
           ['type' => 'error']
         )
-      );
+          );
     }
-    
+
     return $response;
   }
 
@@ -838,4 +844,4 @@ EOT;
     return $keys[$section] ?? $section;
   }
 
-} 
+}

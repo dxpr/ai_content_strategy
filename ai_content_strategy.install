@@ -9,6 +9,6 @@
  * Implements hook_uninstall().
  */
 function ai_content_strategy_uninstall() {
-  // Delete our key-value collection
+  // Delete our key-value collection.
   \Drupal::keyValue('ai_content_strategy.recommendations')->deleteAll();
-} 
+}

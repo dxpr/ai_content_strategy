@@ -1,6 +1,7 @@
 # AI Content Strategy
 
-AI-powered content strategy recommendations based on your existing content and EEAT framework.
+AI-powered content strategy recommendations based on your existing content and
+EEAT framework.
 
 ## Features
 
@@ -34,7 +35,8 @@ drush en ai_content_strategy
 
 ## Usage
 
-The module analyzes your site structure, navigation, and existing content to recommend:
+The module analyzes your site structure, navigation, and existing content to
+recommend:
 
 - Missing content types for comprehensive coverage
 - Topics that establish your authority

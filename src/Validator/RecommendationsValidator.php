@@ -34,7 +34,7 @@ class RecommendationsValidator {
    */
   public function __construct(
     JsonSchemaValidatorInterface $validator,
-    ModuleHandlerInterface $module_handler
+    ModuleHandlerInterface $module_handler,
   ) {
     $this->validator = $validator;
     $this->moduleHandler = $module_handler;
@@ -67,4 +67,4 @@ class RecommendationsValidator {
     return $this->validator->getErrors();
   }
 
-} 
+}
