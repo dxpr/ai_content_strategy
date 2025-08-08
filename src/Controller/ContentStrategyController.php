@@ -170,7 +170,8 @@ class ContentStrategyController extends ControllerBase {
     $last_run = NULL;
 
     if ($stored_data) {
-      if (is_array($stored_data) && isset($stored_data['data'], $stored_data['timestamp'])) {
+      if (is_array($stored_data) && isset($stored_data['data'],
+        $stored_data['timestamp'])) {
         $recommendations = $stored_data['data'];
         $last_run = (int) $stored_data['timestamp'];
       }
@@ -187,7 +188,8 @@ class ContentStrategyController extends ControllerBase {
       '#authority_topics' => $recommendations['authority_topics'] ?? [],
       '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
       '#trust_signals' => $recommendations['trust_signals'] ?? [],
-      '#last_run' => $last_run ? $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
+      '#last_run' => $last_run ?
+      $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
       '#attached' => [
         'library' => ['ai_content_strategy/content_strategy'],
       ],
@@ -307,7 +309,11 @@ class ContentStrategyController extends ControllerBase {
               '#tag' => 'a',
               '#attributes' => [
                 'href' => '#',
-                'class' => ['add-more-recommendations-link', 'button', 'button--secondary'],
+                'class' => [
+                  'add-more-recommendations-link',
+                  'button',
+                  'button--secondary',
+                ],
                 'data-section' => $section,
               ],
               '#value' => ai_content_strategy_get_button_texts()['add_more'][$section],
@@ -355,7 +361,8 @@ class ContentStrategyController extends ControllerBase {
 
       // Extract node ID if the front page is a node.
       if (preg_match('/node\/(\d+)/', $front_uri, $matches)) {
-        $node = $this->entityTypeManager()->getStorage('node')->load($matches[1]);
+        $node = $this->entityTypeManager()->getStorage('node')
+          ->load($matches[1]);
         if ($node) {
           // Get the rendered content.
           $view_builder = $this->entityTypeManager()->getViewBuilder('node');
@@ -367,15 +374,17 @@ class ContentStrategyController extends ControllerBase {
           // Normalize whitespace.
           $text = preg_replace('/\s+/', ' ', $text);
           // Trim to reasonable length.
-          return substr(trim($text), 0, 1000) . (strlen($text) > 1000 ? '...' : '');
+          return substr(trim($text), 0, 1000) .
+            (strlen($text) > 1000 ? '...' : '');
         }
       }
     }
     catch (\Exception $e) {
       // Log error but continue without front page content.
-      $this->getLogger('ai_content_strategy')->error('Error fetching front page content: @error', [
-        '@error' => $e->getMessage(),
-      ]);
+      $this->getLogger('ai_content_strategy')
+        ->error('Error fetching front page content: @error', [
+          '@error' => $e->getMessage(),
+        ]);
     }
 
     return '';
@@ -439,7 +448,8 @@ class ContentStrategyController extends ControllerBase {
 </context>
 
 <instructions>
-Based on the above context, generate 5 additional, unique content ideas for the specified topic.
+Based on the above context, generate 5 additional, unique content ideas for
+the specified topic.
 Return ONLY a JSON array of strings, each being a new content idea.
 </instructions>
 EOT;
@@ -450,7 +460,8 @@ EOT;
       ]);
 
       // Generate ideas.
-      $response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
+      $response = $provider->chat($messages, $defaults['model_id'],
+        ['content_strategy']);
 
       // Get the normalized response and try to decode it.
       $message = $response->getNormalized();
@@ -460,11 +471,15 @@ EOT;
       if (preg_match('/\[(?:[^\[\]]|(?R))*\]/', $text, $matches)) {
         $ideas = json_decode($matches[0], TRUE);
         if (json_last_error() !== JSON_ERROR_NONE) {
-          throw new \RuntimeException('Failed to parse AI response into valid JSON array');
+          throw new \RuntimeException(
+            'Failed to parse AI response into valid JSON array'
+          );
         }
       }
       else {
-        throw new \RuntimeException('Invalid response format from AI provider');
+        throw new \RuntimeException(
+          'Invalid response format from AI provider'
+        );
       }
 
       // After successfully generating and parsing new ideas, update the stored
@@ -550,7 +565,9 @@ EOT;
       // Add command to append the new rows to the table.
       $response->addCommand(
         new AppendCommand(
-          sprintf('.recommendation-item[data-section="%s"][data-title="%s"] .content-ideas-table tbody',
+          sprintf(
+            '.recommendation-item[data-section="%s"][data-title="%s"]' .
+            ' .content-ideas-table tbody',
             $section,
             str_replace('"', '\"', $title)
           ),
@@ -567,7 +584,10 @@ EOT;
       $response = new AjaxResponse();
       $response->addCommand(
         new MessageCommand(
-          $this->t('An error occurred while generating more ideas: @error', ['@error' => $e->getMessage()]),
+          $this->t(
+            'An error occurred while generating more ideas: @error',
+            ['@error' => $e->getMessage()]
+          ),
           NULL,
           ['type' => 'error']
         )
@@ -588,7 +608,8 @@ EOT;
   protected function formatMenuItems(array $menu_items): string {
     $output = [];
     foreach ($menu_items as $item) {
-      $output[] = "- {$item['title']}" . (!empty($item['url']) ? " ({$item['url']})" : "");
+      $output[] = "- {$item['title']}" .
+        (!empty($item['url']) ? " ({$item['url']})" : "");
     }
     return implode("\n", $output);
   }
@@ -668,7 +689,9 @@ EOT;
       $stored_data = $this->keyValue->get(self::KV_KEY);
       $existing_recommendations = '';
       if ($stored_data && isset($stored_data['data'][$section])) {
-        $existing_recommendations = $this->formatExistingRecommendations($stored_data['data'][$section]);
+        $existing_recommendations = $this->formatExistingRecommendations(
+          $stored_data['data'][$section]
+        );
       }
 
       // Prepare the context variables.
@@ -688,19 +711,28 @@ EOT;
 
       // Create chat input with proper format.
       $messages = new ChatInput([
-        new ChatMessage('system', $this->replaceTokens($prompts[$section]['system'], $context)),
-        new ChatMessage('user', $this->replaceTokens($prompts[$section]['user'], $context)),
+        new ChatMessage(
+          'system',
+          $this->replaceTokens($prompts[$section]['system'], $context)
+        ),
+        new ChatMessage(
+          'user',
+          $this->replaceTokens($prompts[$section]['user'], $context)
+        ),
       ]);
 
       // Generate recommendations.
-      $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
+      $chat_response = $provider->chat($messages, $defaults['model_id'],
+        ['content_strategy']);
       $message = $chat_response->getNormalized();
 
       // Use the prompt JSON decoder to parse the response.
       $data = $this->promptJsonDecoder->decode($message);
 
       if (!isset($data[$section])) {
-        throw new \RuntimeException('Invalid response format from AI provider');
+        throw new \RuntimeException(
+          'Invalid response format from AI provider'
+        );
       }
 
       // Update stored recommendations.
@@ -723,7 +755,8 @@ EOT;
           'item_key' => $this->getSectionItemKey($section),
           'description_key' => $this->getSectionDescriptionKey($section),
         ],
-        '#button_text' => $this->config('ai_content_strategy.settings')->get('button_text')['main'],
+        '#button_text' => $this->config('ai_content_strategy.settings')
+          ->get('button_text')['main'],
       ];
 
       // Render the new recommendations.
@@ -742,7 +775,8 @@ EOT;
         new HtmlCommand(
           '.last-run-time',
           $this->t('Last generated: @time ago', [
-            '@time' => $this->dateFormatter->formatTimeDiffSince($stored_data['timestamp']),
+            '@time' => $this->dateFormatter
+              ->formatTimeDiffSince($stored_data['timestamp']),
           ])
         )
       );
@@ -753,9 +787,11 @@ EOT;
 
       $response->addCommand(
         new MessageCommand(
-          $this->t('An error occurred while generating additional recommendations: @error', [
-            '@error' => $e->getMessage(),
-          ]),
+          $this->t(
+            'An error occurred while generating additional recommendations: @error',
+            [
+              '@error' => $e->getMessage(),
+            ]),
           NULL,
           ['type' => 'error']
         )
