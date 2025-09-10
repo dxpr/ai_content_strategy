@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Url;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 
 /**
  * Service for analyzing existing site content.
@@ -53,6 +54,13 @@ class ContentAnalyzer {
   protected $renderer;
 
   /**
+   * The module handler.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  protected $moduleHandler;
+
+  /**
    * Constructs a ContentAnalyzer object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -65,6 +73,8 @@ class ContentAnalyzer {
    *   The config factory.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The renderer service.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
+   *   The module handler.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -72,12 +82,14 @@ class ContentAnalyzer {
     ClientInterface $http_client,
     ConfigFactoryInterface $config_factory,
     RendererInterface $renderer,
+    ModuleHandlerInterface $module_handler,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->menuActiveTrail = $menu_active_trail;
     $this->httpClient = $http_client;
     $this->configFactory = $config_factory;
     $this->renderer = $renderer;
+    $this->moduleHandler = $module_handler;
   }
 
   /**
@@ -133,7 +145,7 @@ class ContentAnalyzer {
 
       // Get primary menu if Menu UI module is available.
       $menu_items = [];
-      if ($this->menuActiveTrail && \Drupal::moduleHandler()->moduleExists('menu_ui')) {
+      if ($this->menuActiveTrail && $this->moduleHandler->moduleExists('menu_ui')) {
         try {
           $menu_tree = $this->menuActiveTrail->getActiveTrailIds('main');
 

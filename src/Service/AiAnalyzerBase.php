@@ -155,7 +155,7 @@ abstract class AiAnalyzerBase {
       }
     }
 
-    throw new \RuntimeException($this->t('Failed to parse AI response into valid JSON')->render());
+    throw new \RuntimeException('Failed to parse AI response into valid JSON');
   }
 
 }
