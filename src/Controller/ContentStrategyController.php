@@ -19,6 +19,7 @@ use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\AppendCommand;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
+use Drupal\Component\Datetime\TimeInterface;
 
 /**
  * Controller for content strategy functionality.
@@ -92,6 +93,13 @@ class ContentStrategyController extends ControllerBase {
   protected $keyValue;
 
   /**
+   * The time service.
+   *
+   * @var \Drupal\Component\Datetime\TimeInterface
+   */
+  protected $time;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -110,6 +118,8 @@ class ContentStrategyController extends ControllerBase {
    *   The date formatter.
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $key_value_factory
    *   The key value factory.
+   * @param \Drupal\Component\Datetime\TimeInterface $time
+   *   The time service.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -120,6 +130,7 @@ class ContentStrategyController extends ControllerBase {
     CacheBackendInterface $cache,
     DateFormatterInterface $date_formatter,
     KeyValueFactoryInterface $key_value_factory,
+    TimeInterface $time,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -129,6 +140,7 @@ class ContentStrategyController extends ControllerBase {
     $this->cache = $cache;
     $this->dateFormatter = $date_formatter;
     $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
+    $this->time = $time;
   }
 
   /**
@@ -143,7 +155,8 @@ class ContentStrategyController extends ControllerBase {
       $container->get('renderer'),
       $container->get('cache.default'),
       $container->get('date.formatter'),
-      $container->get('keyvalue')
+      $container->get('keyvalue'),
+      $container->get('datetime.time')
     );
   }
 
@@ -178,7 +191,7 @@ class ContentStrategyController extends ControllerBase {
       else {
         // Handle legacy format.
         $recommendations = $stored_data;
-        $last_run = \Drupal::time()->getRequestTime();
+        $last_run = $this->time->getRequestTime();
       }
     }
 
@@ -208,21 +221,11 @@ class ContentStrategyController extends ControllerBase {
       $recommendations = $this->strategyGenerator->generateRecommendations();
 
       // Store the results with timestamp in key-value store.
-      $timestamp = (int) \Drupal::time()->getCurrentTime();
+      $timestamp = (int) $this->time->getCurrentTime();
       $this->keyValue->set(self::KV_KEY, [
         'data' => $recommendations,
         'timestamp' => $timestamp,
       ]);
-
-      // Build the response HTML.
-      $build = [
-        '#theme' => 'ai_content_strategy_recommendations',
-        '#content_gaps' => $recommendations['content_gaps'] ?? [],
-        '#authority_topics' => $recommendations['authority_topics'] ?? [],
-        '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
-        '#trust_signals' => $recommendations['trust_signals'] ?? [],
-        '#last_run' => $this->dateFormatter->formatTimeDiffSince($timestamp),
-      ];
 
       // Create AJAX response.
       $response = new AjaxResponse();
@@ -522,7 +525,7 @@ EOT;
 
       if ($updated) {
         // Update the stored data with timestamp.
-        $timestamp = (int) \Drupal::time()->getCurrentTime();
+        $timestamp = (int) $this->time->getCurrentTime();
         $this->keyValue->set(self::KV_KEY, [
           'data' => $recommendations,
           'timestamp' => $timestamp,
@@ -741,7 +744,7 @@ EOT;
           $stored_data['data'][$section],
           $data[$section]
         );
-        $stored_data['timestamp'] = \Drupal::time()->getCurrentTime();
+        $stored_data['timestamp'] = $this->time->getCurrentTime();
         $this->keyValue->set(self::KV_KEY, $stored_data);
       }
 
