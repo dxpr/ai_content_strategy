@@ -18,4 +18,54 @@ ai_content_strategy.prompts:
       mapping:
         prompt_template:
           type: text
-          label: 'Generate more prompt template' 
+          label: 'Generate more prompt template'
+
+ai_content_strategy.recommendation_category.*:
+  type: config_entity
+  label: 'Recommendation Category'
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+    label:
+      type: label
+      label: 'Label'
+    description:
+      type: text
+      label: 'Description'
+    weight:
+      type: integer
+      label: 'Weight'
+    status:
+      type: boolean
+      label: 'Enabled'
+    field_mapping:
+      type: mapping
+      label: 'Field Mapping'
+      mapping:
+        primary_field:
+          type: string
+          label: 'Primary field name'
+        secondary_field:
+          type: string
+          label: 'Secondary field name'
+        priority_field:
+          type: string
+          label: 'Priority field name'
+        ideas_field:
+          type: string
+          label: 'Content ideas field name'
+    prompt_template:
+      type: text
+      label: 'Prompt Template'
+    system_prompt:
+      type: text
+      label: 'System Prompt'
+    add_more_prompt:
+      type: text
+      label: 'Add More Prompt'
+    schema_definition:
+      type: sequence
+      label: 'JSON Schema Definition'
+      sequence:
+        type: ignore

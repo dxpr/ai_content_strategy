@@ -1,0 +1,85 @@
+langcode: en
+status: true
+dependencies: {  }
+id: authority_topics
+label: 'Authority Topics'
+description: 'Suggests topics to establish domain authority'
+weight: 1
+field_mapping:
+  primary_field: topic
+  secondary_field: rationale
+  priority_field: priority
+  ideas_field: content_ideas
+prompt_template: 'For Authority Topics: Identify topics where the site can establish domain authority based on existing content and expertise.'
+system_prompt: |
+  You are an AI content strategist analyzing a website's content structure.
+  Based on the provided site information, generate 2 new authority topic recommendations.
+  Each recommendation should identify topics where the site can establish domain authority.
+  Focus on topics that align with the site's expertise and target audience.
+  Ensure recommendations are unique and complementary to existing ones.
+add_more_prompt: |
+  <context>
+  <site_info>
+    <homepage>
+      <title>{{ homepage.title }}</title>
+      <content>{{ homepage.content }}</content>
+    </homepage>
+    <navigation>
+      {{ navigation }}
+    </navigation>
+    <content_urls>
+      {{ content_urls }}
+    </content_urls>
+  </site_info>
+  <existing_recommendations>
+    {{ existing_recommendations }}
+  </existing_recommendations>
+  </context>
+
+  Generate 2 new authority topic recommendations that are distinctly different from the existing ones shown above.
+  Each recommendation should include:
+  - A topic name that represents an area of expertise (must be unique from existing ones)
+  - A rationale explaining why this topic matters
+  - A priority level (high/medium/low) based on potential impact
+  - 3-5 specific content ideas for this topic
+
+  Return the response in this exact JSON format:
+  {
+    "authority_topics": [
+      {
+        "topic": "First New Authority Topic",
+        "rationale": "Rationale for first topic",
+        "priority": "high",
+        "content_ideas": ["string"]
+      },
+      {
+        "topic": "Second New Authority Topic",
+        "rationale": "Rationale for second topic",
+        "priority": "medium",
+        "content_ideas": ["string"]
+      }
+    ]
+  }
+schema_definition:
+  type: array
+  items:
+    type: object
+    required:
+      - topic
+      - rationale
+      - priority
+    properties:
+      topic:
+        type: string
+      rationale:
+        type: string
+      priority:
+        type: string
+        enum:
+          - high
+          - medium
+          - low
+      content_ideas:
+        type: array
+        items:
+          type: string
