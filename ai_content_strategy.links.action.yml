@@ -9,3 +9,9 @@ recommendation_category.add:
   title: 'Add recommendation category'
   appears_on:
     - entity.recommendation_category.collection
+
+recommendation_category.list:
+  route_name: entity.recommendation_category.collection
+  title: 'Manage categories'
+  appears_on:
+    - ai_content_strategy.settings
