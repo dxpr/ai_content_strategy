@@ -38,9 +38,9 @@ function ai_content_strategy_get_button_texts() {
     $categories = $category_storage->loadMultiple($category_ids);
     foreach ($categories as $category) {
       $category_id = $category->id();
-      $button_texts['generate'][$category_id] = t('Generate @type', ['@type' => t('ideas')]);
-      $button_texts['generate_more'][$category_id] = t('Add more @type', ['@type' => t('ideas')]);
-      $button_texts['add_more'][$category_id] = t('Add more @type', ['@type' => t('recommendations')]);
+      $button_texts['generate'][$category_id] = t('Generate @type with AI', ['@type' => t('ideas')]);
+      $button_texts['generate_more'][$category_id] = t('Add more AI @type', ['@type' => t('ideas')]);
+      $button_texts['add_more'][$category_id] = t('Add AI @type', ['@type' => t('recommendations')]);
     }
   }
 
