@@ -40,6 +40,14 @@ ai_content_strategy.add_more_recommendations:
   options:
     _admin_route: TRUE
 
+ai_content_strategy.settings:
+  path: '/admin/config/ai/content-strategy/settings'
+  defaults:
+    _form: '\Drupal\ai_content_strategy\Form\SettingsForm'
+    _title: 'AI Content Strategy Settings'
+  requirements:
+    _permission: 'administer ai content strategy'
+
 # Recommendation Category entity routes
 entity.recommendation_category.collection:
   path: '/admin/config/ai/content-strategy/categories'

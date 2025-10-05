@@ -181,8 +181,11 @@ class StrategyGenerator extends AnalyzerBase {
       $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
       $provider = $this->aiProvider->createInstance($defaults['provider_id']);
 
-      // Set system role with more explicit JSON formatting instructions.
-      $provider->setChatSystemRole('You are a content strategy expert focused on Google\'s EEAT framework. Your task is to analyze website structure and provide recommendations in a strict JSON format. Always return valid JSON that matches the provided schema exactly. Do not include any explanatory text or markdown formatting.');
+      // Set system role from global config.
+      $system_prompt = $this->configFactory->get('ai_content_strategy.settings')->get('system_prompt') ??
+        'You are an AI content strategist analyzing a website\'s content structure. Based on the provided site information, generate recommendations that are: directly inferred from the site\'s actual content and structure, specific to the site\'s domain and purpose (never generic), actionable and practical to implement, focused on improving user value and engagement.';
+
+      $provider->setChatSystemRole($system_prompt . ' Always return valid JSON that matches the provided schema exactly. Do not include any explanatory text or markdown formatting.');
 
       // Create chat input.
       $prompt = $this->buildEeatPrompt($site_structure, $sitemap_urls);

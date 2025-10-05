@@ -1,3 +1,11 @@
+ai_content_strategy.settings:
+  type: config_object
+  label: 'AI Content Strategy Settings'
+  mapping:
+    system_prompt:
+      type: text
+      label: 'System prompt'
+
 ai_content_strategy.prompts:
   type: config_object
   label: 'AI Content Strategy Prompts'
@@ -39,33 +47,6 @@ ai_content_strategy.recommendation_category.*:
     status:
       type: boolean
       label: 'Enabled'
-    field_mapping:
-      type: mapping
-      label: 'Field Mapping'
-      mapping:
-        primary_field:
-          type: string
-          label: 'Primary field name'
-        secondary_field:
-          type: string
-          label: 'Secondary field name'
-        priority_field:
-          type: string
-          label: 'Priority field name'
-        ideas_field:
-          type: string
-          label: 'Content ideas field name'
-    prompt_template:
+    instructions:
       type: text
-      label: 'Prompt Template'
-    system_prompt:
-      type: text
-      label: 'System Prompt'
-    add_more_prompt:
-      type: text
-      label: 'Add More Prompt'
-    schema_definition:
-      type: sequence
-      label: 'JSON Schema Definition'
-      sequence:
-        type: ignore
+      label: 'AI Instructions'

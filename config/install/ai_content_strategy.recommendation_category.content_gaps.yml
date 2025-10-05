@@ -5,81 +5,11 @@ id: content_gaps
 label: 'Content Gaps'
 description: 'Identifies missing content opportunities in your site'
 weight: 0
-field_mapping:
-  primary_field: title
-  secondary_field: description
-  priority_field: priority
-  ideas_field: content_ideas
-prompt_template: 'For Content Gaps: Identify missing content types and underrepresented topics that would improve the site''s value to users.'
-system_prompt: |
-  You are an AI content strategist analyzing a website's content structure.
-  Based on the provided site information, generate 2 new content gap recommendations.
-  Each recommendation should identify missing content opportunities that would improve the site's value to users.
-  Focus on actionable, specific suggestions that align with the site's purpose and audience.
-  Ensure recommendations are unique and complementary to existing ones.
-add_more_prompt: |
-  <context>
-  <site_info>
-    <homepage>
-      <title>{{ homepage.title }}</title>
-      <content>{{ homepage.content }}</content>
-    </homepage>
-    <navigation>
-      {{ navigation }}
-    </navigation>
-    <content_urls>
-      {{ content_urls }}
-    </content_urls>
-  </site_info>
-  <existing_recommendations>
-    {{ existing_recommendations }}
-  </existing_recommendations>
-  </context>
+instructions: |
+  Identify missing content types and underrepresented topics that would improve the site's value to users.
 
-  Generate 2 new content gap recommendations that are distinctly different from the existing ones shown above.
-  Each recommendation should include:
-  - A specific title identifying the gap (must be unique from existing ones)
-  - A clear description of why this content is needed
-  - A priority level (high/medium/low) based on potential impact
-  - 3-5 specific content ideas to fill this gap
-
-  Return the response in this exact JSON format:
-  {
-    "content_gaps": [
-      {
-        "title": "First New Gap Title",
-        "description": "Description of first gap",
-        "priority": "high",
-        "content_ideas": ["string"]
-      },
-      {
-        "title": "Second New Gap Title",
-        "description": "Description of second gap",
-        "priority": "medium",
-        "content_ideas": ["string"]
-      }
-    ]
-  }
-schema_definition:
-  type: array
-  items:
-    type: object
-    required:
-      - title
-      - description
-      - priority
-    properties:
-      title:
-        type: string
-      description:
-        type: string
-      priority:
-        type: string
-        enum:
-          - high
-          - medium
-          - low
-      content_ideas:
-        type: array
-        items:
-          type: string
+  Focus on:
+  - Content formats that competitors have but this site lacks
+  - Topics within the site's domain that are underrepresented
+  - Audience needs that aren't currently addressed
+  - Content that would fill obvious gaps in the existing content strategy

@@ -51,6 +51,35 @@ class CategorySchemaBuilder {
       return $cached->data;
     }
 
+    // Universal schema for all categories.
+    $universal_item_schema = [
+      'type' => 'array',
+      'items' => [
+        'type' => 'object',
+        'required' => ['title', 'description', 'priority', 'content_ideas'],
+        'properties' => [
+          'title' => [
+            'type' => 'string',
+            'description' => 'The title or main concept',
+          ],
+          'description' => [
+            'type' => 'string',
+            'description' => 'Detailed description or rationale',
+          ],
+          'priority' => [
+            'type' => 'string',
+            'enum' => ['high', 'medium', 'low'],
+            'description' => 'Priority level',
+          ],
+          'content_ideas' => [
+            'type' => 'array',
+            'items' => ['type' => 'string'],
+            'description' => 'Specific content ideas or implementation steps',
+          ],
+        ],
+      ],
+    ];
+
     $schema = [
       '$schema' => 'http://json-schema.org/draft-07/schema#',
       'type' => 'object',
@@ -62,12 +91,8 @@ class CategorySchemaBuilder {
 
     foreach ($categories as $category) {
       $category_id = $category->id();
-      $category_schema = $category->getSchemaDefinition();
-
-      if (!empty($category_schema)) {
-        $schema['required'][] = $category_id;
-        $schema['properties'][$category_id] = $category_schema;
-      }
+      $schema['required'][] = $category_id;
+      $schema['properties'][$category_id] = $universal_item_schema;
     }
 
     // Cache the schema.
@@ -90,7 +115,34 @@ class CategorySchemaBuilder {
     $category = $storage->load($category_id);
 
     if ($category instanceof RecommendationCategory && $category->status()) {
-      return $category->getSchemaDefinition();
+      // Return universal schema for all categories.
+      return [
+        'type' => 'array',
+        'items' => [
+          'type' => 'object',
+          'required' => ['title', 'description', 'priority', 'content_ideas'],
+          'properties' => [
+            'title' => [
+              'type' => 'string',
+              'description' => 'The title or main concept',
+            ],
+            'description' => [
+              'type' => 'string',
+              'description' => 'Detailed description or rationale',
+            ],
+            'priority' => [
+              'type' => 'string',
+              'enum' => ['high', 'medium', 'low'],
+              'description' => 'Priority level',
+            ],
+            'content_ideas' => [
+              'type' => 'array',
+              'items' => ['type' => 'string'],
+              'description' => 'Specific content ideas or implementation steps',
+            ],
+          ],
+        ],
+      ];
     }
 
     return NULL;

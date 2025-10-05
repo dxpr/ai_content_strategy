@@ -5,81 +5,11 @@ id: trust_signals
 label: 'Trust Signals'
 description: 'Identifies trust-building elements for credibility'
 weight: 3
-field_mapping:
-  primary_field: signal
-  secondary_field: implementation
-  priority_field: priority
-  ideas_field: content_ideas
-prompt_template: 'For Trust Signals: Identify trust-building elements that would enhance the site''s credibility and reliability.'
-system_prompt: |
-  You are an AI content strategist analyzing a website's content structure.
-  Based on the provided site information, generate 2 new trust signal recommendations.
-  Each recommendation should suggest ways to build trust and credibility with the audience.
-  Focus on concrete elements that demonstrate reliability and authority.
-  Ensure recommendations are unique and complementary to existing ones.
-add_more_prompt: |
-  <context>
-  <site_info>
-    <homepage>
-      <title>{{ homepage.title }}</title>
-      <content>{{ homepage.content }}</content>
-    </homepage>
-    <navigation>
-      {{ navigation }}
-    </navigation>
-    <content_urls>
-      {{ content_urls }}
-    </content_urls>
-  </site_info>
-  <existing_recommendations>
-    {{ existing_recommendations }}
-  </existing_recommendations>
-  </context>
+instructions: |
+  Identify trust-building elements that would enhance the site's credibility and reliability.
 
-  Generate 2 new trust signal recommendations that are distinctly different from the existing ones shown above.
-  Each recommendation should include:
-  - A specific trust signal element (must be unique from existing ones)
-  - Implementation guidance
-  - A priority level (high/medium/low) based on potential impact
-  - 3-5 specific content ideas to support this signal
-
-  Return the response in this exact JSON format:
-  {
-    "trust_signals": [
-      {
-        "signal": "First New Trust Signal",
-        "implementation": "Implementation of first signal",
-        "priority": "high",
-        "content_ideas": ["string"]
-      },
-      {
-        "signal": "Second New Trust Signal",
-        "implementation": "Implementation of second signal",
-        "priority": "medium",
-        "content_ideas": ["string"]
-      }
-    ]
-  }
-schema_definition:
-  type: array
-  items:
-    type: object
-    required:
-      - signal
-      - implementation
-      - priority
-    properties:
-      signal:
-        type: string
-      implementation:
-        type: string
-      priority:
-        type: string
-        enum:
-          - high
-          - medium
-          - low
-      content_ideas:
-        type: array
-        items:
-          type: string
+  Focus on:
+  - Concrete elements that demonstrate reliability and authority
+  - Content and features that build user confidence
+  - Social proof and credibility indicators appropriate for this site type
+  - Trust-building mechanisms that align with the site's domain and audience

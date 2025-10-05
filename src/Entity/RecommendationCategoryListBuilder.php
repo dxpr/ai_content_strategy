@@ -27,7 +27,7 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   public function buildHeader() {
     $header['label'] = $this->t('Category');
     $header['status'] = $this->t('Status');
-    $header['field_mapping'] = $this->t('Field Mapping');
+    $header['field_mapping'] = $this->t('Instructions');
     return $header + parent::buildHeader();
   }
 
@@ -45,19 +45,11 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
         : '<span style="color: #999;">○ ' . $this->t('Disabled') . '</span>',
     ];
 
-    // Field mapping summary.
-    $field_mapping = $entity->getFieldMapping();
-    $mapping_summary = [];
-    if (!empty($field_mapping['primary_field'])) {
-      $mapping_summary[] = $this->t('Primary: @field', ['@field' => $field_mapping['primary_field']]);
-    }
-    if (!empty($field_mapping['secondary_field'])) {
-      $mapping_summary[] = $this->t('Secondary: @field', ['@field' => $field_mapping['secondary_field']]);
-    }
-
+    // Instructions summary.
+    $instructions = $entity->getInstructions();
     $row['field_mapping'] = [
-      '#markup' => !empty($mapping_summary)
-        ? '<small>' . implode(', ', $mapping_summary) . '</small>'
+      '#markup' => !empty($instructions)
+        ? '<small>' . $this->t('@text...', ['@text' => substr($instructions, 0, 60)]) . '</small>'
         : '<em>' . $this->t('Not configured') . '</em>',
     ];
 

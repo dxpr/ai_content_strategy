@@ -47,11 +47,7 @@ use Drupal\Core\Entity\EntityStorageInterface;
  *     "description",
  *     "weight",
  *     "status",
- *     "field_mapping",
- *     "prompt_template",
- *     "system_prompt",
- *     "add_more_prompt",
- *     "schema_definition"
+ *     "instructions"
  *   }
  * )
  */
@@ -93,39 +89,11 @@ class RecommendationCategory extends ConfigEntityBase {
   protected $status = TRUE;
 
   /**
-   * Field mapping configuration.
-   *
-   * @var array
-   */
-  protected $field_mapping = [];
-
-  /**
-   * Main prompt template.
+   * Instructions for the AI on what to analyze.
    *
    * @var string
    */
-  protected $prompt_template = '';
-
-  /**
-   * System prompt for AI instructions.
-   *
-   * @var string
-   */
-  protected $system_prompt = '';
-
-  /**
-   * Template for "add more" functionality.
-   *
-   * @var string
-   */
-  protected $add_more_prompt = '';
-
-  /**
-   * JSON schema definition for this category.
-   *
-   * @var array
-   */
-  protected $schema_definition = [];
+  protected $instructions = '';
 
   /**
    * Gets the description.
@@ -148,66 +116,13 @@ class RecommendationCategory extends ConfigEntityBase {
   }
 
   /**
-   * Gets the field mapping.
-   *
-   * @return array
-   *   The field mapping array.
-   */
-  public function getFieldMapping() {
-    return $this->field_mapping;
-  }
-
-  /**
-   * Gets the prompt template.
+   * Gets the instructions.
    *
    * @return string
-   *   The prompt template.
+   *   The AI instructions for this category.
    */
-  public function getPromptTemplate() {
-    return $this->prompt_template;
-  }
-
-  /**
-   * Gets the system prompt.
-   *
-   * @return string
-   *   The system prompt.
-   */
-  public function getSystemPrompt() {
-    return $this->system_prompt;
-  }
-
-  /**
-   * Gets the add more prompt.
-   *
-   * @return string
-   *   The add more prompt template.
-   */
-  public function getAddMorePrompt() {
-    return $this->add_more_prompt;
-  }
-
-  /**
-   * Gets the schema definition.
-   *
-   * @return array
-   *   The JSON schema definition.
-   */
-  public function getSchemaDefinition() {
-    return $this->schema_definition;
-  }
-
-  /**
-   * Gets a specific field name from the mapping.
-   *
-   * @param string $role
-   *   The field role (primary_field, secondary_field, etc.).
-   *
-   * @return string|null
-   *   The field name or NULL if not set.
-   */
-  public function getFieldName(string $role) {
-    return $this->field_mapping[$role] ?? NULL;
+  public function getInstructions() {
+    return $this->instructions;
   }
 
   /**
