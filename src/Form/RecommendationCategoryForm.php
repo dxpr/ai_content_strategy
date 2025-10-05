@@ -76,6 +76,19 @@ class RecommendationCategoryForm extends EntityForm {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    // Validate instructions are not empty.
+    $instructions = trim($form_state->getValue('instructions'));
+    if (empty($instructions)) {
+      $form_state->setErrorByName('instructions', $this->t('AI instructions cannot be empty.'));
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function save(array $form, FormStateInterface $form_state) {
     /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $category */
     $category = $this->entity;

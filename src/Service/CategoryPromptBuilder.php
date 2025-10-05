@@ -49,9 +49,15 @@ class CategoryPromptBuilder {
 
       // Build category-specific instructions.
       $instructions = $category->getInstructions();
-      if (!empty($instructions)) {
-        $category_sections[] = "**{$category->label()}**:\n{$instructions}";
+      if (empty($instructions)) {
+        \Drupal::logger('ai_content_strategy')->warning(
+          'Category @label has no instructions configured.',
+          ['@label' => $category->label()]
+        );
+        continue;
       }
+
+      $category_sections[] = "**{$category->label()}**:\n{$instructions}";
 
       // Build universal schema example for this category.
       $schema_examples[$category_id] = [

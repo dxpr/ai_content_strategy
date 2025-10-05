@@ -13,6 +13,20 @@ use Drupal\Core\Config\FileStorage;
 function ai_content_strategy_uninstall() {
   // Delete our key-value collection.
   \Drupal::keyValue('ai_content_strategy.recommendations')->deleteAll();
+
+  // Delete recommendation category entities.
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $storage = $entity_type_manager->getStorage('recommendation_category');
+  $categories = $storage->loadMultiple();
+  if ($categories) {
+    $storage->delete($categories);
+  }
+
+  // Delete state values.
+  \Drupal::state()->delete('ai_content_strategy.last_run');
+
+  // Clear caches.
+  \Drupal::cache()->delete('ai_content_strategy:composite_schema');
 }
 
 /**
@@ -36,14 +50,21 @@ function ai_content_strategy_update_10001() {
     'ai_content_strategy.recommendation_category.trust_signals',
   ];
 
+  $installed = 0;
   foreach ($categories as $config_name) {
-    $config_data = $config_source->read($config_name);
-    if ($config_data) {
-      $config_factory->getEditable($config_name)->setData($config_data)->save();
+    // Only install if it doesn't already exist.
+    if (!$config_factory->get($config_name)->get('id')) {
+      $config_data = $config_source->read($config_name);
+      if ($config_data) {
+        $config_factory->getEditable($config_name)->setData($config_data)->save();
+        $installed++;
+      }
     }
   }
 
-  return t('Installed default recommendation category entities.');
+  return $installed > 0
+    ? t('Installed @count default recommendation category entities.', ['@count' => $installed])
+    : t('Default recommendation categories already exist.');
 }
 
 /**
@@ -60,21 +81,22 @@ function ai_content_strategy_update_10002() {
 }
 
 /**
- * Mark legacy prompts configuration as deprecated.
+ * Install global settings configuration.
  */
 function ai_content_strategy_update_10003() {
   $config_factory = \Drupal::configFactory();
 
-  // Add deprecation notice to old config.
-  $prompts_config = $config_factory->getEditable('ai_content_strategy.prompts');
-  $prompts_config->set('_deprecated', TRUE);
-  $prompts_config->set('_deprecation_message', 'This configuration is deprecated. Use recommendation_category config entities instead.');
-  $prompts_config->save();
+  // Install settings config if it doesn't exist.
+  if (!$config_factory->get('ai_content_strategy.settings')->get('system_prompt')) {
+    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $config_source = new FileStorage($config_path);
 
-  // Log deprecation warning.
-  \Drupal::logger('ai_content_strategy')->warning(
-    'Legacy prompts configuration is deprecated and will be removed in version 3.0. Migrate to recommendation_category entities.'
-  );
+    $config_data = $config_source->read('ai_content_strategy.settings');
+    if ($config_data) {
+      $config_factory->getEditable('ai_content_strategy.settings')->setData($config_data)->save();
+      return t('Installed global settings configuration.');
+    }
+  }
 
-  return t('Legacy configuration marked as deprecated.');
+  return t('Global settings already exist.');
 }
