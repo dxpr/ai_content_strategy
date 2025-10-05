@@ -785,7 +785,7 @@ EOT;
       ];
 
       // Render the new recommendations.
-      $html = $this->renderer->render($build);
+      $html = $this->renderer->renderRoot($build);
 
       // Update the recommendations section.
       $response->addCommand(
