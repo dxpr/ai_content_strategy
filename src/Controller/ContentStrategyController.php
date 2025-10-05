@@ -7,6 +7,7 @@ use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
+use Drupal\Core\Utility\Error;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\ai\OperationType\Chat\ChatInput;
 use Drupal\ai\OperationType\Chat\ChatMessage;
@@ -370,7 +371,7 @@ class ContentStrategyController extends ControllerBase {
           // Get the rendered content.
           $view_builder = $this->entityTypeManager()->getViewBuilder('node');
           $build = $view_builder->view($node);
-          $html = $this->renderer()->renderPlain($build);
+          $html = $this->renderer()->renderInIsolation($build);
 
           // Convert HTML to plain text.
           $text = strip_tags($html);
@@ -582,7 +583,7 @@ EOT;
 
     }
     catch (\Exception $e) {
-      watchdog_exception('ai_content_strategy', $e);
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
 
       $response = new AjaxResponse();
       $response->addCommand(
@@ -786,7 +787,7 @@ EOT;
 
     }
     catch (\Exception $e) {
-      watchdog_exception('ai_content_strategy', $e);
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
 
       $response->addCommand(
         new MessageCommand(

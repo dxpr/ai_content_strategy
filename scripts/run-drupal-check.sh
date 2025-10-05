@@ -28,6 +28,11 @@ parameters:
     level: 5
     # Don't treat PHPDoc types as certain to reduce false positives
     treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # AI module ProviderProxy methods - dynamic magic methods
+        - '#Call to an undefined method Drupal\\\\ai\\\\Plugin\\\\ProviderProxy::(chat|isUsable|getConfiguredModels|setChatSystemRole)\(\)#'
+        # new static() is intentional for factory pattern
+        - '#Unsafe usage of new static\(\)#'
 EOF
 
 mkdir -p web/modules/contrib/
