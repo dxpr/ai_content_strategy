@@ -9,6 +9,7 @@ use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\Unicode;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Utility\Error;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\ai\OperationType\Chat\ChatInput;
@@ -780,13 +781,7 @@ EOT;
         '#theme' => 'ai_content_strategy_recommendations_items',
         '#items' => $data[$section],
         '#section' => $section,
-        '#section_config' => [
-          'title' => $this->getSectionTitle($section),
-          'item_key' => $this->getSectionItemKey($section),
-          'description_key' => $this->getSectionDescriptionKey($section),
-        ],
-        '#button_text' => $this->config('ai_content_strategy.settings')
-          ->get('button_text')['main'],
+        '#button_text' => ai_content_strategy_get_button_texts(),
       ];
 
       // Render the new recommendations.
