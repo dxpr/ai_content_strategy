@@ -233,13 +233,11 @@ class ContentStrategyController extends ControllerBase {
       // Create AJAX response.
       $response = new AjaxResponse();
 
-      // Update the button text to "Regenerate report".
-      $response->addCommand(
-        new HtmlCommand(
-          '.generate-recommendations',
-          $this->t('Regenerate report')
-        )
-      );
+      // Re-enable the generate button.
+      $response->addCommand(new HtmlCommand(
+        '.generate-recommendations',
+        $this->t('Regenerate report')
+      ));
 
       // Update the last run time.
       $response->addCommand(
@@ -285,7 +283,7 @@ class ContentStrategyController extends ControllerBase {
           '#button_text' => ai_content_strategy_get_button_texts(),
         ];
 
-        $section_html = $this->renderer->render($section_build);
+        $section_html = $this->renderer->renderRoot($section_build);
 
         // For empty state, we need to create the section container first.
         $section_container = [
@@ -294,12 +292,12 @@ class ContentStrategyController extends ControllerBase {
             'class' => ['recommendation-section'],
             'data-section' => $section,
           ],
-          'title' => [
+          'section_title' => [
             '#type' => 'html_tag',
             '#tag' => 'h3',
             '#value' => $this->getSectionTitle($section),
           ],
-          'items' => [
+          'section_items' => [
             '#type' => 'container',
             '#attributes' => ['class' => ['recommendation-items']],
             'content' => ['#markup' => $section_html],
@@ -307,10 +305,10 @@ class ContentStrategyController extends ControllerBase {
         ];
 
         if (!empty($recommendations[$section])) {
-          $section_container['add_more'] = [
+          $section_container['section_add_more'] = [
             '#type' => 'container',
             '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
-            'link' => [
+            'add_link' => [
               '#type' => 'html_tag',
               '#tag' => 'a',
               '#attributes' => [
@@ -334,21 +332,36 @@ class ContentStrategyController extends ControllerBase {
       $response->addCommand(
         new AppendCommand(
           '.content-strategy-recommendations',
-          $this->renderer->render($wrapper)
+          $this->renderer->renderRoot($wrapper)
         )
       );
 
       return $response;
     }
     catch (\Exception $e) {
+      // Log the full error for administrators.
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      // Create user-friendly error message.
+      $error_message = $this->buildUserFriendlyErrorMessage($e);
+
       $response = new AjaxResponse();
+
+      // Re-enable the button so user can retry.
+      $response->addCommand(new HtmlCommand(
+        '.generate-recommendations',
+        $this->t('Generate recommendations')
+      ));
+
+      // Show error message.
       $response->addCommand(
         new MessageCommand(
-          $this->t('Error: @message', ['@message' => $e->getMessage()]),
+          $error_message,
           NULL,
           ['type' => 'error']
         )
       );
+
       return $response;
     }
   }
@@ -586,19 +599,21 @@ EOT;
 
     }
     catch (\Exception $e) {
+      // Log the full error for administrators.
       Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      // Create user-friendly error message.
+      $error_message = $this->buildUserFriendlyErrorMessage($e);
 
       $response = new AjaxResponse();
       $response->addCommand(
         new MessageCommand(
-          $this->t(
-            'An error occurred while generating more ideas: @error',
-            ['@error' => $e->getMessage()]
-          ),
+          $error_message,
           NULL,
           ['type' => 'error']
         )
-          );
+      );
+
       return $response;
     }
   }
@@ -885,6 +900,77 @@ EOT;
       'trust_signals' => 'implementation',
     ];
     return $keys[$section] ?? $section;
+  }
+
+  /**
+   * Builds a user-friendly error message with actionable guidance.
+   *
+   * Following Jakob Nielsen's usability heuristics:
+   * - Error messages should be expressed in plain language.
+   * - Precisely indicate the problem.
+   * - Constructively suggest a solution.
+   *
+   * @param \Exception $exception
+   *   The exception that occurred.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A user-friendly error message with next steps.
+   */
+  protected function buildUserFriendlyErrorMessage(\Exception $exception): TranslatableMarkup {
+    $message = $exception->getMessage();
+
+    // Check for common error patterns and provide specific guidance.
+    // Pattern 1: No chat provider available.
+    if (stripos($message, 'no chat provider') !== FALSE || stripos($message, 'provider') !== FALSE) {
+      return $this->t('<strong>AI provider not configured.</strong><br>Please configure an AI chat provider at <a href="@url">AI settings</a> before generating recommendations.', [
+        '@url' => '/admin/config/ai/providers',
+      ]);
+    }
+
+    // Pattern 2: No URLs found in sitemap.
+    if (stripos($message, 'no urls') !== FALSE || stripos($message, 'sitemap') !== FALSE) {
+      return $this->t('<strong>No content found to analyze.</strong><br>Please ensure your site has published content and a properly configured sitemap. Check your sitemap at <a href="@url">@url</a>.', [
+        '@url' => '/sitemap.xml',
+      ]);
+    }
+
+    // Pattern 3: No enabled categories.
+    if (stripos($message, 'no enabled') !== FALSE || stripos($message, 'categor') !== FALSE) {
+      return $this->t('<strong>No recommendation categories enabled.</strong><br>Please enable at least one category at <a href="@url">category settings</a>.', [
+        '@url' => '/admin/config/ai/content-strategy/categories',
+      ]);
+    }
+
+    // Pattern 4: JSON parsing errors.
+    if (stripos($message, 'json') !== FALSE || stripos($message, 'parse') !== FALSE) {
+      return $this->t('<strong>AI returned an invalid response.</strong><br>The AI model may be overloaded or misconfigured. Please try again in a moment. If the problem persists, try a different AI model in <a href="@url">AI settings</a>.', [
+        '@url' => '/admin/config/ai/providers',
+      ]);
+    }
+
+    // Pattern 5: API/Network errors.
+    if (stripos($message, 'timeout') !== FALSE || stripos($message, 'connection') !== FALSE || stripos($message, 'network') !== FALSE) {
+      return $this->t('<strong>Connection to AI provider failed.</strong><br>This may be a temporary network issue. Please check your internet connection and try again. If using a third-party API, verify your API credentials are correct.');
+    }
+
+    // Pattern 6: Rate limiting.
+    if (stripos($message, 'rate limit') !== FALSE || stripos($message, 'quota') !== FALSE || stripos($message, 'too many') !== FALSE) {
+      return $this->t('<strong>AI service rate limit reached.</strong><br>You have exceeded the API usage limits. Please wait a few minutes before trying again, or check your API plan limits with your provider.');
+    }
+
+    // Pattern 7: Authentication errors.
+    if (stripos($message, 'auth') !== FALSE || stripos($message, 'api key') !== FALSE || stripos($message, 'credential') !== FALSE) {
+      return $this->t('<strong>AI provider authentication failed.</strong><br>Please verify your API credentials are correct at <a href="@url">AI settings</a>.', [
+        '@url' => '/admin/config/ai/providers',
+      ]);
+    }
+
+    // Generic fallback with constructive guidance.
+    return $this->t('<strong>Unable to generate recommendations.</strong><br>An unexpected error occurred: @error<br><br><strong>What to try:</strong><ul><li>Refresh the page and try again</li><li>Check the <a href="@logs">error logs</a> for details</li><li>Verify your <a href="@ai">AI provider settings</a></li><li>Ensure your site has published content</li></ul>', [
+      '@error' => $message,
+      '@logs' => '/admin/reports/dblog',
+      '@ai' => '/admin/config/ai/providers',
+    ]);
   }
 
 }
