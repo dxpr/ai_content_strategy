@@ -5,4 +5,4 @@ services:
   
   ai_content_strategy.content_analyzer:
     class: Drupal\ai_content_strategy\Service\ContentAnalyzer
-    arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory', '@renderer'] 
+    arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory', '@renderer', '@module_handler'] 

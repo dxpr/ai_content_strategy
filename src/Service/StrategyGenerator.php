@@ -152,7 +152,7 @@ class StrategyGenerator extends AnalyzerBase {
 
       // Check sitemap data.
       if (empty($sitemap_urls['urls'])) {
-        throw new \RuntimeException($this->t('No URLs found in sitemap. Please ensure your sitemap is properly configured.')->render());
+        throw new \RuntimeException('No URLs found in sitemap. Please ensure your sitemap is properly configured.');
       }
 
       // Get default provider and model.
@@ -177,7 +177,7 @@ class StrategyGenerator extends AnalyzerBase {
         return $decoded;
       }
 
-      throw new \RuntimeException($this->t('Failed to parse AI response into valid JSON')->render());
+      throw new \RuntimeException('Failed to parse AI response into valid JSON');
     }
     catch (\Exception $e) {
       $this->messenger->addError($this->t('Error: @error', [

@@ -28,4 +28,14 @@ services:
     environment:
       DRUPAL_RECOMMENDED_PROJECT: 11.2.x-dev
     volumes:
+      - .:/src
+
+  drupal-test:
+    image: composer:2.7
+    profiles: ["test"]
+    working_dir: /
+    command: bash -c "/src/scripts/run-drupal-tests.sh"
+    environment:
+      DRUPAL_RECOMMENDED_PROJECT: 11.2.x-dev
+    volumes:
       - .:/src 
