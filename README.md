@@ -29,15 +29,18 @@ drush en ai_content_strategy
 
 1. Configure AI provider at `/admin/config/ai/providers`
 2. Set permissions at `/admin/people/permissions`
-3. Configure recommendation categories at `/admin/config/ai/content-strategy/categories`
-4. Customize global AI settings at `/admin/config/ai/content-strategy/settings`
+3. Configure recommendation categories at
+   `/admin/config/ai/content-strategy/categories`
+4. Customize global AI settings at
+   `/admin/config/ai/content-strategy/settings`
 5. Access recommendations at `/admin/reports/ai/content-strategy`
 6. Click "Generate Recommendations" to analyze your site
 7. Use "Generate More Ideas" for specific content suggestions
 
 ### Customizing Categories
 
-You can customize the recommendation categories to match your content strategy needs:
+You can customize the recommendation categories to match your content
+strategy needs:
 
 - **Add new categories**: Create custom recommendation types
 - **Modify instructions**: Tailor AI analysis per category
@@ -66,10 +69,12 @@ If upgrading from a version prior to 2.0.0:
 
 1. Run database updates: `drush updatedb`
 2. Clear caches: `drush cr`
-3. Review and customize categories at `/admin/config/ai/content-strategy/categories`
+3. Review and customize categories at
+   `/admin/config/ai/content-strategy/categories`
 
-The module will automatically install default categories (Content Gaps, Authority Topics,
-Expertise Demonstrations, Trust Signals) with pre-configured instructions.
+The module will automatically install default categories (Content Gaps,
+Authority Topics, Expertise Demonstrations, Trust Signals) with
+pre-configured instructions.
 
 ## Usage
 

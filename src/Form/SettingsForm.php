@@ -33,7 +33,7 @@ class SettingsForm extends ConfigFormBase {
     $form['system_prompt'] = [
       '#type' => 'textarea',
       '#title' => $this->t('System prompt'),
-      '#description' => $this->t('Global system-level instructions that set the AI\'s role and behavior when generating recommendations. This applies to all categories.'),
+      '#description' => $this->t("Global system-level instructions that set the AI's role and behavior when generating recommendations. This applies to all categories."),
       '#default_value' => $config->get('system_prompt') ?? $this->getDefaultSystemPrompt(),
       '#rows' => 10,
     ];
