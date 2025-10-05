@@ -15,32 +15,36 @@ use Drupal\Core\Url;
  *   Array of translated button texts.
  */
 function ai_content_strategy_get_button_texts() {
-  return [
+  $button_texts = [
     'main' => [
       'generate' => t('Generate recommendations'),
       'refresh' => t('Regenerate report'),
       'loading' => t('Adding recommendations here...'),
       'loading_more' => t('Adding more recommendations here...'),
     ],
-    'generate' => [
-      'content_gaps' => t('Generate @type', ['@type' => t('ideas')]),
-      'authority_topics' => t('Generate @type', ['@type' => t('ideas')]),
-      'expertise_demonstrations' => t('Generate @type', ['@type' => t('ideas')]),
-      'trust_signals' => t('Generate @type', ['@type' => t('ideas')]),
-    ],
-    'generate_more' => [
-      'content_gaps' => t('Generate more @type', ['@type' => t('ideas')]),
-      'authority_topics' => t('Generate more @type', ['@type' => t('ideas')]),
-      'expertise_demonstrations' => t('Generate more @type', ['@type' => t('ideas')]),
-      'trust_signals' => t('Generate more @type', ['@type' => t('ideas')]),
-    ],
-    'add_more' => [
-      'content_gaps' => t('Generate more @type', ['@type' => t('cards')]),
-      'authority_topics' => t('Generate more @type', ['@type' => t('cards')]),
-      'expertise_demonstrations' => t('Generate more @type', ['@type' => t('cards')]),
-      'trust_signals' => t('Generate more @type', ['@type' => t('cards')]),
-    ],
+    'generate' => [],
+    'generate_more' => [],
+    'add_more' => [],
   ];
+
+  // Load enabled categories and generate button texts dynamically.
+  $category_storage = \Drupal::entityTypeManager()->getStorage('recommendation_category');
+  $category_ids = $category_storage->getQuery()
+    ->condition('status', TRUE)
+    ->accessCheck(FALSE)
+    ->execute();
+
+  if ($category_ids) {
+    $categories = $category_storage->loadMultiple($category_ids);
+    foreach ($categories as $category) {
+      $category_id = $category->id();
+      $button_texts['generate'][$category_id] = t('Generate @type', ['@type' => t('ideas')]);
+      $button_texts['generate_more'][$category_id] = t('Generate more @type', ['@type' => t('ideas')]);
+      $button_texts['add_more'][$category_id] = t('Generate more @type', ['@type' => t('cards')]);
+    }
+  }
+
+  return $button_texts;
 }
 
 /**
@@ -50,10 +54,7 @@ function ai_content_strategy_theme() {
   return [
     'ai_content_strategy_recommendations' => [
       'variables' => [
-        'content_gaps' => [],
-        'authority_topics' => [],
-        'expertise_demonstrations' => [],
-        'trust_signals' => [],
+        'categories' => [],
         'button_text' => [],
         'last_run' => NULL,
       ],
@@ -62,7 +63,6 @@ function ai_content_strategy_theme() {
       'variables' => [
         'items' => [],
         'section' => NULL,
-        'section_config' => [],
         'button_text' => [],
       ],
     ],

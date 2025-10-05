@@ -198,12 +198,33 @@ class ContentStrategyController extends ControllerBase {
       }
     }
 
+    // Load enabled categories and build category metadata.
+    $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+    $category_ids = $category_storage->getQuery()
+      ->condition('status', TRUE)
+      ->sort('weight')
+      ->sort('id')
+      ->accessCheck(FALSE)
+      ->execute();
+
+    $categories = [];
+    if ($category_ids) {
+      $category_entities = $category_storage->loadMultiple($category_ids);
+      foreach ($category_entities as $category) {
+        $category_id = $category->id();
+        $categories[$category_id] = [
+          'id' => $category_id,
+          'label' => $category->label(),
+          'description' => $category->getDescription(),
+          'weight' => $category->getWeight(),
+          'items' => $recommendations[$category_id] ?? [],
+        ];
+      }
+    }
+
     return [
       '#theme' => 'ai_content_strategy_recommendations',
-      '#content_gaps' => $recommendations['content_gaps'] ?? [],
-      '#authority_topics' => $recommendations['authority_topics'] ?? [],
-      '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
-      '#trust_signals' => $recommendations['trust_signals'] ?? [],
+      '#categories' => $categories,
       '#last_run' => $last_run ?
       $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
       '#attached' => [
@@ -262,70 +283,73 @@ class ContentStrategyController extends ControllerBase {
         ],
       ];
 
-      // Build the sections HTML.
-      $sections = [
-        'content_gaps',
-        'authority_topics',
-        'expertise_demonstrations',
-        'trust_signals',
-      ];
+      // Load enabled categories dynamically.
+      $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+      $category_ids = $category_storage->getQuery()
+        ->condition('status', TRUE)
+        ->sort('weight')
+        ->sort('id')
+        ->accessCheck(FALSE)
+        ->execute();
 
-      foreach ($sections as $section) {
-        $section_build = [
-          '#theme' => 'ai_content_strategy_recommendations_items',
-          '#items' => $recommendations[$section] ?? [],
-          '#section' => $section,
-          '#section_config' => [
-            'title' => $this->getSectionTitle($section),
-            'item_key' => $this->getSectionItemKey($section),
-            'description_key' => $this->getSectionDescriptionKey($section),
-          ],
-          '#button_text' => ai_content_strategy_get_button_texts(),
-        ];
+      if ($category_ids) {
+        $categories = $category_storage->loadMultiple($category_ids);
+        $button_texts = ai_content_strategy_get_button_texts();
 
-        $section_html = $this->renderer->renderRoot($section_build);
+        foreach ($categories as $category) {
+          $category_id = $category->id();
 
-        // For empty state, we need to create the section container first.
-        $section_container = [
-          '#type' => 'container',
-          '#attributes' => [
-            'class' => ['recommendation-section'],
-            'data-section' => $section,
-          ],
-          'section_title' => [
-            '#type' => 'html_tag',
-            '#tag' => 'h3',
-            '#value' => $this->getSectionTitle($section),
-          ],
-          'section_items' => [
+          $section_build = [
+            '#theme' => 'ai_content_strategy_recommendations_items',
+            '#items' => $recommendations[$category_id] ?? [],
+            '#section' => $category_id,
+            '#button_text' => $button_texts,
+          ];
+
+          $section_html = $this->renderer->renderRoot($section_build);
+
+          // For empty state, we need to create the section container first.
+          $section_container = [
             '#type' => 'container',
-            '#attributes' => ['class' => ['recommendation-items']],
-            'content' => ['#markup' => $section_html],
-          ],
-        ];
-
-        if (!empty($recommendations[$section])) {
-          $section_container['section_add_more'] = [
-            '#type' => 'container',
-            '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
-            'add_link' => [
+            '#attributes' => [
+              'class' => ['recommendation-section'],
+              'data-section' => $category_id,
+            ],
+            'section_title' => [
               '#type' => 'html_tag',
-              '#tag' => 'a',
-              '#attributes' => [
-                'href' => '#',
-                'class' => [
-                  'add-more-recommendations-link',
-                  'button',
-                  'button--secondary',
-                ],
-                'data-section' => $section,
-              ],
-              '#value' => ai_content_strategy_get_button_texts()['add_more'][$section],
+              '#tag' => 'h3',
+              '#value' => $category->label(),
+            ],
+            'section_items' => [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['recommendation-items']],
+              'content' => ['#markup' => $section_html],
             ],
           ];
-        }
 
-        $wrapper[$section] = $section_container;
+          if (!empty($recommendations[$category_id])) {
+            $section_container['section_add_more'] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
+              'add_link' => [
+                '#type' => 'html_tag',
+                '#tag' => 'a',
+                '#attributes' => [
+                  'href' => '#',
+                  'class' => [
+                    'add-more-recommendations-link',
+                    'button',
+                    'button--secondary',
+                  ],
+                  'data-section' => $category_id,
+                ],
+                '#value' => $button_texts['add_more'][$category_id] ?? $this->t('Generate more recommendations'),
+              ],
+            ];
+          }
+
+          $wrapper[$category_id] = $section_container;
+        }
       }
 
       // Add the wrapper with all sections.
@@ -509,26 +533,10 @@ EOT;
       // Find the correct section and item to update.
       if (isset($recommendations[$section])) {
         foreach ($recommendations[$section] as $key => $item) {
-          $match = FALSE;
-          switch ($section) {
-            case 'content_gaps':
-              $match = ($item['title'] === $title);
-              break;
+          // Try common title fields to match the item.
+          $item_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? NULL;
 
-            case 'authority_topics':
-              $match = ($item['topic'] === $title);
-              break;
-
-            case 'expertise_demonstrations':
-              $match = ($item['content_type'] === $title);
-              break;
-
-            case 'trust_signals':
-              $match = ($item['signal'] === $title);
-              break;
-          }
-
-          if ($match) {
+          if ($item_title === $title) {
             // Append new ideas to existing ones.
             $recommendations[$section][$key]['content_ideas'] = array_merge(
               $recommendations[$section][$key]['content_ideas'],
@@ -843,63 +851,6 @@ EOT;
       '{{ existing_recommendations }}' => $context['existing_recommendations'],
     ]);
     return $text;
-  }
-
-  /**
-   * Gets the section title.
-   *
-   * @param string $section
-   *   The section identifier.
-   *
-   * @return string
-   *   The human-readable section title.
-   */
-  protected function getSectionTitle($section) {
-    $titles = [
-      'content_gaps' => $this->t('Content Gap'),
-      'authority_topics' => $this->t('Authority Topic'),
-      'expertise_demonstrations' => $this->t('Expertise Demonstration'),
-      'trust_signals' => $this->t('Trust Signal'),
-    ];
-    return $titles[$section] ?? $section;
-  }
-
-  /**
-   * Gets the section item key.
-   *
-   * @param string $section
-   *   The section identifier.
-   *
-   * @return string
-   *   The key used to identify items in this section.
-   */
-  protected function getSectionItemKey($section) {
-    $keys = [
-      'content_gaps' => 'title',
-      'authority_topics' => 'topic',
-      'expertise_demonstrations' => 'content_type',
-      'trust_signals' => 'signal',
-    ];
-    return $keys[$section] ?? $section;
-  }
-
-  /**
-   * Gets the section description key.
-   *
-   * @param string $section
-   *   The section identifier.
-   *
-   * @return string
-   *   The key used for descriptions in this section.
-   */
-  protected function getSectionDescriptionKey($section) {
-    $keys = [
-      'content_gaps' => 'description',
-      'authority_topics' => 'rationale',
-      'expertise_demonstrations' => 'description',
-      'trust_signals' => 'implementation',
-    ];
-    return $keys[$section] ?? $section;
   }
 
   /**
