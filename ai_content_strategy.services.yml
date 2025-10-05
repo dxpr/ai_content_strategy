@@ -3,10 +3,24 @@ services:
     parent: logger.channel_base
     arguments: ['ai_content_strategy']
 
+  ai_content_strategy.category_schema_builder:
+    class: Drupal\ai_content_strategy\Service\CategorySchemaBuilder
+    arguments: ['@entity_type.manager', '@cache.default']
+
+  ai_content_strategy.category_prompt_builder:
+    class: Drupal\ai_content_strategy\Service\CategoryPromptBuilder
+
   ai_content_strategy.strategy_generator:
     class: Drupal\ai_content_strategy\Service\StrategyGenerator
-    arguments: ['@ai.provider', '@ai_content_strategy.content_analyzer', '@ai.prompt_json_decode', '@messenger', '@config.factory']
+    arguments:
+      - '@ai.provider'
+      - '@ai_content_strategy.content_analyzer'
+      - '@ai.prompt_json_decode'
+      - '@messenger'
+      - '@config.factory'
+      - '@ai_content_strategy.category_schema_builder'
+      - '@ai_content_strategy.category_prompt_builder'
 
   ai_content_strategy.content_analyzer:
     class: Drupal\ai_content_strategy\Service\ContentAnalyzer
-    arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory', '@renderer', '@module_handler', '@logger.channel.ai_content_strategy'] 
+    arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory', '@renderer', '@module_handler', '@logger.channel.ai_content_strategy']

@@ -53,6 +53,20 @@ class StrategyGenerator extends AnalyzerBase {
   protected $configFactory;
 
   /**
+   * The category schema builder.
+   *
+   * @var \Drupal\ai_content_strategy\Service\CategorySchemaBuilder
+   */
+  protected $categorySchemaBuilder;
+
+  /**
+   * The category prompt builder.
+   *
+   * @var \Drupal\ai_content_strategy\Service\CategoryPromptBuilder
+   */
+  protected $categoryPromptBuilder;
+
+  /**
    * Constructs a StrategyGenerator object.
    *
    * @param \Drupal\ai\AiProviderPluginManager $ai_provider
@@ -65,6 +79,10 @@ class StrategyGenerator extends AnalyzerBase {
    *   The messenger service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
+   * @param \Drupal\ai_content_strategy\Service\CategorySchemaBuilder $category_schema_builder
+   *   The category schema builder service.
+   * @param \Drupal\ai_content_strategy\Service\CategoryPromptBuilder $category_prompt_builder
+   *   The category prompt builder service.
    */
   public function __construct(
     AiProviderPluginManager $ai_provider,
@@ -72,12 +90,16 @@ class StrategyGenerator extends AnalyzerBase {
     PromptJsonDecoderInterface $prompt_json_decoder,
     MessengerInterface $messenger,
     ConfigFactoryInterface $config_factory,
+    CategorySchemaBuilder $category_schema_builder,
+    CategoryPromptBuilder $category_prompt_builder,
   ) {
     $this->aiProvider = $ai_provider;
     $this->contentAnalyzer = $content_analyzer;
     $this->promptJsonDecoder = $prompt_json_decoder;
     $this->messenger = $messenger;
     $this->configFactory = $config_factory;
+    $this->categorySchemaBuilder = $category_schema_builder;
+    $this->categoryPromptBuilder = $category_prompt_builder;
   }
 
   /**
@@ -204,17 +226,19 @@ class StrategyGenerator extends AnalyzerBase {
       throw new \RuntimeException('Could not analyze sitemap: ' . $sitemap_urls['error']);
     }
 
-    $config = $this->configFactory->get('ai_content_strategy.prompts');
-    $prompt_template = $config->get('content_strategy.prompt_template');
-    $schema_example = $config->get('content_strategy.schema_example');
+    // Get enabled categories.
+    $categories = $this->categorySchemaBuilder->getEnabledCategories();
 
-    return strtr($prompt_template, [
-      '{schema_example}' => $schema_example,
-      '{homepage_title}' => $site_structure['homepage']['title'],
-      '{homepage_content}' => $site_structure['homepage']['content'],
-      '{primary_menu}' => $this->formatMenuItems($site_structure['primary_menu']),
-      '{urls}' => $this->formatUrls($sitemap_urls['urls']),
-    ]);
+    if (empty($categories)) {
+      throw new \RuntimeException('No enabled recommendation categories found. Please enable at least one category.');
+    }
+
+    // Build prompt using category prompt builder.
+    return $this->categoryPromptBuilder->buildStrategyPrompt(
+      $categories,
+      $site_structure,
+      $sitemap_urls
+    );
   }
 
 }
