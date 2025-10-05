@@ -38,4 +38,37 @@ ai_content_strategy.add_more_recommendations:
   requirements:
     _permission: 'access ai content strategy'
   options:
-    _admin_route: TRUE 
+    _admin_route: TRUE
+
+# Recommendation Category entity routes
+entity.recommendation_category.collection:
+  path: '/admin/config/ai/content-strategy/categories'
+  defaults:
+    _entity_list: 'recommendation_category'
+    _title: 'Recommendation Categories'
+  requirements:
+    _permission: 'administer ai content strategy'
+
+entity.recommendation_category.add_form:
+  path: '/admin/config/ai/content-strategy/categories/add'
+  defaults:
+    _entity_form: 'recommendation_category.add'
+    _title: 'Add Recommendation Category'
+  requirements:
+    _permission: 'administer ai content strategy'
+
+entity.recommendation_category.edit_form:
+  path: '/admin/config/ai/content-strategy/categories/{recommendation_category}/edit'
+  defaults:
+    _entity_form: 'recommendation_category.edit'
+    _title: 'Edit Recommendation Category'
+  requirements:
+    _permission: 'administer ai content strategy'
+
+entity.recommendation_category.delete_form:
+  path: '/admin/config/ai/content-strategy/categories/{recommendation_category}/delete'
+  defaults:
+    _entity_form: 'recommendation_category.delete'
+    _title: 'Delete Recommendation Category'
+  requirements:
+    _permission: 'administer ai content strategy'

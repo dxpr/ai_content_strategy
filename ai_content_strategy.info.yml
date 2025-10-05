@@ -3,9 +3,10 @@ type: module
 description: 'Provides AI-powered content strategy recommendations based on existing site content and EEAT framework.'
 package: AI
 core_version_requirement: ^10.2 || ^11
+configure: entity.recommendation_category.collection
 dependencies:
   - ai:ai
 
 # Optional dependencies that enhance functionality
 suggests:
-  - drupal:menu_ui 
+  - drupal:menu_ui

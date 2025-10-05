@@ -2,4 +2,10 @@ ai_content_strategy.recommendations:
   route_name: ai_content_strategy.recommendations
   title: 'AI Content Strategy'
   appears_on:
-    - system.admin_reports 
+    - system.admin_reports
+
+recommendation_category.add:
+  route_name: entity.recommendation_category.add_form
+  title: 'Add recommendation category'
+  appears_on:
+    - entity.recommendation_category.collection
