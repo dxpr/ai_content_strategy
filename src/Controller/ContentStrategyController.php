@@ -538,9 +538,10 @@ EOT;
           $item_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? NULL;
 
           if ($item_title === $title) {
-            // Append new ideas to existing ones.
+            // Append new ideas to existing ones (or initialize if empty).
+            $existing_ideas = $recommendations[$section][$key]['content_ideas'] ?? [];
             $recommendations[$section][$key]['content_ideas'] = array_merge(
-              $recommendations[$section][$key]['content_ideas'],
+              $existing_ideas,
               $ideas
             );
             $updated = TRUE;
