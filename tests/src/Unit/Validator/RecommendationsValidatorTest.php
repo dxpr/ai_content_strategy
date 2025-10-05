@@ -86,7 +86,8 @@ class RecommendationsValidatorTest extends UnitTestCase {
   public function testValidateRecommendationsWithMissingFields() {
     $recommendations = [
       'content_gaps' => [
-        ['title' => 'Test Gap'], // Missing priority and description
+        // Missing priority and description.
+        ['title' => 'Test Gap'],
       ],
     ];
 
