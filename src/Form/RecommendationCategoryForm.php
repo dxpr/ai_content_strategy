@@ -5,11 +5,38 @@ namespace Drupal\ai_content_strategy\Form;
 use Drupal\ai_content_strategy\Service\CategorySchemaBuilder;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Form handler for recommendation category add and edit forms.
  */
 class RecommendationCategoryForm extends EntityForm {
+
+  /**
+   * The category schema builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\CategorySchemaBuilder
+   */
+  protected $categorySchemaBuilder;
+
+  /**
+   * Constructs a new RecommendationCategoryForm.
+   *
+   * @param \Drupal\ai_content_strategy\Service\CategorySchemaBuilder $category_schema_builder
+   *   The category schema builder service.
+   */
+  public function __construct(CategorySchemaBuilder $category_schema_builder) {
+    $this->categorySchemaBuilder = $category_schema_builder;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('ai_content_strategy.category_schema_builder')
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -96,10 +123,7 @@ class RecommendationCategoryForm extends EntityForm {
     $status = $category->save();
 
     // Invalidate schema cache.
-    $schema_builder = \Drupal::service('ai_content_strategy.category_schema_builder');
-    if ($schema_builder instanceof CategorySchemaBuilder) {
-      $schema_builder->invalidateCache();
-    }
+    $this->categorySchemaBuilder->invalidateCache();
 
     $message_args = ['%label' => $category->label()];
     if ($status === SAVED_NEW) {

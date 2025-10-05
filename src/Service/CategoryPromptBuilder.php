@@ -2,6 +2,7 @@
 
 namespace Drupal\ai_content_strategy\Service;
 
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
@@ -9,6 +10,23 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
  */
 class CategoryPromptBuilder {
   use StringTranslationTrait;
+
+  /**
+   * The logger factory.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  protected $loggerFactory;
+
+  /**
+   * Constructs a new CategoryPromptBuilder.
+   *
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   The logger factory.
+   */
+  public function __construct(LoggerChannelFactoryInterface $logger_factory) {
+    $this->loggerFactory = $logger_factory;
+  }
 
   /**
    * Builds a prompt from a category template with token replacement.
@@ -50,7 +68,7 @@ class CategoryPromptBuilder {
       // Build category-specific instructions.
       $instructions = $category->getInstructions();
       if (empty($instructions)) {
-        \Drupal::logger('ai_content_strategy')->warning(
+        $this->loggerFactory->get('ai_content_strategy')->warning(
           'Category @label has no instructions configured.',
           ['@label' => $category->label()]
         );

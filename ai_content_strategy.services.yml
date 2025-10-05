@@ -9,6 +9,7 @@ services:
 
   ai_content_strategy.category_prompt_builder:
     class: Drupal\ai_content_strategy\Service\CategoryPromptBuilder
+    arguments: ['@logger.factory']
 
   ai_content_strategy.strategy_generator:
     class: Drupal\ai_content_strategy\Service\StrategyGenerator
