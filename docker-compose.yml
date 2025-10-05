@@ -21,13 +21,12 @@ services:
       - .:/src
 
   drupal-check:
-    image: composer:2.7
-    profiles: ["lint"]
-    working_dir: /
-    command: bash -c "/src/scripts/run-drupal-check.sh"
-    environment:
-      DRUPAL_RECOMMENDED_PROJECT: 11.2.x-dev
-    volumes:
+   image: composer:2.7
+   profiles: ["lint"]
+   working_dir: /
+   command: bash -c "/src/scripts/run-drupal-check.sh"
+   tty: true
+   volumes:
       - .:/src
 
   drupal-test:

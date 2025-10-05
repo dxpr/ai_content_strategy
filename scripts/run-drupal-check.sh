@@ -1,59 +1,54 @@
 #!/bin/bash
+
 set -vo pipefail
 
-DRUPAL_RECOMMENDED_PROJECT=${DRUPAL_RECOMMENDED_PROJECT:-11.x-dev}
-PHP_EXTENSIONS="gd"
-DRUPAL_CHECK_TOOL="mglaman/drupal-check"
+# Install required libs for Drupal
+GD_ENABLED=$(php -i | grep 'GD Support' | awk '{ print $4 }')
 
-# Install required PHP extensions
-for ext in $PHP_EXTENSIONS; do
-  if ! php -m | grep -q $ext; then
-    apk update && apk add --no-cache ${ext}-dev
-    docker-php-ext-install $ext
-  fi
-done
-
-# Create Drupal project if it doesn't exist
-if [ ! -d "/drupal" ]; then
-  composer create-project drupal/recommended-project=$DRUPAL_RECOMMENDED_PROJECT drupal --no-interaction --stability=dev
+if [ "$GD_ENABLED" != 'enabled' ]; then
+  apk update && \
+  apk add libpng libpng-dev libjpeg-turbo-dev libwebp-dev zlib-dev libxpm-dev gd tree rsync && docker-php-ext-install gd
 fi
 
-cd drupal
+# Create project in a temporary directory inside the container
+INSTALL_DIR="/drupal_install_tmp"
+composer create-project drupal/recommended-project:11.x-dev "$INSTALL_DIR" --no-interaction --stability=dev
+
+cd "$INSTALL_DIR"
+
+# Allow specific plugins needed by dependencies before requiring them.
+composer config --no-plugins allow-plugins.tbachert/spi true --no-interaction
+
+# Create phpstan.neon config file
+cat <<EOF > phpstan.neon
+parameters:
+    paths:
+        - web/modules/contrib/ai_content_strategy
+    # Set the analysis level (0-9)
+    level: 5
+    # Don't treat PHPDoc types as certain to reduce false positives
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # AI module ProviderProxy methods - dynamic magic methods
+        - '#Call to an undefined method Drupal\\\\ai\\\\Plugin\\\\ProviderProxy::(chat|isUsable|getConfiguredModels|setChatSystemRole)\(\)#'
+        # new static() is intentional for factory pattern
+        - '#Unsafe usage of new static\(\)#'
+EOF
+
 mkdir -p web/modules/contrib/
 
-# Symlink ai_content_strategy if not already linked
 if [ ! -L "web/modules/contrib/ai_content_strategy" ]; then
   ln -s /src web/modules/contrib/ai_content_strategy
 fi
 
-# Install the statistic modules if D11 (removed from core).
-if [[ $DRUPAL_RECOMMENDED_PROJECT == 11.* ]]; then
-  composer require drupal/statistics
-fi
+# Install the statistics module if D11 (removed from core).
+composer require drupal/statistics --no-interaction
 
-# Install drupal-check - try different approaches for compatibility
-echo "Attempting to install drupal-check..."
+# Install required dependencies for ai_content_strategy module
+composer require drupal/ai --no-interaction
 
-# First try the latest version
-if composer require $DRUPAL_CHECK_TOOL --dev --with-all-dependencies; then
-  echo "Successfully installed drupal-check"
-elif composer require "drupal/coder:^8.3.1" --dev --with-all-dependencies; then
-  echo "Installed drupal/coder instead as fallback for static analysis"
-  # Use phpcs for static analysis instead
-  ./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,info,txt,md,yml web/modules/contrib/ai_content_strategy
-  exit $?
-else
-  echo "Warning: Could not install drupal-check or drupal/coder due to dependency conflicts."
-  echo "This is a known issue with PHP 8.3 and Drupal 11.x-dev."
-  echo "Skipping drupal-check analysis..."
-  exit 0
-fi
+# Install PHPStan extensions for Drupal 11 and Drush for command analysis
+composer require --dev phpstan/phpstan mglaman/phpstan-drupal phpstan/phpstan-deprecation-rules drush/drush --with-all-dependencies --no-interaction
 
-# Run drupal-check if it was installed successfully
-if [ -f ./vendor/bin/drupal-check ]; then
-  echo "Running drupal-check analysis..."
-  ./vendor/bin/drupal-check --drupal-root . -ad web/modules/contrib/ai_content_strategy
-else
-  echo "drupal-check binary not found, skipping analysis"
-  exit 0
-fi 
+# Run phpstan
+./vendor/bin/phpstan analyse --memory-limit=-1 -c phpstan.neon

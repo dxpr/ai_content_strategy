@@ -4,6 +4,7 @@ namespace Drupal\ai_content_strategy\Service;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Menu\MenuActiveTrailInterface;
+use Drupal\Core\Utility\Error;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -11,6 +12,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Url;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Service for analyzing existing site content.
@@ -61,6 +63,13 @@ class ContentAnalyzer {
   protected $moduleHandler;
 
   /**
+   * The logger.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * Constructs a ContentAnalyzer object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -75,6 +84,8 @@ class ContentAnalyzer {
    *   The renderer service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   The module handler.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   The logger.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -83,6 +94,7 @@ class ContentAnalyzer {
     ConfigFactoryInterface $config_factory,
     RendererInterface $renderer,
     ModuleHandlerInterface $module_handler,
+    LoggerInterface $logger,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->menuActiveTrail = $menu_active_trail;
@@ -90,6 +102,7 @@ class ContentAnalyzer {
     $this->configFactory = $config_factory;
     $this->renderer = $renderer;
     $this->moduleHandler = $module_handler;
+    $this->logger = $logger;
   }
 
   /**
@@ -117,7 +130,7 @@ class ContentAnalyzer {
           $build = $view_builder->view($node);
 
           // Render the node.
-          $html = $this->renderer->renderPlain($build);
+          $html = $this->renderer->renderInIsolation($build);
 
           // Convert HTML to plain text.
           return strip_tags($html);
@@ -125,7 +138,7 @@ class ContentAnalyzer {
       }
       catch (\Exception $e) {
         // Log error but continue with empty content.
-        watchdog_exception('ai_content_strategy', $e);
+        Error::logException($this->logger, $e);
       }
     }
 
@@ -162,7 +175,7 @@ class ContentAnalyzer {
           }
         }
         catch (\Exception $e) {
-          watchdog_exception('ai_content_strategy', $e);
+          Error::logException($this->logger, $e);
         }
       }
 
@@ -175,7 +188,7 @@ class ContentAnalyzer {
       ];
     }
     catch (\Exception $e) {
-      watchdog_exception('ai_content_strategy', $e);
+      Error::logException($this->logger, $e);
       return [
         'homepage' => ['title' => '', 'content' => ''],
         'primary_menu' => [],

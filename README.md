@@ -43,4 +43,24 @@ recommend:
 - Content formats that demonstrate expertise
 - Trust-building elements for credibility
 
-Each recommendation includes priority level and specific content ideas. 
+Each recommendation includes priority level and specific content ideas.
+
+## Development
+
+### Running Code Quality Tools
+
+This project uses Docker for running code quality checks:
+
+```bash
+# Run Drupal coding standards lint
+docker compose --profile lint run drupal-lint
+
+# Auto-fix coding standards issues
+docker compose --profile lint run drupal-lint-auto-fix
+
+# Run drupal-check for deprecation analysis
+docker compose --profile lint run drupal-check
+
+# Run tests
+docker compose --profile test run drupal-test
+```
