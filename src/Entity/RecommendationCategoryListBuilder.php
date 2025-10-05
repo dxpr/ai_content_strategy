@@ -4,6 +4,7 @@ namespace Drupal\ai_content_strategy\Entity;
 
 use Drupal\Core\Link;
 use Drupal\ai_content_strategy\Service\CategorySchemaBuilder;
+use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Config\Entity\DraggableListBuilder;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
@@ -95,11 +96,20 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
 
     // Instructions summary.
     $instructions = $entity->getInstructions();
-    $row['field_mapping'] = [
-      '#markup' => !empty($instructions)
-        ? '<small>' . $this->t('@text...', ['@text' => substr($instructions, 0, 60)]) . '</small>'
-        : '<em>' . $this->t('Not configured') . '</em>',
-    ];
+    if (!empty($instructions)) {
+      $row['field_mapping'] = [
+        '#type' => 'inline_template',
+        '#template' => '<small>{{ text }}...</small>',
+        '#context' => [
+          'text' => Unicode::truncate($instructions, 60, TRUE, FALSE),
+        ],
+      ];
+    }
+    else {
+      $row['field_mapping'] = [
+        '#markup' => '<em>' . $this->t('Not configured') . '</em>',
+      ];
+    }
 
     return $row + parent::buildRow($entity);
   }

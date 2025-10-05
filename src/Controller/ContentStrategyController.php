@@ -7,6 +7,8 @@ use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
+use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Utility\Error;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\ai\OperationType\Chat\ChatInput;
@@ -376,10 +378,9 @@ class ContentStrategyController extends ControllerBase {
           // Convert HTML to plain text.
           $text = strip_tags($html);
           // Normalize whitespace.
-          $text = preg_replace('/\s+/', ' ', $text);
+          $text = preg_replace('/\s+/', ' ', trim($text));
           // Trim to reasonable length.
-          return substr(trim($text), 0, 1000) .
-            (strlen($text) > 1000 ? '...' : '');
+          return Unicode::truncate($text, 1000, TRUE, TRUE);
         }
       }
     }
@@ -473,8 +474,10 @@ EOT;
 
       // Try to extract and parse JSON array from the text.
       if (preg_match('/\[(?:[^\[\]]|(?R))*\]/', $text, $matches)) {
-        $ideas = json_decode($matches[0], TRUE);
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        try {
+          $ideas = Json::decode($matches[0]);
+        }
+        catch (\Exception $e) {
           throw new \RuntimeException(
             'Failed to parse AI response into valid JSON array'
           );

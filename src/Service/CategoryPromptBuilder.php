@@ -2,6 +2,7 @@
 
 namespace Drupal\ai_content_strategy\Service;
 
+use Drupal\Component\Serialization\Json;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
@@ -125,7 +126,7 @@ class CategoryPromptBuilder {
 
     // Add schema example.
     $prompt .= "  <schema_example>\n";
-    $prompt .= json_encode($schema_examples, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    $prompt .= Json::encode($schema_examples);
     $prompt .= "\n  </schema_example>\n\n";
 
     // Add website data.
