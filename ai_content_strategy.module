@@ -5,6 +5,9 @@
  * AI Content Strategy module.
  */
 
+use Drupal\Core\Link;
+use Drupal\Core\Url;
+
 /**
  * Gets translated button texts.
  *
@@ -77,6 +80,26 @@ function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$va
   $last_run = \Drupal::state()->get('ai_content_strategy.last_run');
   if ($last_run) {
     $variables['last_run'] = \Drupal::service('date.formatter')->formatTimeDiffSince($last_run);
+  }
+
+  // Add "Configure settings" link if user has permission.
+  $current_user = \Drupal::currentUser();
+  if ($current_user->hasPermission('administer ai content strategy')) {
+    $settings_url = Url::fromRoute('entity.recommendation_category.collection');
+    if ($settings_url->access()) {
+      $link = Link::fromTextAndUrl(t('Configure categories'), $settings_url);
+      $link = $link->toRenderable();
+      $link['#attributes']['class'][] = 'button';
+      $link['#attributes']['class'][] = 'button--small';
+      $link['#attributes']['class'][] = 'button--primary';
+
+      $variables['configure_link'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['form-actions', 'configure-actions']],
+        '#weight' => -10,
+        'link' => $link,
+      ];
+    }
   }
 
   // Add to JavaScript settings.

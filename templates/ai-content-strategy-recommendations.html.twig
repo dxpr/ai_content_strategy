@@ -17,6 +17,10 @@
 {{ attach_library('ai_content_strategy/recommendations') }}
 
 <div{{ attributes.addClass('content-strategy-recommendations') }}>
+  {% if configure_link %}
+    {{ configure_link }}
+  {% endif %}
+
   <div class="content-strategy-description">
     <p>{{ 'AI-powered content strategy recommendations based on your site structure.'|t }}</p>
   </div>
