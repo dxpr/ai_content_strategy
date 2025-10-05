@@ -4,9 +4,16 @@ ai_content_strategy.main:
   parent: system.admin_reports
   route_name: ai_content_strategy.recommendations
 
+ai_content_strategy.settings:
+  title: 'AI Content Strategy Settings'
+  description: 'Configure AI content strategy settings'
+  parent: system.admin_config_ai
+  route_name: ai_content_strategy.settings
+  weight: 10
+
 ai_content_strategy.categories:
   title: 'Recommendation Categories'
   description: 'Manage content strategy recommendation categories'
   parent: system.admin_config_ai
   route_name: entity.recommendation_category.collection
-  weight: 10
+  weight: 11
