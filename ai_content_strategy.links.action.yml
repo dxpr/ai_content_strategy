@@ -1,5 +1,5 @@
 ai_content_strategy.recommendations:
   route_name: ai_content_strategy.recommendations
-  title: 'Content Strategy'
+  title: 'AI Content Strategy'
   appears_on:
     - system.admin_reports 

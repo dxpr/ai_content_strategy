@@ -2,7 +2,7 @@ ai_content_strategy.recommendations:
   path: '/admin/reports/ai/content-strategy'
   defaults:
     _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::recommendations'
-    _title: 'Content Strategy'
+    _title: 'AI Content Strategy'
   requirements:
     _permission: 'access ai content strategy'
 

@@ -1,5 +1,5 @@
 ai_content_strategy.main:
-  title: 'Content Strategy'
+  title: 'AI Content Strategy'
   description: 'AI-powered content strategy tools'
   parent: system.admin_reports
   route_name: ai_content_strategy.recommendations 

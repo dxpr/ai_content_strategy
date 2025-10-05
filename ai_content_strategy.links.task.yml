@@ -1,4 +1,4 @@
 ai_content_strategy.recommendations:
   route_name: ai_content_strategy.recommendations
-  title: 'Content Strategy'
+  title: 'AI Content Strategy'
   base_route: ai_content_strategy.recommendations 
