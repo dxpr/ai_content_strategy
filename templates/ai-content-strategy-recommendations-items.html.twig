@@ -15,7 +15,7 @@
 
 {% for item in items %}
   {# Determine title field - try common fields in order #}
-  {% set item_title = item.title|default(item.topic|default(item.content_type|default(item.signal|default('Recommendation')))) %}
+  {% set item_title = item.title|default(item.topic|default(item.content_type|default(item.signal|default('Recommendation'|t)))) %}
   {% if item_title is iterable and item_title['#markup'] is defined %}
     {% set item_title = item_title['#markup'] %}
   {% elseif item_title is iterable %}
