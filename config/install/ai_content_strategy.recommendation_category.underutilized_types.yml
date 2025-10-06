@@ -1,0 +1,15 @@
+langcode: en
+status: false
+dependencies: {  }
+id: underutilized_types
+label: 'Underutilized Content Types'
+description: 'Identifies content types and formats that are underused on your site'
+weight: 5
+instructions: |
+  Analyze the balance of content types and formats to identify underutilized opportunities.
+
+  Focus on:
+  - Content types defined in the site but rarely used
+  - Formats that appear in some topic areas but are missing from others
+  - Structural patterns used successfully in some sections but absent elsewhere
+  - Content type combinations that could enhance coverage (e.g., adding guides to product areas that only have basic pages)
