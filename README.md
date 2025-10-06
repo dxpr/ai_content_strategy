@@ -63,19 +63,6 @@ The category configs are stored in:
 - `ai_content_strategy.recommendation_category.*`
 - `ai_content_strategy.settings`
 
-## Upgrading
-
-If upgrading from a version prior to 2.0.0:
-
-1. Run database updates: `drush updatedb`
-2. Clear caches: `drush cr`
-3. Review and customize categories at
-   `/admin/config/ai/content-strategy/categories`
-
-The module will automatically install default categories (Content Gaps,
-Authority Topics, Expertise Demonstrations, Trust Signals) with
-pre-configured instructions.
-
 ## Usage
 
 The module analyzes your site structure, navigation, and existing content to
