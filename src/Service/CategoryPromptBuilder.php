@@ -81,9 +81,57 @@ class CategoryPromptBuilder {
       // Build universal schema example for this category.
       $schema_examples[$category_id] = [
         [
-          'title' => 'Example ' . $category->label(),
+          'title' => 'Example ' . $category->label() . ' 1',
           'description' => 'Example description based on site context',
           'priority' => 'high',
+          'content_ideas' => [
+            'Example content idea 1 based on site context',
+            'Example content idea 2 based on site context',
+            'Example content idea 3 based on site context',
+            'Example content idea 4 based on site context',
+            'Example content idea 5 based on site context',
+          ],
+        ],
+        [
+          'title' => 'Example ' . $category->label() . ' 2',
+          'description' => 'Example description based on site context',
+          'priority' => 'high',
+          'content_ideas' => [
+            'Example content idea 1 based on site context',
+            'Example content idea 2 based on site context',
+            'Example content idea 3 based on site context',
+            'Example content idea 4 based on site context',
+            'Example content idea 5 based on site context',
+          ],
+        ],
+        [
+          'title' => 'Example ' . $category->label() . ' 3',
+          'description' => 'Example description based on site context',
+          'priority' => 'medium',
+          'content_ideas' => [
+            'Example content idea 1 based on site context',
+            'Example content idea 2 based on site context',
+            'Example content idea 3 based on site context',
+            'Example content idea 4 based on site context',
+            'Example content idea 5 based on site context',
+          ],
+        ],
+        [
+          'title' => 'Example ' . $category->label() . ' 4',
+          'description' => 'Example description based on site context',
+          'priority' => 'medium',
+          'content_ideas' => [
+            'Example content idea 1 based on site context',
+            'Example content idea 2 based on site context',
+            'Example content idea 3 based on site context',
+            'Example content idea 4 based on site context',
+            'Example content idea 5 based on site context',
+          ],
+        ],
+        [
+          'title' => 'Example ' . $category->label() . ' 5',
+          'description' => 'Example description based on site context',
+          'priority' => 'low',
           'content_ideas' => [
             'Example content idea 1 based on site context',
             'Example content idea 2 based on site context',
@@ -118,7 +166,7 @@ class CategoryPromptBuilder {
     $prompt .= "2. NO generic suggestions - each recommendation should clearly relate to the site's specific domain and purpose\n";
     $prompt .= "3. Content ideas must be specific and actionable\n";
     $prompt .= "4. Generate exactly 5 highly specific content ideas for each recommendation\n";
-    $prompt .= "5. For each category, provide EXACTLY 2 distinct recommendations\n";
+    $prompt .= "5. For each category, provide EXACTLY 5 distinct recommendations\n";
     $prompt .= "6. Each recommendation MUST include a priority level (high/medium/low)\n\n";
 
     $prompt .= "The response must be a valid JSON object with these exact keys: " . implode(', ', $required_keys) . "\n";
@@ -142,7 +190,7 @@ class CategoryPromptBuilder {
 
     $prompt .= "  <response_requirements>\n";
     $prompt .= "Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().\n";
-    $prompt .= "Each category MUST contain EXACTLY 2 distinct recommendations - no more, no less.\n";
+    $prompt .= "Each category MUST contain EXACTLY 5 distinct recommendations - no more, no less.\n";
     $prompt .= "Each recommendation MUST have EXACTLY 5 content ideas.\n";
     $prompt .= "All recommendations MUST use the structure: {title, description, priority, content_ideas}\n";
     $prompt .= "  </response_requirements>\n";
@@ -220,7 +268,7 @@ class CategoryPromptBuilder {
 
     $system_prompt = <<<PROMPT
 You are an AI content strategist analyzing a website's content structure.
-Based on the provided site information, generate 2 new recommendations for the "{$category_label}" category.
+Based on the provided site information, generate 5 new recommendations for the "{$category_label}" category.
 
 Category Instructions:
 {$instructions}
@@ -253,7 +301,7 @@ Existing Content URLs:
 </existing_recommendations>
 </context>
 
-Generate 2 new distinct recommendations. Return ONLY a JSON object with this exact structure:
+Generate 5 new distinct recommendations. Return ONLY a JSON object with this exact structure:
 {
   "{$category_id}": [
     {
@@ -272,6 +320,42 @@ Generate 2 new distinct recommendations. Return ONLY a JSON object with this exa
       "title": "Second Recommendation Title",
       "description": "Detailed description based on site context",
       "priority": "medium",
+      "content_ideas": [
+        "Specific content idea 1",
+        "Specific content idea 2",
+        "Specific content idea 3",
+        "Specific content idea 4",
+        "Specific content idea 5"
+      ]
+    },
+    {
+      "title": "Third Recommendation Title",
+      "description": "Detailed description based on site context",
+      "priority": "medium",
+      "content_ideas": [
+        "Specific content idea 1",
+        "Specific content idea 2",
+        "Specific content idea 3",
+        "Specific content idea 4",
+        "Specific content idea 5"
+      ]
+    },
+    {
+      "title": "Fourth Recommendation Title",
+      "description": "Detailed description based on site context",
+      "priority": "low",
+      "content_ideas": [
+        "Specific content idea 1",
+        "Specific content idea 2",
+        "Specific content idea 3",
+        "Specific content idea 4",
+        "Specific content idea 5"
+      ]
+    },
+    {
+      "title": "Fifth Recommendation Title",
+      "description": "Detailed description based on site context",
+      "priority": "low",
       "content_ideas": [
         "Specific content idea 1",
         "Specific content idea 2",

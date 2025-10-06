@@ -31,6 +31,8 @@
 <ol>
   <li>Configure AI provider settings at /admin/config/ai/providers</li>
   <li>Configure permissions at /admin/people/permissions</li>
+  <li>Configure recommendation categories at /admin/config/ai/content-strategy/categories</li>
+  <li>Customize global AI settings at /admin/config/ai/content-strategy/settings</li>
   <li>Access content strategy recommendations at /admin/reports/ai/content-strategy</li>
   <li>Generate initial recommendations using the "Generate Recommendations" button</li>
   <li>Use "Generate More Ideas" for additional specific content suggestions</li>
@@ -51,6 +53,30 @@
 </p>
 
 <h3 id="module-project--customization">Customization</h3>
+
+<h4>Customizing Categories</h4>
 <p>
-  The module's prompts and recommendation schema can be customized through configuration. The default prompts are designed to provide comprehensive content strategy recommendations that can be modified to align with specific organizational needs.
+  You can customize the recommendation categories to match your content strategy needs:
 </p>
+<ul>
+  <li><strong>Add new categories</strong>: Create custom recommendation types</li>
+  <li><strong>Modify instructions</strong>: Tailor AI analysis per category</li>
+  <li><strong>Enable/disable categories</strong>: Control which recommendations appear</li>
+  <li><strong>Reorder categories</strong>: Drag and drop to change display order</li>
+</ul>
+
+<h4>Exporting Configuration</h4>
+<p>
+  Categories are configuration entities and can be exported/imported using Drupal's standard configuration management:
+</p>
+<ul>
+  <li>Export configuration: <code>drush config:export</code></li>
+  <li>Import configuration: <code>drush config:import</code></li>
+</ul>
+<p>
+  The category configs are stored in:
+</p>
+<ul>
+  <li><code>ai_content_strategy.recommendation_category.*</code></li>
+  <li><code>ai_content_strategy.settings</code></li>
+</ul>
