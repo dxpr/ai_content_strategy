@@ -75,7 +75,6 @@
       beforeSend: function(xhr, settings) {
         element.textContent = loadingText;
         element.disabled = true;
-        // Announce loading state to screen readers (WCAG 4.1.3)
         Drupal.announce(loadingText, 'polite');
         return true;
       },
@@ -141,7 +140,6 @@
         }
         element.disabled = false;
         element.textContent = successText;
-        // Announce completion to screen readers (WCAG 4.1.3)
         Drupal.announce(Drupal.t('Content loaded successfully'), 'polite');
       },
       error: function(xhr, status, error) {
