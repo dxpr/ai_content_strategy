@@ -74,6 +74,15 @@
                   {{ button_text.add_more[category.id] }}
                 </a>
               </div>
+            {% else %}
+              <div class="empty-category-state">
+                <p>{{ 'No recommendations yet. Click below to generate AI-powered content suggestions.'|t }}</p>
+                <div class="add-more-recommendations-wrapper">
+                  <a href="#" class="add-more-recommendations-link button button--primary" data-section="{{ category.id }}">
+                    {{ button_text.generate[category.id] }}
+                  </a>
+                </div>
+              </div>
             {% endif %}
           </div>
         {% endfor %}

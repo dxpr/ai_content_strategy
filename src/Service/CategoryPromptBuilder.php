@@ -197,4 +197,97 @@ class CategoryPromptBuilder {
     return '- ' . implode("\n- ", array_slice($urls, 0, 50));
   }
 
+  /**
+   * Builds add-more prompts for a specific category.
+   *
+   * @param \Drupal\ai_content_strategy\Entity\RecommendationCategory $category
+   *   The category entity.
+   * @param string $existing_recommendations
+   *   Formatted string of existing recommendations.
+   *
+   * @return array
+   *   Array with 'system' and 'user' prompts.
+   */
+  public function buildAddMorePrompts($category, string $existing_recommendations = ''): array {
+    $category_id = $category->id();
+    $category_label = $category->label();
+    $instructions = $category->getInstructions();
+
+    // Fallback if no instructions.
+    if (empty($instructions)) {
+      $instructions = "Identify opportunities related to {$category_label}.";
+    }
+
+    $system_prompt = <<<PROMPT
+You are an AI content strategist analyzing a website's content structure.
+Based on the provided site information, generate 2 new recommendations for the "{$category_label}" category.
+
+Category Instructions:
+{$instructions}
+
+Rules for Recommendations:
+1. ALL recommendations must be directly inferred from the site's actual content and structure
+2. NO generic suggestions - each recommendation should clearly relate to the site's specific domain and purpose
+3. Content ideas must be specific and actionable
+4. Generate exactly 5 highly specific content ideas for each recommendation
+5. Each recommendation MUST include a priority level (high/medium/low)
+6. Ensure recommendations are unique and complementary to existing ones
+PROMPT;
+
+    $user_prompt = <<<PROMPT
+<context>
+<site_info>
+Homepage:
+Title: {homepage_title}
+Content: {homepage_content}
+
+Primary Navigation:
+{primary_menu}
+
+Existing Content URLs:
+{urls}
+</site_info>
+
+<existing_recommendations>
+{existing_recommendations}
+</existing_recommendations>
+</context>
+
+Generate 2 new distinct recommendations. Return ONLY a JSON object with this exact structure:
+{
+  "{$category_id}": [
+    {
+      "title": "Recommendation Title",
+      "description": "Detailed description based on site context",
+      "priority": "high",
+      "content_ideas": [
+        "Specific content idea 1",
+        "Specific content idea 2",
+        "Specific content idea 3",
+        "Specific content idea 4",
+        "Specific content idea 5"
+      ]
+    },
+    {
+      "title": "Second Recommendation Title",
+      "description": "Detailed description based on site context",
+      "priority": "medium",
+      "content_ideas": [
+        "Specific content idea 1",
+        "Specific content idea 2",
+        "Specific content idea 3",
+        "Specific content idea 4",
+        "Specific content idea 5"
+      ]
+    }
+  ]
+}
+PROMPT;
+
+    return [
+      'system' => $system_prompt,
+      'user' => $user_prompt,
+    ];
+  }
+
 }

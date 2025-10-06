@@ -5,6 +5,7 @@ namespace Drupal\ai_content_strategy\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
+use Drupal\ai_content_strategy\Service\CategoryPromptBuilder;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Drupal\Component\Serialization\Json;
@@ -104,6 +105,13 @@ class ContentStrategyController extends ControllerBase {
   protected $time;
 
   /**
+   * The category prompt builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\CategoryPromptBuilder
+   */
+  protected $categoryPromptBuilder;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -124,6 +132,8 @@ class ContentStrategyController extends ControllerBase {
    *   The key value factory.
    * @param \Drupal\Component\Datetime\TimeInterface $time
    *   The time service.
+   * @param \Drupal\ai_content_strategy\Service\CategoryPromptBuilder $category_prompt_builder
+   *   The category prompt builder service.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -135,6 +145,7 @@ class ContentStrategyController extends ControllerBase {
     DateFormatterInterface $date_formatter,
     KeyValueFactoryInterface $key_value_factory,
     TimeInterface $time,
+    CategoryPromptBuilder $category_prompt_builder,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -145,6 +156,7 @@ class ContentStrategyController extends ControllerBase {
     $this->dateFormatter = $date_formatter;
     $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
     $this->time = $time;
+    $this->categoryPromptBuilder = $category_prompt_builder;
   }
 
   /**
@@ -160,7 +172,8 @@ class ContentStrategyController extends ControllerBase {
       $container->get('cache.default'),
       $container->get('date.formatter'),
       $container->get('keyvalue'),
-      $container->get('datetime.time')
+      $container->get('datetime.time'),
+      $container->get('ai_content_strategy.category_prompt_builder')
     );
   }
 
@@ -328,26 +341,45 @@ class ContentStrategyController extends ControllerBase {
             ],
           ];
 
-          if (!empty($recommendations[$category_id])) {
-            $section_container['section_add_more'] = [
+          // Determine if this category has items or is empty.
+          $has_items = !empty($recommendations[$category_id]);
+          $button_class = $has_items ? 'button--secondary' : 'button--primary';
+          $button_text = $has_items
+            ? ($button_texts['add_more'][$category_id] ?? $this->t('Add AI recommendations'))
+            : ($button_texts['generate'][$category_id] ?? $this->t('Generate AI recommendations'));
+
+          // Add empty state message for categories with no items.
+          if (!$has_items) {
+            $section_container['empty_state'] = [
               '#type' => 'container',
-              '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
-              'add_link' => [
+              '#attributes' => ['class' => ['empty-category-state']],
+              'message' => [
                 '#type' => 'html_tag',
-                '#tag' => 'a',
-                '#attributes' => [
-                  'href' => '#',
-                  'class' => [
-                    'add-more-recommendations-link',
-                    'button',
-                    'button--secondary',
-                  ],
-                  'data-section' => $category_id,
-                ],
-                '#value' => $button_texts['add_more'][$category_id] ?? $this->t('Generate more recommendations'),
+                '#tag' => 'p',
+                '#value' => $this->t('No recommendations yet. Click below to generate AI-powered content suggestions.'),
               ],
             ];
           }
+
+          // Always include the add-more button.
+          $section_container['section_add_more'] = [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
+            'add_link' => [
+              '#type' => 'html_tag',
+              '#tag' => 'a',
+              '#attributes' => [
+                'href' => '#',
+                'class' => [
+                  'add-more-recommendations-link',
+                  'button',
+                  $button_class,
+                ],
+                'data-section' => $category_id,
+              ],
+              '#value' => $button_text,
+            ],
+          ];
 
           $wrapper[$category_id] = $section_container;
         }
@@ -704,18 +736,18 @@ EOT;
     $response = new AjaxResponse();
 
     try {
+      // Load the category entity.
+      $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+      $category = $category_storage->load($section);
+
+      if (!$category) {
+        throw new \InvalidArgumentException('Invalid category specified');
+      }
+
       // Get site data for context.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
       $front_page_content = $this->getFrontPageContent();
-
-      // Get the prompt configuration.
-      $config = $this->config('ai_content_strategy.prompts');
-      $prompts = $config->get('add_more_recommendations');
-
-      if (!isset($prompts[$section])) {
-        throw new \InvalidArgumentException('Invalid section specified');
-      }
 
       // Get existing recommendations.
       $stored_data = $this->keyValue->get(self::KV_KEY);
@@ -726,7 +758,13 @@ EOT;
         );
       }
 
-      // Prepare the context variables.
+      // Build prompts dynamically from category instructions.
+      $prompts = $this->categoryPromptBuilder->buildAddMorePrompts(
+        $category,
+        $existing_recommendations
+      );
+
+      // Prepare the context variables for token replacement.
       $context = [
         'homepage' => [
           'title' => $site_structure['homepage']['title'],
@@ -745,11 +783,11 @@ EOT;
       $messages = new ChatInput([
         new ChatMessage(
           'system',
-          $this->replaceTokens($prompts[$section]['system'], $context)
+          $prompts['system']
         ),
         new ChatMessage(
           'user',
-          $this->replaceTokens($prompts[$section]['user'], $context)
+          $this->replaceTokens($prompts['user'], $context)
         ),
       ]);
 
@@ -768,13 +806,19 @@ EOT;
       }
 
       // Update stored recommendations.
-      if ($stored_data && isset($stored_data['data'][$section])) {
-        $stored_data['data'][$section] = array_merge(
-          $stored_data['data'][$section],
-          $data[$section]
-        );
+      if ($stored_data) {
+        // Merge with existing recommendations or initialize if empty.
+        $existing = $stored_data['data'][$section] ?? [];
+        $stored_data['data'][$section] = array_merge($existing, $data[$section]);
         $stored_data['timestamp'] = $this->time->getCurrentTime();
         $this->keyValue->set(self::KV_KEY, $stored_data);
+      }
+      else {
+        // Initialize storage for first time.
+        $this->keyValue->set(self::KV_KEY, [
+          'data' => [$section => $data[$section]],
+          'timestamp' => $this->time->getCurrentTime(),
+        ]);
       }
 
       // Build the render array for new recommendations.
