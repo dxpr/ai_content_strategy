@@ -2,6 +2,7 @@
 
 namespace Drupal\ai_content_strategy\Controller;
 
+use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
@@ -225,6 +226,7 @@ class ContentStrategyController extends ControllerBase {
     if ($category_ids) {
       $category_entities = $category_storage->loadMultiple($category_ids);
       foreach ($category_entities as $category) {
+        assert($category instanceof RecommendationCategory);
         $category_id = $category->id();
         $categories[$category_id] = [
           'id' => $category_id,
@@ -740,7 +742,7 @@ EOT;
       $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
       $category = $category_storage->load($section);
 
-      if (!$category) {
+      if (!$category instanceof RecommendationCategory) {
         throw new \InvalidArgumentException('Invalid category specified');
       }
 
