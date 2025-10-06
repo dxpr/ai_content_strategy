@@ -7,6 +7,6 @@ ai_content_strategy.main:
 ai_content_strategy.config:
   title: 'AI Content Strategy'
   description: 'Configure AI content strategy settings and categories'
-  parent: system.admin_config_ai
+  parent: ai.admin_settings
   route_name: ai_content_strategy.settings
   weight: 10
