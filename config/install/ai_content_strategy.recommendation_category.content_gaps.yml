@@ -1,0 +1,15 @@
+langcode: en
+status: true
+dependencies: {  }
+id: content_gaps
+label: 'Content Gaps'
+description: 'Identifies missing content opportunities in your site'
+weight: 0
+instructions: |
+  Identify missing content types and underrepresented topics that would improve the site's value to users.
+
+  Focus on:
+  - Content formats that competitors have but this site lacks
+  - Topics within the site's domain that are underrepresented
+  - Audience needs that aren't currently addressed
+  - Content that would fill obvious gaps in the existing content strategy

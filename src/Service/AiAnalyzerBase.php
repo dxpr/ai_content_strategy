@@ -4,6 +4,7 @@ namespace Drupal\ai_content_strategy\Service;
 
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
+use Drupal\Component\Serialization\Json;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
@@ -149,9 +150,14 @@ abstract class AiAnalyzerBase {
     // If decoding failed, try to extract JSON from the response text.
     $text = $response->getText();
     if (preg_match('/\{(?:[^{}]|(?R))*\}/', $text, $matches)) {
-      $json = json_decode($matches[0], TRUE);
-      if (json_last_error() === JSON_ERROR_NONE) {
-        return $json;
+      try {
+        $json = Json::decode($matches[0]);
+        if (is_array($json)) {
+          return $json;
+        }
+      }
+      catch (\Exception $e) {
+        // Continue to throw RuntimeException below.
       }
     }
 

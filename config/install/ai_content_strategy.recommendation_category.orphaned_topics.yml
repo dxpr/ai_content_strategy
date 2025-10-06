@@ -1,0 +1,15 @@
+langcode: en
+status: false
+dependencies: {  }
+id: orphaned_topics
+label: 'Orphaned Topic Expansion'
+description: 'Finds topics with single pieces of content that need supporting material'
+weight: 6
+instructions: |
+  Identify topics or taxonomy terms with isolated content that would benefit from supporting material.
+
+  Focus on:
+  - Topics with only one or two pieces of content that suggest broader interest
+  - Taxonomy terms applied to very few nodes but represent important subject areas
+  - Content pieces with high-value topics that lack context, prerequisites, or follow-up material
+  - Subject areas introduced but not developed into comprehensive coverage

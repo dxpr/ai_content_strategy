@@ -1,4 +1,17 @@
 ai_content_strategy.recommendations:
   route_name: ai_content_strategy.recommendations
   title: 'AI Content Strategy'
-  base_route: ai_content_strategy.recommendations 
+  base_route: ai_content_strategy.recommendations
+
+# Configuration tabs
+ai_content_strategy.settings_tab:
+  route_name: ai_content_strategy.settings
+  title: 'Settings'
+  base_route: ai_content_strategy.settings
+  weight: -10
+
+ai_content_strategy.categories_tab:
+  route_name: entity.recommendation_category.collection
+  title: 'Categories'
+  base_route: ai_content_strategy.settings
+  weight: 0

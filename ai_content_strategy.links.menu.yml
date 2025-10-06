@@ -2,4 +2,11 @@ ai_content_strategy.main:
   title: 'AI Content Strategy'
   description: 'AI-powered content strategy tools'
   parent: system.admin_reports
-  route_name: ai_content_strategy.recommendations 
+  route_name: ai_content_strategy.recommendations
+
+ai_content_strategy.config:
+  title: 'AI Content Strategy'
+  description: 'Configure AI content strategy settings and categories'
+  parent: system.admin_config_ai
+  route_name: ai_content_strategy.settings
+  weight: 10

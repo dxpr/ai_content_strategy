@@ -1,0 +1,15 @@
+langcode: en
+status: false
+dependencies: {  }
+id: content_series
+label: 'Content Series Opportunities'
+description: 'Suggests topics that could be expanded into multi-part content series'
+weight: 4
+instructions: |
+  Identify topics that could be expanded into comprehensive content series or pillar pages.
+
+  Focus on:
+  - Broad topics with multiple existing related pieces that could be organized into a series
+  - Subjects covered superficially that deserve deeper, multi-part treatment
+  - Complementary content pieces that could be connected into a learning path
+  - Topics where the site has scattered knowledge that could be consolidated into a structured series

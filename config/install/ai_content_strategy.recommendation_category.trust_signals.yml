@@ -1,0 +1,15 @@
+langcode: en
+status: true
+dependencies: {  }
+id: trust_signals
+label: 'Trust Signals'
+description: 'Identifies trust-building elements for credibility'
+weight: 3
+instructions: |
+  Identify trust-building elements that would enhance the site's credibility and reliability.
+
+  Focus on:
+  - Concrete elements that demonstrate reliability and authority
+  - Content and features that build user confidence
+  - Social proof and credibility indicators appropriate for this site type
+  - Trust-building mechanisms that align with the site's domain and audience

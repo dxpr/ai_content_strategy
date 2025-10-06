@@ -75,6 +75,7 @@
       beforeSend: function(xhr, settings) {
         element.textContent = loadingText;
         element.disabled = true;
+        Drupal.announce(loadingText, 'polite');
         return true;
       },
       success: function(response, status) {
@@ -139,6 +140,7 @@
         }
         element.disabled = false;
         element.textContent = successText;
+        Drupal.announce(Drupal.t('Content loaded successfully'), 'polite');
       },
       error: function(xhr, status, error) {
         element.disabled = false;
@@ -173,6 +175,65 @@
     return ajaxSettings;
   }
 
+  // Attach generate ideas behavior (initial generation for items without content_ideas)
+  function attachGenerateIdeasBehavior(link, index, settings) {
+    const { section, title } = DOMUtils.getItemData(link);
+    if (!section || !title) {
+      return;
+    }
+
+    const buttonText = DOMUtils.getButtonText(settings, 'generate', section);
+    if (buttonText) {
+      link.textContent = buttonText;
+    }
+
+    try {
+      DOMUtils.ensureElementId(link, 'content-strategy');
+      const ajaxHandler = new Drupal.Ajax(
+        link.id,
+        link,
+        createAjaxHandler({
+          element: link,
+          url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
+          loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
+          successText: buttonText || link.textContent,
+          errorText: buttonText || link.textContent,
+          method: 'append',
+          onSuccess: (target) => {
+            // After generating initial ideas, replace the button with "generate more" link
+            const item = link.closest('.recommendation-item');
+            if (item) {
+              const actionsDiv = item.querySelector('.recommendation-actions');
+              if (actionsDiv) {
+                // Remove the generate button
+                link.remove();
+
+                // Create the "generate more" link
+                const moreLink = document.createElement('a');
+                moreLink.href = '#';
+                moreLink.className = 'generate-more-link';
+                moreLink.dataset.section = section;
+                moreLink.dataset.title = title;
+                moreLink.textContent = DOMUtils.getButtonText(settings, 'generate_more', section);
+                actionsDiv.appendChild(moreLink);
+
+                // Attach behavior to the new link
+                attachGenerateMoreBehavior(moreLink, 0, settings);
+              }
+            }
+          }
+        }, settings)
+      );
+
+      link.addEventListener('click', function(event) {
+        event.preventDefault();
+        ajaxHandler.execute();
+      });
+    } catch (e) {
+      // Error handling without console.error
+    }
+  }
+
   // Attach generate more behavior
   function attachGenerateMoreBehavior(link, index, settings) {
     const { section, title } = DOMUtils.getItemData(link);
@@ -184,7 +245,7 @@
     if (buttonText) {
       link.textContent = buttonText;
     }
-    
+
     try {
       DOMUtils.ensureElementId(link, 'content-strategy');
       const ajaxHandler = new Drupal.Ajax(
@@ -277,6 +338,10 @@
                 // Find the recommendations wrapper that was just added
                 const wrapper = document.querySelector('.recommendations-wrapper');
                 if (wrapper) {
+                  // Reattach behaviors to all generate ideas links
+                  wrapper.querySelectorAll('.generate-ideas-link').forEach((link, index) => {
+                    attachGenerateIdeasBehavior(link, index, settings);
+                  });
                   // Reattach behaviors to all generate more links
                   wrapper.querySelectorAll('.generate-more-link').forEach((link, index) => {
                     attachGenerateMoreBehavior(link, index, settings);
@@ -297,6 +362,11 @@
         } catch (e) {
           // Error handling without console.error
         }
+      });
+
+      // Handle generate ideas links (initial generation)
+      once('generate-ideas', '.generate-ideas-link', context).forEach((link, index) => {
+        attachGenerateIdeasBehavior(link, index, settings);
       });
 
       // Handle generate more links

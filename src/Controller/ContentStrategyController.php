@@ -2,11 +2,16 @@
 
 namespace Drupal\ai_content_strategy\Controller;
 
+use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
+use Drupal\ai_content_strategy\Service\CategoryPromptBuilder;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
+use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\Unicode;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Utility\Error;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\ai\OperationType\Chat\ChatInput;
@@ -101,6 +106,13 @@ class ContentStrategyController extends ControllerBase {
   protected $time;
 
   /**
+   * The category prompt builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\CategoryPromptBuilder
+   */
+  protected $categoryPromptBuilder;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -121,6 +133,8 @@ class ContentStrategyController extends ControllerBase {
    *   The key value factory.
    * @param \Drupal\Component\Datetime\TimeInterface $time
    *   The time service.
+   * @param \Drupal\ai_content_strategy\Service\CategoryPromptBuilder $category_prompt_builder
+   *   The category prompt builder service.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -132,6 +146,7 @@ class ContentStrategyController extends ControllerBase {
     DateFormatterInterface $date_formatter,
     KeyValueFactoryInterface $key_value_factory,
     TimeInterface $time,
+    CategoryPromptBuilder $category_prompt_builder,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -142,6 +157,7 @@ class ContentStrategyController extends ControllerBase {
     $this->dateFormatter = $date_formatter;
     $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
     $this->time = $time;
+    $this->categoryPromptBuilder = $category_prompt_builder;
   }
 
   /**
@@ -157,7 +173,8 @@ class ContentStrategyController extends ControllerBase {
       $container->get('cache.default'),
       $container->get('date.formatter'),
       $container->get('keyvalue'),
-      $container->get('datetime.time')
+      $container->get('datetime.time'),
+      $container->get('ai_content_strategy.category_prompt_builder')
     );
   }
 
@@ -196,12 +213,34 @@ class ContentStrategyController extends ControllerBase {
       }
     }
 
+    // Load enabled categories and build category metadata.
+    $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+    $category_ids = $category_storage->getQuery()
+      ->condition('status', TRUE)
+      ->sort('weight')
+      ->sort('id')
+      ->accessCheck(FALSE)
+      ->execute();
+
+    $categories = [];
+    if ($category_ids) {
+      $category_entities = $category_storage->loadMultiple($category_ids);
+      foreach ($category_entities as $category) {
+        assert($category instanceof RecommendationCategory);
+        $category_id = $category->id();
+        $categories[$category_id] = [
+          'id' => $category_id,
+          'label' => $category->label(),
+          'description' => $category->getDescription(),
+          'weight' => $category->getWeight(),
+          'items' => $recommendations[$category_id] ?? [],
+        ];
+      }
+    }
+
     return [
       '#theme' => 'ai_content_strategy_recommendations',
-      '#content_gaps' => $recommendations['content_gaps'] ?? [],
-      '#authority_topics' => $recommendations['authority_topics'] ?? [],
-      '#expertise_demonstrations' => $recommendations['expertise_demonstrations'] ?? [],
-      '#trust_signals' => $recommendations['trust_signals'] ?? [],
+      '#categories' => $categories,
       '#last_run' => $last_run ?
       $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
       '#attached' => [
@@ -231,13 +270,11 @@ class ContentStrategyController extends ControllerBase {
       // Create AJAX response.
       $response = new AjaxResponse();
 
-      // Update the button text to "Regenerate report".
-      $response->addCommand(
-        new HtmlCommand(
-          '.generate-recommendations',
-          $this->t('Regenerate report')
-        )
-      );
+      // Re-enable the generate button.
+      $response->addCommand(new HtmlCommand(
+        '.generate-recommendations',
+        $this->t('Regenerate report')
+      ));
 
       // Update the last run time.
       $response->addCommand(
@@ -262,53 +299,75 @@ class ContentStrategyController extends ControllerBase {
         ],
       ];
 
-      // Build the sections HTML.
-      $sections = [
-        'content_gaps',
-        'authority_topics',
-        'expertise_demonstrations',
-        'trust_signals',
-      ];
+      // Load enabled categories dynamically.
+      $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+      $category_ids = $category_storage->getQuery()
+        ->condition('status', TRUE)
+        ->sort('weight')
+        ->sort('id')
+        ->accessCheck(FALSE)
+        ->execute();
 
-      foreach ($sections as $section) {
-        $section_build = [
-          '#theme' => 'ai_content_strategy_recommendations_items',
-          '#items' => $recommendations[$section] ?? [],
-          '#section' => $section,
-          '#section_config' => [
-            'title' => $this->getSectionTitle($section),
-            'item_key' => $this->getSectionItemKey($section),
-            'description_key' => $this->getSectionDescriptionKey($section),
-          ],
-          '#button_text' => ai_content_strategy_get_button_texts(),
-        ];
+      if ($category_ids) {
+        $categories = $category_storage->loadMultiple($category_ids);
+        $button_texts = ai_content_strategy_get_button_texts();
 
-        $section_html = $this->renderer->render($section_build);
+        foreach ($categories as $category) {
+          $category_id = $category->id();
 
-        // For empty state, we need to create the section container first.
-        $section_container = [
-          '#type' => 'container',
-          '#attributes' => [
-            'class' => ['recommendation-section'],
-            'data-section' => $section,
-          ],
-          'title' => [
-            '#type' => 'html_tag',
-            '#tag' => 'h3',
-            '#value' => $this->getSectionTitle($section),
-          ],
-          'items' => [
+          $section_build = [
+            '#theme' => 'ai_content_strategy_recommendations_items',
+            '#items' => $recommendations[$category_id] ?? [],
+            '#section' => $category_id,
+            '#button_text' => $button_texts,
+          ];
+
+          $section_html = $this->renderer->renderRoot($section_build);
+
+          // For empty state, we need to create the section container first.
+          $section_container = [
             '#type' => 'container',
-            '#attributes' => ['class' => ['recommendation-items']],
-            'content' => ['#markup' => $section_html],
-          ],
-        ];
+            '#attributes' => [
+              'class' => ['recommendation-section'],
+              'data-section' => $category_id,
+            ],
+            'section_title' => [
+              '#type' => 'html_tag',
+              '#tag' => 'h3',
+              '#value' => $category->label(),
+            ],
+            'section_items' => [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['recommendation-items']],
+              'content' => ['#markup' => $section_html],
+            ],
+          ];
 
-        if (!empty($recommendations[$section])) {
-          $section_container['add_more'] = [
+          // Determine if this category has items or is empty.
+          $has_items = !empty($recommendations[$category_id]);
+          $button_class = $has_items ? 'button--secondary' : 'button--primary';
+          $button_text = $has_items
+            ? ($button_texts['add_more'][$category_id] ?? $this->t('Add AI recommendations'))
+            : ($button_texts['generate'][$category_id] ?? $this->t('Generate AI recommendations'));
+
+          // Add empty state message for categories with no items.
+          if (!$has_items) {
+            $section_container['empty_state'] = [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['empty-category-state']],
+              'message' => [
+                '#type' => 'html_tag',
+                '#tag' => 'p',
+                '#value' => $this->t('No recommendations yet. Click below to generate AI-powered content suggestions.'),
+              ],
+            ];
+          }
+
+          // Always include the add-more button.
+          $section_container['section_add_more'] = [
             '#type' => 'container',
             '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
-            'link' => [
+            'add_link' => [
               '#type' => 'html_tag',
               '#tag' => 'a',
               '#attributes' => [
@@ -316,37 +375,52 @@ class ContentStrategyController extends ControllerBase {
                 'class' => [
                   'add-more-recommendations-link',
                   'button',
-                  'button--secondary',
+                  $button_class,
                 ],
-                'data-section' => $section,
+                'data-section' => $category_id,
               ],
-              '#value' => ai_content_strategy_get_button_texts()['add_more'][$section],
+              '#value' => $button_text,
             ],
           ];
-        }
 
-        $wrapper[$section] = $section_container;
+          $wrapper[$category_id] = $section_container;
+        }
       }
 
       // Add the wrapper with all sections.
       $response->addCommand(
         new AppendCommand(
           '.content-strategy-recommendations',
-          $this->renderer->render($wrapper)
+          $this->renderer->renderRoot($wrapper)
         )
       );
 
       return $response;
     }
     catch (\Exception $e) {
+      // Log the full error for administrators.
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      // Create user-friendly error message.
+      $error_message = $this->buildUserFriendlyErrorMessage($e);
+
       $response = new AjaxResponse();
+
+      // Re-enable the button so user can retry.
+      $response->addCommand(new HtmlCommand(
+        '.generate-recommendations',
+        $this->t('Generate recommendations')
+      ));
+
+      // Show error message.
       $response->addCommand(
         new MessageCommand(
-          $this->t('Error: @message', ['@message' => $e->getMessage()]),
+          $error_message,
           NULL,
           ['type' => 'error']
         )
       );
+
       return $response;
     }
   }
@@ -376,10 +450,9 @@ class ContentStrategyController extends ControllerBase {
           // Convert HTML to plain text.
           $text = strip_tags($html);
           // Normalize whitespace.
-          $text = preg_replace('/\s+/', ' ', $text);
+          $text = preg_replace('/\s+/', ' ', trim($text));
           // Trim to reasonable length.
-          return substr(trim($text), 0, 1000) .
-            (strlen($text) > 1000 ? '...' : '');
+          return Unicode::truncate($text, 1000, TRUE, TRUE);
         }
       }
     }
@@ -473,8 +546,10 @@ EOT;
 
       // Try to extract and parse JSON array from the text.
       if (preg_match('/\[(?:[^\[\]]|(?R))*\]/', $text, $matches)) {
-        $ideas = json_decode($matches[0], TRUE);
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        try {
+          $ideas = Json::decode($matches[0]);
+        }
+        catch (\Exception $e) {
           throw new \RuntimeException(
             'Failed to parse AI response into valid JSON array'
           );
@@ -493,29 +568,14 @@ EOT;
       // Find the correct section and item to update.
       if (isset($recommendations[$section])) {
         foreach ($recommendations[$section] as $key => $item) {
-          $match = FALSE;
-          switch ($section) {
-            case 'content_gaps':
-              $match = ($item['title'] === $title);
-              break;
+          // Try common title fields to match the item.
+          $item_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? NULL;
 
-            case 'authority_topics':
-              $match = ($item['topic'] === $title);
-              break;
-
-            case 'expertise_demonstrations':
-              $match = ($item['content_type'] === $title);
-              break;
-
-            case 'trust_signals':
-              $match = ($item['signal'] === $title);
-              break;
-          }
-
-          if ($match) {
-            // Append new ideas to existing ones.
+          if ($item_title === $title) {
+            // Append new ideas to existing ones (or initialize if empty).
+            $existing_ideas = $recommendations[$section][$key]['content_ideas'] ?? [];
             $recommendations[$section][$key]['content_ideas'] = array_merge(
-              $recommendations[$section][$key]['content_ideas'],
+              $existing_ideas,
               $ideas
             );
             $updated = TRUE;
@@ -583,19 +643,21 @@ EOT;
 
     }
     catch (\Exception $e) {
+      // Log the full error for administrators.
       Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      // Create user-friendly error message.
+      $error_message = $this->buildUserFriendlyErrorMessage($e);
 
       $response = new AjaxResponse();
       $response->addCommand(
         new MessageCommand(
-          $this->t(
-            'An error occurred while generating more ideas: @error',
-            ['@error' => $e->getMessage()]
-          ),
+          $error_message,
           NULL,
           ['type' => 'error']
         )
-          );
+      );
+
       return $response;
     }
   }
@@ -676,18 +738,18 @@ EOT;
     $response = new AjaxResponse();
 
     try {
+      // Load the category entity.
+      $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+      $category = $category_storage->load($section);
+
+      if (!$category instanceof RecommendationCategory) {
+        throw new \InvalidArgumentException('Invalid category specified');
+      }
+
       // Get site data for context.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
       $front_page_content = $this->getFrontPageContent();
-
-      // Get the prompt configuration.
-      $config = $this->config('ai_content_strategy.prompts');
-      $prompts = $config->get('add_more_recommendations');
-
-      if (!isset($prompts[$section])) {
-        throw new \InvalidArgumentException('Invalid section specified');
-      }
 
       // Get existing recommendations.
       $stored_data = $this->keyValue->get(self::KV_KEY);
@@ -698,7 +760,13 @@ EOT;
         );
       }
 
-      // Prepare the context variables.
+      // Build prompts dynamically from category instructions.
+      $prompts = $this->categoryPromptBuilder->buildAddMorePrompts(
+        $category,
+        $existing_recommendations
+      );
+
+      // Prepare the context variables for token replacement.
       $context = [
         'homepage' => [
           'title' => $site_structure['homepage']['title'],
@@ -717,11 +785,11 @@ EOT;
       $messages = new ChatInput([
         new ChatMessage(
           'system',
-          $this->replaceTokens($prompts[$section]['system'], $context)
+          $prompts['system']
         ),
         new ChatMessage(
           'user',
-          $this->replaceTokens($prompts[$section]['user'], $context)
+          $this->replaceTokens($prompts['user'], $context)
         ),
       ]);
 
@@ -740,13 +808,19 @@ EOT;
       }
 
       // Update stored recommendations.
-      if ($stored_data && isset($stored_data['data'][$section])) {
-        $stored_data['data'][$section] = array_merge(
-          $stored_data['data'][$section],
-          $data[$section]
-        );
+      if ($stored_data) {
+        // Merge with existing recommendations or initialize if empty.
+        $existing = $stored_data['data'][$section] ?? [];
+        $stored_data['data'][$section] = array_merge($existing, $data[$section]);
         $stored_data['timestamp'] = $this->time->getCurrentTime();
         $this->keyValue->set(self::KV_KEY, $stored_data);
+      }
+      else {
+        // Initialize storage for first time.
+        $this->keyValue->set(self::KV_KEY, [
+          'data' => [$section => $data[$section]],
+          'timestamp' => $this->time->getCurrentTime(),
+        ]);
       }
 
       // Build the render array for new recommendations.
@@ -754,17 +828,11 @@ EOT;
         '#theme' => 'ai_content_strategy_recommendations_items',
         '#items' => $data[$section],
         '#section' => $section,
-        '#section_config' => [
-          'title' => $this->getSectionTitle($section),
-          'item_key' => $this->getSectionItemKey($section),
-          'description_key' => $this->getSectionDescriptionKey($section),
-        ],
-        '#button_text' => $this->config('ai_content_strategy.settings')
-          ->get('button_text')['main'],
+        '#button_text' => ai_content_strategy_get_button_texts(),
       ];
 
       // Render the new recommendations.
-      $html = $this->renderer->render($build);
+      $html = $this->renderer->renderRoot($build);
 
       // Update the recommendations section.
       $response->addCommand(
@@ -828,60 +896,74 @@ EOT;
   }
 
   /**
-   * Gets the section title.
+   * Builds a user-friendly error message with actionable guidance.
    *
-   * @param string $section
-   *   The section identifier.
+   * Following Jakob Nielsen's usability heuristics:
+   * - Error messages should be expressed in plain language.
+   * - Precisely indicate the problem.
+   * - Constructively suggest a solution.
    *
-   * @return string
-   *   The human-readable section title.
+   * @param \Exception $exception
+   *   The exception that occurred.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A user-friendly error message with next steps.
    */
-  protected function getSectionTitle($section) {
-    $titles = [
-      'content_gaps' => $this->t('Content Gap'),
-      'authority_topics' => $this->t('Authority Topic'),
-      'expertise_demonstrations' => $this->t('Expertise Demonstration'),
-      'trust_signals' => $this->t('Trust Signal'),
-    ];
-    return $titles[$section] ?? $section;
-  }
+  protected function buildUserFriendlyErrorMessage(\Exception $exception): TranslatableMarkup {
+    $message = $exception->getMessage();
 
-  /**
-   * Gets the section item key.
-   *
-   * @param string $section
-   *   The section identifier.
-   *
-   * @return string
-   *   The key used to identify items in this section.
-   */
-  protected function getSectionItemKey($section) {
-    $keys = [
-      'content_gaps' => 'title',
-      'authority_topics' => 'topic',
-      'expertise_demonstrations' => 'content_type',
-      'trust_signals' => 'signal',
-    ];
-    return $keys[$section] ?? $section;
-  }
+    // Check for common error patterns and provide specific guidance.
+    // Pattern 1: No chat provider available.
+    if (stripos($message, 'no chat provider') !== FALSE || stripos($message, 'provider') !== FALSE) {
+      return $this->t('<strong>AI provider not configured.</strong><br>Please configure an AI chat provider at <a href="@url">AI settings</a> before generating recommendations.', [
+        '@url' => '/admin/config/ai/providers',
+      ]);
+    }
 
-  /**
-   * Gets the section description key.
-   *
-   * @param string $section
-   *   The section identifier.
-   *
-   * @return string
-   *   The key used for descriptions in this section.
-   */
-  protected function getSectionDescriptionKey($section) {
-    $keys = [
-      'content_gaps' => 'description',
-      'authority_topics' => 'rationale',
-      'expertise_demonstrations' => 'description',
-      'trust_signals' => 'implementation',
-    ];
-    return $keys[$section] ?? $section;
+    // Pattern 2: No URLs found in sitemap.
+    if (stripos($message, 'no urls') !== FALSE || stripos($message, 'sitemap') !== FALSE) {
+      return $this->t('<strong>No content found to analyze.</strong><br>Please ensure your site has published content and a properly configured sitemap. Check your sitemap at <a href="@url">@url</a>.', [
+        '@url' => '/sitemap.xml',
+      ]);
+    }
+
+    // Pattern 3: No enabled categories.
+    if (stripos($message, 'no enabled') !== FALSE || stripos($message, 'categor') !== FALSE) {
+      return $this->t('<strong>No recommendation categories enabled.</strong><br>Please enable at least one category at <a href="@url">category settings</a>.', [
+        '@url' => '/admin/config/ai/content-strategy/categories',
+      ]);
+    }
+
+    // Pattern 4: JSON parsing errors.
+    if (stripos($message, 'json') !== FALSE || stripos($message, 'parse') !== FALSE) {
+      return $this->t('<strong>AI returned an invalid response.</strong><br>The AI model may be overloaded or misconfigured. Please try again in a moment. If the problem persists, try a different AI model in <a href="@url">AI settings</a>.', [
+        '@url' => '/admin/config/ai/providers',
+      ]);
+    }
+
+    // Pattern 5: API/Network errors.
+    if (stripos($message, 'timeout') !== FALSE || stripos($message, 'connection') !== FALSE || stripos($message, 'network') !== FALSE) {
+      return $this->t('<strong>Connection to AI provider failed.</strong><br>This may be a temporary network issue. Please check your internet connection and try again. If using a third-party API, verify your API credentials are correct.');
+    }
+
+    // Pattern 6: Rate limiting.
+    if (stripos($message, 'rate limit') !== FALSE || stripos($message, 'quota') !== FALSE || stripos($message, 'too many') !== FALSE) {
+      return $this->t('<strong>AI service rate limit reached.</strong><br>You have exceeded the API usage limits. Please wait a few minutes before trying again, or check your API plan limits with your provider.');
+    }
+
+    // Pattern 7: Authentication errors.
+    if (stripos($message, 'auth') !== FALSE || stripos($message, 'api key') !== FALSE || stripos($message, 'credential') !== FALSE) {
+      return $this->t('<strong>AI provider authentication failed.</strong><br>Please verify your API credentials are correct at <a href="@url">AI settings</a>.', [
+        '@url' => '/admin/config/ai/providers',
+      ]);
+    }
+
+    // Generic fallback with constructive guidance.
+    return $this->t('<strong>Unable to generate recommendations.</strong><br>An unexpected error occurred: @error<br><br><strong>What to try:</strong><ul><li>Refresh the page and try again</li><li>Check the <a href="@logs">error logs</a> for details</li><li>Verify your <a href="@ai">AI provider settings</a></li><li>Ensure your site has published content</li></ul>', [
+      '@error' => $message,
+      '@logs' => '/admin/reports/dblog',
+      '@ai' => '/admin/config/ai/providers',
+    ]);
   }
 
 }

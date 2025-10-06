@@ -5,10 +5,98 @@
  * Install, update and uninstall functions for the AI Content Strategy module.
  */
 
+use Drupal\Core\Config\FileStorage;
+
 /**
  * Implements hook_uninstall().
  */
 function ai_content_strategy_uninstall() {
   // Delete our key-value collection.
   \Drupal::keyValue('ai_content_strategy.recommendations')->deleteAll();
+
+  // Delete recommendation category entities.
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $storage = $entity_type_manager->getStorage('recommendation_category');
+  $categories = $storage->loadMultiple();
+  if ($categories) {
+    $storage->delete($categories);
+  }
+
+  // Delete state values.
+  \Drupal::state()->delete('ai_content_strategy.last_run');
+
+  // Clear caches.
+  \Drupal::cache()->delete('ai_content_strategy:composite_schema');
+}
+
+/**
+ * Install default recommendation category config entities.
+ */
+function ai_content_strategy_update_10001() {
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $config_factory = \Drupal::configFactory();
+
+  // Ensure the entity type definition is available.
+  $entity_type_manager->clearCachedDefinitions();
+
+  // Install the default category configs.
+  $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+  $config_source = new FileStorage($config_path);
+
+  $categories = [
+    'ai_content_strategy.recommendation_category.content_gaps',
+    'ai_content_strategy.recommendation_category.authority_topics',
+    'ai_content_strategy.recommendation_category.expertise_demonstrations',
+    'ai_content_strategy.recommendation_category.trust_signals',
+  ];
+
+  $installed = 0;
+  foreach ($categories as $config_name) {
+    // Only install if it doesn't already exist.
+    if (!$config_factory->get($config_name)->get('id')) {
+      $config_data = $config_source->read($config_name);
+      if ($config_data) {
+        $config_factory->getEditable($config_name)->setData($config_data)->save();
+        $installed++;
+      }
+    }
+  }
+
+  return $installed > 0
+    ? t('Installed @count default recommendation category entities.', ['@count' => $installed])
+    : t('Default recommendation categories already exist.');
+}
+
+/**
+ * Clear caches after category entity installation.
+ */
+function ai_content_strategy_update_10002() {
+  // Invalidate schema builder cache.
+  \Drupal::cache()->delete('ai_content_strategy:composite_schema');
+
+  // Clear all caches to ensure new services are registered.
+  drupal_flush_all_caches();
+
+  return t('Category caches invalidated.');
+}
+
+/**
+ * Install global settings configuration.
+ */
+function ai_content_strategy_update_10003() {
+  $config_factory = \Drupal::configFactory();
+
+  // Install settings config if it doesn't exist.
+  if (!$config_factory->get('ai_content_strategy.settings')->get('system_prompt')) {
+    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $config_source = new FileStorage($config_path);
+
+    $config_data = $config_source->read('ai_content_strategy.settings');
+    if ($config_data) {
+      $config_factory->getEditable('ai_content_strategy.settings')->setData($config_data)->save();
+      return t('Installed global settings configuration.');
+    }
+  }
+
+  return t('Global settings already exist.');
 }

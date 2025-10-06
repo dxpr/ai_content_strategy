@@ -1,0 +1,15 @@
+langcode: en
+status: true
+dependencies: {  }
+id: expertise_demonstrations
+label: 'Expertise Demonstrations'
+description: 'Recommends ways to showcase expertise and knowledge'
+weight: 2
+instructions: |
+  Suggest content types and formats that showcase the site's expertise and knowledge.
+
+  Focus on:
+  - Content formats that demonstrate deep subject matter expertise
+  - Ways to make the site's knowledge more visible and accessible
+  - Content types that build credibility and trust with the audience
+  - Formats that allow for detailed, authoritative information sharing

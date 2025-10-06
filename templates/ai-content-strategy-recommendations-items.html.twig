@@ -14,13 +14,20 @@
 #}
 
 {% for item in items %}
-  {% set item_value = item[section_config.item_key] %}
-  {% set item_title = item_value is iterable and item_value['#markup'] is defined ? item_value['#markup'] : (item_value is iterable ? item_value|first : item_value|default(item)) %}
+  {# Determine title field - try common fields in order #}
+  {% set item_title = item.title|default(item.topic|default(item.content_type|default(item.signal|default('Recommendation'|t)))) %}
+  {% if item_title is iterable and item_title['#markup'] is defined %}
+    {% set item_title = item_title['#markup'] %}
+  {% elseif item_title is iterable %}
+    {% set item_title = item_title|first %}
+  {% endif %}
+
   <div class="recommendation-item recommendation-priority-{{ item.priority }}" data-section="{{ section }}" data-title="{{ item_title }}">
     <div class="recommendation-content">
       <h4>{{ item_title }}</h4>
-      {% if section_config.description_key and item[section_config.description_key] %}
-        {% set description = item[section_config.description_key] %}
+      {# Try to find description - try common fields in order #}
+      {% set description = item.description|default(item.rationale|default(item.implementation|default(null))) %}
+      {% if description %}
         <p>{{ description is iterable and description['#markup'] is defined ? description['#markup'] : description }}</p>
       {% endif %}
       

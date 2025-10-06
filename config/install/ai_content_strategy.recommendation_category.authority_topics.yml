@@ -1,0 +1,15 @@
+langcode: en
+status: true
+dependencies: {  }
+id: authority_topics
+label: 'Authority Topics'
+description: 'Suggests topics to establish domain authority'
+weight: 1
+instructions: |
+  Identify topics where the site can establish domain authority based on existing content and expertise.
+
+  Focus on:
+  - Topics that align with the site's demonstrated knowledge and expertise
+  - Subject areas where the site can become a recognized authority
+  - Content themes that would strengthen the site's thought leadership
+  - Areas where consistent, in-depth coverage would build credibility
