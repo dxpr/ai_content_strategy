@@ -79,12 +79,14 @@
         return true;
       },
       success: function(response, status) {
+        let hasError = false;
+
         if (Array.isArray(response)) {
           // Process all commands first
           response.forEach((command) => {
             if (command.command === 'insert') {
               const target = document.querySelector(command.selector);
-              
+
               // Special handling for last-run-time
               if (command.selector === '.last-run-time') {
                 let lastRunTime = target;
@@ -113,16 +115,21 @@
             // Handle message commands using Drupal.Message API
             else if (command.command === 'message') {
               const messages = new Drupal.Message();
-              
+
               if (command.clearPrevious) {
                 messages.clear();
               }
-              
+
               messages.add(command.message, {
                 type: command.messageOptions?.type || 'status',
                 id: `content-strategy-message-${Date.now()}`,
                 announce: command.message
               });
+
+              // Track if this is an error message
+              if (command.messageOptions?.type === 'error') {
+                hasError = true;
+              }
             }
             else if (command.command === 'remove') {
               const target = document.querySelector(command.selector);
@@ -132,15 +139,22 @@
             }
           });
 
-          // After all commands are processed, call onSuccess if provided
-          if (onSuccess) {
+          // After all commands are processed, call onSuccess if provided and no errors
+          if (onSuccess && !hasError) {
             const mainContainer = document.querySelector('.content-strategy-recommendations');
             onSuccess(mainContainer);
           }
         }
+
         element.disabled = false;
-        element.textContent = successText;
-        Drupal.announce(Drupal.t('Content loaded successfully'), 'polite');
+
+        // Update button text and announcement based on whether there was an error
+        if (hasError) {
+          element.textContent = errorText;
+        } else {
+          element.textContent = successText;
+          Drupal.announce(Drupal.t('Content loaded successfully'), 'polite');
+        }
       },
       error: function(xhr, status, error) {
         element.disabled = false;

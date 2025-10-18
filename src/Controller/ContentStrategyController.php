@@ -24,6 +24,8 @@ use Drupal\Core\Ajax\MessageCommand;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\AppendCommand;
+use Drupal\Core\Ajax\BeforeCommand;
+use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Component\Datetime\TimeInterface;
 
@@ -834,13 +836,65 @@ EOT;
       // Render the new recommendations.
       $html = $this->renderer->renderRoot($build);
 
-      // Update the recommendations section.
-      $response->addCommand(
-        new AppendCommand(
-          ".recommendation-section[data-section='$section'] .recommendation-items",
-          $html
-        )
-      );
+      // Check if this was an empty category (no existing recommendations).
+      $was_empty = empty($existing);
+
+      if ($was_empty) {
+        // Remove the empty state container.
+        $response->addCommand(
+          new RemoveCommand(".recommendation-section[data-section='$section'] .empty-category-state")
+        );
+
+        // Create the recommendation-items container and add the content.
+        $items_container = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['recommendation-items']],
+          'content' => ['#markup' => $html],
+        ];
+        $items_html = $this->renderer->renderRoot($items_container);
+
+        // Insert the new container before the add-more button wrapper.
+        $response->addCommand(
+          new BeforeCommand(
+            ".recommendation-section[data-section='$section'] .add-more-recommendations-wrapper",
+            $items_html
+          )
+        );
+
+        // Update the button to secondary style and change text.
+        $button_texts = ai_content_strategy_get_button_texts();
+        $response->addCommand(
+          new HtmlCommand(
+            ".recommendation-section[data-section='$section'] .add-more-recommendations-link",
+            $button_texts['add_more'][$section] ?? $this->t('Add more AI recommendations')
+          )
+        );
+
+        // Update button classes from primary to secondary.
+        $response->addCommand(
+          new InvokeCommand(
+            ".recommendation-section[data-section='$section'] .add-more-recommendations-link",
+            'removeClass',
+            ['button--primary']
+          )
+        );
+        $response->addCommand(
+          new InvokeCommand(
+            ".recommendation-section[data-section='$section'] .add-more-recommendations-link",
+            'addClass',
+            ['button--secondary']
+          )
+        );
+      }
+      else {
+        // Category already had items, just append to existing container.
+        $response->addCommand(
+          new AppendCommand(
+            ".recommendation-section[data-section='$section'] .recommendation-items",
+            $html
+          )
+        );
+      }
 
       // Update the last run time.
       $response->addCommand(
