@@ -95,43 +95,7 @@ class CategoryPromptBuilder {
         [
           'title' => 'Example ' . $category->label() . ' 2',
           'description' => 'Example description based on site context',
-          'priority' => 'high',
-          'content_ideas' => [
-            'Example content idea 1 based on site context',
-            'Example content idea 2 based on site context',
-            'Example content idea 3 based on site context',
-            'Example content idea 4 based on site context',
-            'Example content idea 5 based on site context',
-          ],
-        ],
-        [
-          'title' => 'Example ' . $category->label() . ' 3',
-          'description' => 'Example description based on site context',
           'priority' => 'medium',
-          'content_ideas' => [
-            'Example content idea 1 based on site context',
-            'Example content idea 2 based on site context',
-            'Example content idea 3 based on site context',
-            'Example content idea 4 based on site context',
-            'Example content idea 5 based on site context',
-          ],
-        ],
-        [
-          'title' => 'Example ' . $category->label() . ' 4',
-          'description' => 'Example description based on site context',
-          'priority' => 'medium',
-          'content_ideas' => [
-            'Example content idea 1 based on site context',
-            'Example content idea 2 based on site context',
-            'Example content idea 3 based on site context',
-            'Example content idea 4 based on site context',
-            'Example content idea 5 based on site context',
-          ],
-        ],
-        [
-          'title' => 'Example ' . $category->label() . ' 5',
-          'description' => 'Example description based on site context',
-          'priority' => 'low',
           'content_ideas' => [
             'Example content idea 1 based on site context',
             'Example content idea 2 based on site context',
@@ -154,20 +118,20 @@ class CategoryPromptBuilder {
     $prompt .= "   - Target audience indicators\n";
     $prompt .= "   - Industry/sector context\n\n";
 
-    $prompt .= "2. Then provide recommendations for the following categories:\n\n";
+    $prompt .= "2. Then provide recommendation cards for the following categories:\n\n";
 
     // Add category-specific instructions.
     if (!empty($category_sections)) {
       $prompt .= implode("\n\n", $category_sections) . "\n\n";
     }
 
-    $prompt .= "Rules for Recommendations:\n";
-    $prompt .= "1. ALL recommendations must be directly inferred from the site's actual content and structure\n";
-    $prompt .= "2. NO generic suggestions - each recommendation should clearly relate to the site's specific domain and purpose\n";
-    $prompt .= "3. Content ideas must be specific and actionable\n";
-    $prompt .= "4. Generate exactly 5 highly specific content ideas for each recommendation\n";
-    $prompt .= "5. For each category, provide EXACTLY 5 distinct recommendations\n";
-    $prompt .= "6. Each recommendation MUST include a priority level (high/medium/low)\n\n";
+    $prompt .= "Rules for Recommendation Cards:\n";
+    $prompt .= "1. ALL recommendation cards must be directly inferred from the site's actual content and structure\n";
+    $prompt .= "2. NO generic suggestions - each card should clearly relate to the site's specific domain and purpose\n";
+    $prompt .= "3. Content ideas within each card must be specific and actionable\n";
+    $prompt .= "4. Generate exactly 5 highly specific content ideas for each recommendation card\n";
+    $prompt .= "5. For each category, provide EXACTLY 2 distinct recommendation cards\n";
+    $prompt .= "6. Each recommendation card MUST include a priority level (high/medium/low)\n\n";
 
     $prompt .= "The response must be a valid JSON object with these exact keys: " . implode(', ', $required_keys) . "\n";
     $prompt .= "  </instructions>\n\n";
@@ -190,9 +154,9 @@ class CategoryPromptBuilder {
 
     $prompt .= "  <response_requirements>\n";
     $prompt .= "Return ONLY the JSON object, no other text. The response must be parseable by PHP's json_decode().\n";
-    $prompt .= "Each category MUST contain EXACTLY 5 distinct recommendations - no more, no less.\n";
-    $prompt .= "Each recommendation MUST have EXACTLY 5 content ideas.\n";
-    $prompt .= "All recommendations MUST use the structure: {title, description, priority, content_ideas}\n";
+    $prompt .= "Each category MUST contain EXACTLY 2 recommendation cards - no more, no less.\n";
+    $prompt .= "Each recommendation card MUST have EXACTLY 5 content ideas.\n";
+    $prompt .= "All recommendation cards MUST use the structure: {title, description, priority, content_ideas}\n";
     $prompt .= "  </response_requirements>\n";
     $prompt .= "</prompt>";
 
@@ -268,18 +232,18 @@ class CategoryPromptBuilder {
 
     $system_prompt = <<<PROMPT
 You are an AI content strategist analyzing a website's content structure.
-Based on the provided site information, generate 5 new recommendations for the "{$category_label}" category.
+Based on the provided site information, generate 2 new recommendation cards for the "{$category_label}" category.
 
 Category Instructions:
 {$instructions}
 
-Rules for Recommendations:
-1. ALL recommendations must be directly inferred from the site's actual content and structure
-2. NO generic suggestions - each recommendation should clearly relate to the site's specific domain and purpose
-3. Content ideas must be specific and actionable
-4. Generate exactly 5 highly specific content ideas for each recommendation
-5. Each recommendation MUST include a priority level (high/medium/low)
-6. Ensure recommendations are unique and complementary to existing ones
+Rules for Recommendation Cards:
+1. ALL recommendation cards must be directly inferred from the site's actual content and structure
+2. NO generic suggestions - each card should clearly relate to the site's specific domain and purpose
+3. Content ideas within each card must be specific and actionable
+4. Generate exactly 5 highly specific content ideas for each recommendation card
+5. Each recommendation card MUST include a priority level (high/medium/low)
+6. Ensure recommendation cards are unique and complementary to existing ones
 PROMPT;
 
     $user_prompt = <<<PROMPT
@@ -301,11 +265,11 @@ Existing Content URLs:
 </existing_recommendations>
 </context>
 
-Generate 5 new distinct recommendations. Return ONLY a JSON object with this exact structure:
+Generate 2 new distinct recommendation cards. Return ONLY a JSON object with this exact structure:
 {
   "{$category_id}": [
     {
-      "title": "Recommendation Title",
+      "title": "First Card Title",
       "description": "Detailed description based on site context",
       "priority": "high",
       "content_ideas": [
@@ -317,45 +281,9 @@ Generate 5 new distinct recommendations. Return ONLY a JSON object with this exa
       ]
     },
     {
-      "title": "Second Recommendation Title",
+      "title": "Second Card Title",
       "description": "Detailed description based on site context",
       "priority": "medium",
-      "content_ideas": [
-        "Specific content idea 1",
-        "Specific content idea 2",
-        "Specific content idea 3",
-        "Specific content idea 4",
-        "Specific content idea 5"
-      ]
-    },
-    {
-      "title": "Third Recommendation Title",
-      "description": "Detailed description based on site context",
-      "priority": "medium",
-      "content_ideas": [
-        "Specific content idea 1",
-        "Specific content idea 2",
-        "Specific content idea 3",
-        "Specific content idea 4",
-        "Specific content idea 5"
-      ]
-    },
-    {
-      "title": "Fourth Recommendation Title",
-      "description": "Detailed description based on site context",
-      "priority": "low",
-      "content_ideas": [
-        "Specific content idea 1",
-        "Specific content idea 2",
-        "Specific content idea 3",
-        "Specific content idea 4",
-        "Specific content idea 5"
-      ]
-    },
-    {
-      "title": "Fifth Recommendation Title",
-      "description": "Detailed description based on site context",
-      "priority": "low",
       "content_ideas": [
         "Specific content idea 1",
         "Specific content idea 2",
