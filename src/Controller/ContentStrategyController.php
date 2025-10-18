@@ -423,6 +423,9 @@ class ContentStrategyController extends ControllerBase {
         )
       );
 
+      // Set proper HTTP status code for errors.
+      $response->setStatusCode(500);
+
       return $response;
     }
   }
@@ -659,6 +662,9 @@ EOT;
           ['type' => 'error']
         )
       );
+
+      // Set proper HTTP status code for errors.
+      $response->setStatusCode(500);
 
       return $response;
     }
@@ -921,7 +927,10 @@ EOT;
           NULL,
           ['type' => 'error']
         )
-          );
+      );
+
+      // Set proper HTTP status code for errors.
+      $response->setStatusCode(500);
     }
 
     return $response;
