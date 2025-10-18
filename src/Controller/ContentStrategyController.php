@@ -423,6 +423,11 @@ class ContentStrategyController extends ControllerBase {
         )
       );
 
+      // Set HTTP status code - use the exception's code if it's a valid HTTP
+      // status, otherwise default to 500.
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
+
       return $response;
     }
   }
@@ -659,6 +664,11 @@ EOT;
           ['type' => 'error']
         )
       );
+
+      // Set HTTP status code - use the exception's code if it's a valid HTTP
+      // status, otherwise default to 500.
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
 
       return $response;
     }
@@ -921,7 +931,12 @@ EOT;
           NULL,
           ['type' => 'error']
         )
-          );
+      );
+
+      // Set HTTP status code - use the exception's code if it's a valid HTTP
+      // status, otherwise default to 500.
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
     }
 
     return $response;
@@ -1018,6 +1033,31 @@ EOT;
       '@logs' => '/admin/reports/dblog',
       '@ai' => '/admin/config/ai/providers',
     ]);
+  }
+
+  /**
+   * Extracts HTTP status code from exception or returns default.
+   *
+   * This method attempts to extract a valid HTTP status code from an
+   * exception. Many HTTP client libraries and API wrappers throw exceptions
+   * with the HTTP status code as the exception code (e.g., 402, 429, 503).
+   *
+   * @param \Exception $exception
+   *   The exception to extract status code from.
+   *
+   * @return int
+   *   Valid HTTP status code (400-599), or 500 if none found.
+   */
+  protected function getHttpStatusFromException(\Exception $exception): int {
+    $code = $exception->getCode();
+
+    // Check if the exception code is a valid HTTP error status (4xx or 5xx).
+    if (is_int($code) && $code >= 400 && $code < 600) {
+      return $code;
+    }
+
+    // Default to 500 Internal Server Error.
+    return 500;
   }
 
 }
