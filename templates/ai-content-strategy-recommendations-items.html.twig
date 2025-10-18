@@ -24,13 +24,13 @@
 
   <div class="recommendation-item recommendation-priority-{{ item.priority }}" data-section="{{ section }}" data-title="{{ item_title }}">
     <div class="recommendation-content">
-      <h4>{{ item_title }}</h4>
+      <h4 contenteditable="true" data-field="title" data-original="{{ item_title }}" class="editable-field">{{ item_title }}</h4>
       {# Try to find description - try common fields in order #}
       {% set description = item.description|default(item.rationale|default(item.implementation|default(null))) %}
       {% if description %}
-        <p>{{ description is iterable and description['#markup'] is defined ? description['#markup'] : description }}</p>
+        <p contenteditable="true" data-field="description" class="editable-field">{{ description is iterable and description['#markup'] is defined ? description['#markup'] : description }}</p>
       {% endif %}
-      
+
       {% if item.priority %}
         <span class="priority-badge {{ item.priority }}">{{ item.priority|title|t }}</span>
       {% endif %}
@@ -43,9 +43,9 @@
             </tr>
           </thead>
           <tbody>
-            {% for idea in item.content_ideas %}
+            {% for key, idea in item.content_ideas %}
               <tr>
-                <td>{{ idea is iterable and idea['#markup'] is defined ? idea['#markup'] : idea }}</td>
+                <td contenteditable="true" data-field="content_ideas" data-idea-index="{{ key }}" class="editable-field">{{ idea is iterable and idea['#markup'] is defined ? idea['#markup'] : idea }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -53,6 +53,12 @@
       {% endif %}
     </div>
     <div class="recommendation-actions">
+      <a href="#" class="delete-card-link" data-section="{{ section }}" data-title="{{ item_title }}" title="{{ 'Delete this recommendation'|t }}">
+        {{ '✕ Delete'|t }}
+      </a>
+
+      <span class="save-indicator" style="display: none; opacity: 0.6; font-size: 0.9em; margin-left: 8px;"></span>
+
       {% if item.content_ideas is not empty %}
         <a href="#" class="generate-more-link" data-section="{{ section }}" data-title="{{ item_title }}">
           {{ button_text.generate_more[section] }}

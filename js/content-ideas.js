@@ -392,6 +392,172 @@
       once('content-ideas', '.add-more-recommendations-link', context).forEach((link) => {
         attachAddMoreRecommendationsBehavior(link, settings);
       });
+
+      // Handle delete card links
+      once('delete-card', '.delete-card-link', context).forEach((link) => {
+        link.addEventListener('click', function(event) {
+          event.preventDefault();
+
+          const section = link.dataset.section;
+          const title = link.dataset.title;
+
+          // Confirm deletion
+          if (!confirm(Drupal.t('Are you sure you want to delete this recommendation? This cannot be undone.'))) {
+            return;
+          }
+
+          // Disable link during request
+          link.style.opacity = '0.5';
+          link.style.pointerEvents = 'none';
+
+          // Make AJAX request
+          const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/delete-card/${section}/${encodeURIComponent(title)}`;
+
+          fetch(url, {
+            method: 'GET',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => response.json())
+          .then(commands => {
+            // Process AJAX commands
+            if (Array.isArray(commands)) {
+              commands.forEach((command) => {
+                if (command.command === 'remove') {
+                  const target = document.querySelector(command.selector);
+                  if (target) {
+                    target.remove();
+                  }
+                }
+                else if (command.command === 'message') {
+                  const messages = new Drupal.Message();
+                  if (command.clearPrevious) {
+                    messages.clear();
+                  }
+                  messages.add(command.message, {
+                    type: command.messageOptions?.type || 'status',
+                    id: `content-strategy-message-${Date.now()}`
+                  });
+                }
+                else if (command.command === 'insert') {
+                  const target = document.querySelector(command.selector);
+                  if (target) {
+                    if (command.method === 'before') {
+                      target.insertAdjacentHTML('beforebegin', command.data);
+                    }
+                  }
+                }
+              });
+
+              // Reattach behaviors to new elements
+              Drupal.attachBehaviors(document.querySelector('.content-strategy-recommendations'));
+            }
+          })
+          .catch(error => {
+            const messages = new Drupal.Message();
+            messages.add(Drupal.t('An error occurred while deleting.'), {
+              type: 'error',
+              id: `content-strategy-error-${Date.now()}`
+            });
+
+            // Re-enable link
+            link.style.opacity = '1';
+            link.style.pointerEvents = 'auto';
+          });
+        });
+      });
+
+      // Handle editable fields
+      once('edit-card', '.editable-field', context).forEach((field) => {
+        let saveTimeout;
+        const card = field.closest('.recommendation-item');
+        const section = card.dataset.section;
+        const originalTitle = card.dataset.title;
+        const saveIndicator = card.querySelector('.save-indicator');
+
+        // Save function with debouncing
+        const saveEdit = () => {
+          const fieldName = field.dataset.field;
+          const value = field.textContent.trim();
+          const ideaIndex = field.dataset.ideaIndex || null;
+
+          // Show "Saving..." indicator
+          if (saveIndicator) {
+            saveIndicator.textContent = Drupal.t('Saving...');
+            saveIndicator.style.display = 'inline';
+          }
+
+          // Prepare data
+          const formData = new FormData();
+          formData.append('field', fieldName);
+          formData.append('value', value);
+          if (ideaIndex !== null) {
+            formData.append('idea_index', ideaIndex);
+          }
+
+          // Make AJAX request
+          const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/save-card/${section}/${encodeURIComponent(originalTitle)}`;
+
+          fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            // Show "Saved" indicator briefly
+            if (saveIndicator) {
+              saveIndicator.textContent = Drupal.t('Saved');
+              setTimeout(() => {
+                saveIndicator.style.display = 'none';
+              }, 2000);
+            }
+
+            // If title changed, update data-title attribute
+            if (fieldName === 'title') {
+              card.dataset.title = value;
+            }
+          })
+          .catch(error => {
+            if (saveIndicator) {
+              saveIndicator.textContent = Drupal.t('Error saving');
+              saveIndicator.style.color = 'red';
+              setTimeout(() => {
+                saveIndicator.style.display = 'none';
+                saveIndicator.style.color = '';
+              }, 3000);
+            }
+          });
+        };
+
+        // Listen for input events (typing)
+        field.addEventListener('input', () => {
+          // Clear existing timeout
+          clearTimeout(saveTimeout);
+
+          // Set new timeout - save 1 second after typing stops
+          saveTimeout = setTimeout(saveEdit, 1000);
+        });
+
+        // Also save on blur (when clicking away)
+        field.addEventListener('blur', () => {
+          clearTimeout(saveTimeout);
+          saveEdit();
+        });
+
+        // Prevent Enter key from creating new lines in title/description
+        if (field.dataset.field === 'title') {
+          field.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              field.blur(); // Exit edit mode
+            }
+          });
+        }
+      });
     }
   };
 

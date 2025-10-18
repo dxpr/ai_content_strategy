@@ -40,6 +40,35 @@ ai_content_strategy.add_more_recommendations:
   options:
     _admin_route: TRUE
 
+ai_content_strategy.delete_card:
+  path: '/admin/reports/ai/content-strategy/delete-card/{section}/{title}'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::deleteCard'
+    _title: 'Delete Card'
+  requirements:
+    _permission: 'access ai content strategy'
+  options:
+    parameters:
+      section:
+        type: string
+      title:
+        type: string
+
+ai_content_strategy.save_card:
+  path: '/admin/reports/ai/content-strategy/save-card/{section}/{title}'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::saveCard'
+    _title: 'Save Card'
+  requirements:
+    _permission: 'access ai content strategy'
+  methods: [POST]
+  options:
+    parameters:
+      section:
+        type: string
+      title:
+        type: string
+
 ai_content_strategy.settings:
   path: '/admin/config/ai/content-strategy/settings'
   defaults:

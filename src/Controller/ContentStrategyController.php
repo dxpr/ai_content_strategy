@@ -2,6 +2,7 @@
 
 namespace Drupal\ai_content_strategy\Controller;
 
+use Drupal\Core\Ajax\DataCommand;
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
@@ -1058,6 +1059,237 @@ EOT;
 
     // Default to 500 Internal Server Error.
     return 500;
+  }
+
+  /**
+   * Deletes a recommendation card via AJAX.
+   *
+   * @param string $section
+   *   The category section (e.g., 'content_gaps').
+   * @param string $title
+   *   The title of the card to delete.
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   AJAX response with removal commands.
+   */
+  public function deleteCard(string $section, string $title) {
+    $response = new AjaxResponse();
+
+    try {
+      // Load stored data.
+      $stored_data = $this->keyValue->get(self::KV_KEY);
+
+      if (!$stored_data || !isset($stored_data['data'][$section])) {
+        throw new \RuntimeException('No data found for this section');
+      }
+
+      $recommendations = $stored_data['data'];
+
+      // Find and remove the card.
+      $found = FALSE;
+      foreach ($recommendations[$section] as $key => $card) {
+        $card_title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
+        if ($card_title === $title) {
+          unset($recommendations[$section][$key]);
+          $found = TRUE;
+          break;
+        }
+      }
+
+      if (!$found) {
+        throw new \RuntimeException('Card not found');
+      }
+
+      // Re-index array.
+      $recommendations[$section] = array_values($recommendations[$section]);
+
+      // Save updated data.
+      $stored_data['data'] = $recommendations;
+      $this->keyValue->set(self::KV_KEY, $stored_data);
+
+      // Remove card from DOM.
+      $response->addCommand(
+        new RemoveCommand(".recommendation-item[data-section='$section'][data-title='" . addslashes($title) . "']")
+      );
+
+      // If category is now empty, show empty state.
+      if (empty($recommendations[$section])) {
+        $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+        $category = $category_storage->load($section);
+
+        if ($category) {
+          $button_texts = ai_content_strategy_get_button_texts();
+
+          $empty_state = [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['empty-category-state']],
+            'message' => [
+              '#type' => 'html_tag',
+              '#tag' => 'p',
+              '#value' => $this->t('No recommendations yet. Click below to generate AI-powered content suggestions.'),
+            ],
+            'button_wrapper' => [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
+              'button' => [
+                '#type' => 'html_tag',
+                '#tag' => 'a',
+                '#attributes' => [
+                  'href' => '#',
+                  'class' => ['add-more-recommendations-link', 'button', 'button--primary'],
+                  'data-section' => $section,
+                ],
+                '#value' => $button_texts['generate'][$section] ?? $this->t('Generate AI recommendations'),
+              ],
+            ],
+          ];
+
+          $html = $this->renderer->renderRoot($empty_state);
+
+          // Remove the recommendation-items container.
+          $response->addCommand(
+            new RemoveCommand(".recommendation-section[data-section='$section'] .recommendation-items")
+          );
+
+          // Add empty state before the existing add-more button wrapper.
+          $response->addCommand(
+            new BeforeCommand(
+              ".recommendation-section[data-section='$section'] .add-more-recommendations-wrapper",
+              $html
+            )
+          );
+
+          // Remove the old add-more wrapper.
+          $response->addCommand(
+            new RemoveCommand(".recommendation-section[data-section='$section'] .add-more-recommendations-wrapper:last-child")
+          );
+        }
+      }
+
+      // Show success message.
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Recommendation deleted successfully.'),
+          NULL,
+          ['type' => 'status']
+        )
+      );
+
+    }
+    catch (\Exception $e) {
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Error deleting recommendation: @error', ['@error' => $e->getMessage()]),
+          NULL,
+          ['type' => 'error']
+        )
+      );
+
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
+    }
+
+    return $response;
+  }
+
+  /**
+   * Saves edits to a recommendation card via AJAX.
+   *
+   * @param string $section
+   *   The category section.
+   * @param string $title
+   *   The original title of the card (used to find it).
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   AJAX response confirming save.
+   */
+  public function saveCard(string $section, string $title) {
+    $response = new AjaxResponse();
+
+    try {
+      // Get POST data.
+      $request = \Drupal::request();
+      $field = $request->request->get('field');
+      $value = $request->request->get('value');
+      $idea_index = $request->request->get('idea_index');
+
+      if (empty($field) || $value === NULL) {
+        throw new \InvalidArgumentException('Missing field or value');
+      }
+
+      // Load stored data.
+      $stored_data = $this->keyValue->get(self::KV_KEY);
+
+      if (!$stored_data || !isset($stored_data['data'][$section])) {
+        throw new \RuntimeException('No data found for this section');
+      }
+
+      $recommendations = $stored_data['data'];
+
+      // Find the card.
+      $found = FALSE;
+      $card_index = NULL;
+      foreach ($recommendations[$section] as $key => $card) {
+        $card_title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
+        if ($card_title === $title) {
+          $card_index = $key;
+          $found = TRUE;
+          break;
+        }
+      }
+
+      if (!$found) {
+        throw new \RuntimeException('Card not found');
+      }
+
+      // Update the field.
+      switch ($field) {
+        case 'title':
+          $recommendations[$section][$card_index]['title'] = strip_tags($value);
+          break;
+
+        case 'description':
+          $recommendations[$section][$card_index]['description'] = strip_tags($value);
+          break;
+
+        case 'content_ideas':
+          if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
+            $recommendations[$section][$card_index]['content_ideas'][$idea_index] = strip_tags($value);
+          }
+          break;
+
+        default:
+          throw new \InvalidArgumentException('Invalid field');
+      }
+
+      // Save updated data.
+      $stored_data['data'] = $recommendations;
+      $this->keyValue->set(self::KV_KEY, $stored_data);
+
+      // Return success (no visual command needed, JS will handle feedback).
+      $response->addCommand(
+        new DataCommand('.save-indicator', 'saved', 'true')
+      );
+
+    }
+    catch (\Exception $e) {
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Error saving: @error', ['@error' => $e->getMessage()]),
+          NULL,
+          ['type' => 'error']
+        )
+      );
+
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
+    }
+
+    return $response;
   }
 
 }

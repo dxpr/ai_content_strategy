@@ -89,3 +89,38 @@
   border-radius: 8px;
   color: #6b7280;
 }
+
+/* Editable Fields */
+.editable-field {
+  cursor: text;
+}
+
+.editable-field:hover {
+  outline: 1px dashed #ccc;
+  outline-offset: 2px;
+}
+
+.editable-field:focus {
+  outline: 2px solid #0073aa;
+  outline-offset: 2px;
+  background-color: #f9f9f9;
+}
+
+/* Save Indicator */
+.save-indicator {
+  font-size: 0.9em;
+  color: #666;
+  font-style: italic;
+}
+
+/* Delete Link */
+.delete-card-link {
+  color: #dc2626;
+  text-decoration: none;
+  font-size: 0.9em;
+}
+
+.delete-card-link:hover {
+  color: #991b1b;
+  text-decoration: underline;
+}
