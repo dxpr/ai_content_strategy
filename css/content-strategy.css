@@ -11,17 +11,40 @@
   color: #666;
 }
 
+/* Status Area */
+.content-strategy-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.status-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95em;
+}
+
+.status-item strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+.status-item:not(strong) {
+  color: #6b7280;
+}
+
 /* Actions */
 .content-strategy-actions {
   display: flex;
-  align-items: center;
   gap: 1rem;
+  align-items: center;
   margin-bottom: 2rem;
-}
-
-.last-run-time {
-  color: #666;
-  font-size: 0.9em;
 }
 
 /* Recommendations Grid */
@@ -45,6 +68,19 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.recommendation-header h4 {
+  flex: 1;
+  margin: 0;
 }
 
 .recommendation-item p {
@@ -81,6 +117,82 @@
   border: 1px solid #dcfce7;
 }
 
+/* Content Ideas Table */
+.content-ideas-table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+}
+
+.content-ideas-table thead th {
+  text-align: left;
+  padding: 0.5rem;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.content-ideas-table thead .idea-actions-header {
+  width: 40px;
+  padding: 0;
+}
+
+.content-ideas-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+}
+
+.content-ideas-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.content-ideas-table tbody td {
+  padding: 0.75rem 0.5rem;
+}
+
+.content-ideas-table tbody td.idea-actions {
+  width: 40px;
+  padding: 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Delete Idea Button */
+.delete-idea-link {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0;
+}
+
+.content-ideas-table tbody tr:hover .delete-idea-link {
+  opacity: 0.6;
+}
+
+.delete-idea-link:hover {
+  opacity: 1 !important;
+  background-color: #fee2e2;
+}
+
+.delete-idea-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.delete-idea-link:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
 /* Empty State */
 .empty-recommendations {
   text-align: center;
@@ -88,6 +200,14 @@
   background: #f9fafb;
   border-radius: 8px;
   color: #6b7280;
+}
+
+/* Recommendation Actions */
+.recommendation-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 /* Editable Fields */
@@ -113,14 +233,56 @@
   font-style: italic;
 }
 
-/* Delete Link */
-.delete-card-link {
+/* Delete Buttons - Shared styles */
+.delete-card-link,
+.delete-idea-link {
+  background: none;
+  border: none;
+  padding: 0.5rem;
   color: #dc2626;
-  text-decoration: none;
-  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.delete-card-link {
+  flex-shrink: 0;
+  opacity: 0.6;
 }
 
 .delete-card-link:hover {
+  opacity: 1;
+}
+
+.delete-card-link svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.delete-idea-link svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.delete-card-link:hover,
+.delete-idea-link:hover {
   color: #991b1b;
-  text-decoration: underline;
+  background-color: #fee2e2;
+}
+
+.delete-card-link:hover svg,
+.delete-idea-link:hover svg {
+  transform: scale(1.1);
+}
+
+.delete-card-link:focus,
+.delete-idea-link:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+  color: #dc2626;
 }

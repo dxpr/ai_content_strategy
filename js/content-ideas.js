@@ -81,27 +81,19 @@
       success: function(response, status) {
         let hasError = false;
 
+        // Clear all progress messages (supports multiple instances)
+        document.querySelectorAll('[data-drupal-message-type="status"]').forEach((msg) => {
+          if (msg.textContent.includes('Analyzing') || msg.textContent.includes('generating')) {
+            msg.remove();
+          }
+        });
+
         if (Array.isArray(response)) {
           // Process all commands first
           response.forEach((command) => {
             if (command.command === 'insert') {
               const target = document.querySelector(command.selector);
-
-              // Special handling for last-run-time
-              if (command.selector === '.last-run-time') {
-                let lastRunTime = target;
-                if (!lastRunTime) {
-                  lastRunTime = document.createElement('div');
-                  lastRunTime.className = 'last-run-time';
-                  const actionsContainer = document.querySelector('.content-strategy-actions');
-                  if (actionsContainer) {
-                    actionsContainer.appendChild(lastRunTime);
-                  }
-                }
-                if (lastRunTime) {
-                  DOMUtils.safeInsertHTML(lastRunTime, command.data, command.method);
-                }
-              } else if (target) {
+              if (target) {
                 // If this is the main recommendations wrapper, remove the old one first
                 if (command.selector === '.content-strategy-recommendations' && command.method === 'append') {
                   const oldWrapper = target.querySelector('.recommendations-wrapper');
@@ -159,7 +151,14 @@
       error: function(xhr, status, error) {
         element.disabled = false;
         element.textContent = errorText;
-        
+
+        // Clear all progress messages (supports multiple instances)
+        document.querySelectorAll('[data-drupal-message-type="status"]').forEach((msg) => {
+          if (msg.textContent.includes('Analyzing') || msg.textContent.includes('generating')) {
+            msg.remove();
+          }
+        });
+
         try {
           const response = JSON.parse(xhr.responseText);
           const messages = new Drupal.Message();
@@ -333,10 +332,6 @@
     attach: function (context, settings) {
       // Handle main generate button
       once('contentIdeas', '.generate-recommendations', context).forEach((button) => {
-        // Don't override the initial button text from server
-        const initialText = button.textContent.trim();
-        const hasRecommendations = initialText === settings?.aiContentStrategy?.buttonText?.main?.refresh;
-
         try {
           DOMUtils.ensureElementId(button, 'content-strategy');
           const ajaxHandler = new Drupal.Ajax(
@@ -346,8 +341,8 @@
               element: button,
               url: 'admin/reports/ai/content-strategy/generate',
               loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
-              successText: settings?.aiContentStrategy?.buttonText?.main?.refresh,
-              errorText: hasRecommendations ? settings?.aiContentStrategy?.buttonText?.main?.refresh : settings?.aiContentStrategy?.buttonText?.main?.generate,
+              successText: button.textContent.trim(), // Keep whatever backend set
+              errorText: button.textContent.trim(), // Keep whatever backend set
               onSuccess: (target) => {
                 // Find the recommendations wrapper that was just added
                 const wrapper = document.querySelector('.recommendations-wrapper');
@@ -371,6 +366,30 @@
 
           button.addEventListener('click', function(event) {
             event.preventDefault();
+
+            // If there are existing recommendations, show confirmation dialog
+            if (button.dataset.hasExisting === 'true') {
+              const confirmed = confirm(
+                Drupal.t('Regenerate all recommendations?\n\n') +
+                Drupal.t('All existing recommendations will be replaced. This cannot be undone.')
+              );
+
+              if (!confirmed) {
+                return;
+              }
+            }
+
+            // Show detailed loading message
+            const messages = new Drupal.Message();
+            messages.add(
+              Drupal.t('Analyzing your site and generating recommendations... This may take a minute.'),
+              {
+                type: 'status',
+                id: `generation-progress-${Date.now()}`,
+                announce: Drupal.t('Generating recommendations, please wait')
+              }
+            );
+
             ajaxHandler.execute();
           });
         } catch (e) {
@@ -401,8 +420,22 @@
           const section = link.dataset.section;
           const title = link.dataset.title;
 
+          // Get card context for better confirmation message
+          const card = link.closest('.recommendation-item');
+          const ideasTable = card.querySelector('.content-ideas-table tbody');
+          const ideasCount = ideasTable ? ideasTable.querySelectorAll('tr').length : 0;
+
+          // Build contextual confirmation message
+          let confirmMessage = Drupal.t('Delete "@title"?', {'@title': title});
+          if (ideasCount > 0) {
+            confirmMessage += '\n\n' + Drupal.t('This will permanently delete @count content idea(s).', {'@count': ideasCount});
+          } else {
+            confirmMessage += '\n\n' + Drupal.t('This recommendation has no content ideas yet.');
+          }
+          confirmMessage += '\n\n' + Drupal.t('This action cannot be undone.');
+
           // Confirm deletion
-          if (!confirm(Drupal.t('Are you sure you want to delete this recommendation? This cannot be undone.'))) {
+          if (!confirm(confirmMessage)) {
             return;
           }
 
@@ -557,6 +590,170 @@
             }
           });
         }
+      });
+
+      // Handle delete idea links (individual content ideas)
+      once('delete-idea', '.delete-idea-link', context).forEach((button) => {
+        button.addEventListener('click', function(event) {
+          event.preventDefault();
+
+          const section = button.dataset.section;
+          const title = button.dataset.title;
+          const ideaIndex = button.dataset.ideaIndex;
+
+          // Get the idea text for confirmation
+          const row = button.closest('tr');
+          const ideaCell = row.querySelector('.editable-field');
+          const ideaText = ideaCell ? ideaCell.textContent.trim() : '';
+
+          // Build contextual confirmation message
+          let confirmMessage = Drupal.t('Delete this content idea?');
+          if (ideaText) {
+            const truncatedText = ideaText.length > 60 ? ideaText.substring(0, 60) + '...' : ideaText;
+            confirmMessage += '\n\n"' + truncatedText + '"';
+          }
+          confirmMessage += '\n\n' + Drupal.t('This action cannot be undone.');
+
+          // Confirm deletion
+          if (!confirm(confirmMessage)) {
+            return;
+          }
+
+          // Disable button during request
+          button.style.opacity = '0.5';
+          button.style.pointerEvents = 'none';
+
+          // Make AJAX request
+          const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/delete-idea/${section}/${encodeURIComponent(title)}/${ideaIndex}`;
+
+          fetch(url, {
+            method: 'GET',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => response.json())
+          .then(commands => {
+            // Process AJAX commands
+            if (Array.isArray(commands)) {
+              commands.forEach((command) => {
+                if (command.command === 'remove') {
+                  const target = document.querySelector(command.selector);
+                  if (target) {
+                    target.remove();
+                  }
+                }
+                else if (command.command === 'message') {
+                  const messages = new Drupal.Message();
+                  if (command.clearPrevious) {
+                    messages.clear();
+                  }
+                  messages.add(command.message, {
+                    type: command.messageOptions?.type || 'status',
+                    id: `content-strategy-message-${Date.now()}`
+                  });
+                }
+              });
+
+              // Reattach behaviors to the card
+              const card = document.querySelector(`.recommendation-item[data-section='${section}'][data-title='${title}']`);
+              if (card) {
+                Drupal.attachBehaviors(card);
+              }
+            }
+          })
+          .catch(error => {
+            const messages = new Drupal.Message();
+            messages.add(Drupal.t('An error occurred while deleting the content idea.'), {
+              type: 'error',
+              id: `content-strategy-error-${Date.now()}`
+            });
+
+            // Re-enable button
+            button.style.opacity = '1';
+            button.style.pointerEvents = 'auto';
+          });
+        });
+      });
+
+      // Handle CSV export button
+      once('export-csv', '.export-csv-button', context).forEach((button) => {
+        button.addEventListener('click', function(event) {
+          event.preventDefault();
+
+          // Collect all recommendation data
+          const csvData = [];
+
+          // Add header row - Content Idea first, Recommendation Title last
+          csvData.push(['Content Idea', 'Category', 'Priority', 'Recommendation Title']);
+
+          // Loop through all recommendation cards
+          document.querySelectorAll('.recommendation-item').forEach((card) => {
+            const section = card.dataset.section || '';
+            const title = card.querySelector('h4')?.textContent?.trim() || '';
+            const priority = card.querySelector('.priority-badge')?.textContent?.trim() || '';
+
+            // Get category name from section heading
+            const sectionElement = card.closest('.recommendation-section');
+            const categoryName = sectionElement?.querySelector('h3')?.textContent?.trim() || section;
+
+            // Get all content ideas
+            const ideas = card.querySelectorAll('.content-ideas-table tbody tr');
+
+            if (ideas.length > 0) {
+              // One row per idea
+              ideas.forEach((ideaRow) => {
+                const idea = ideaRow.querySelector('td.editable-field')?.textContent?.trim() || '';
+                csvData.push([
+                  idea,
+                  categoryName,
+                  priority,
+                  title
+                ]);
+              });
+            } else {
+              // Card without ideas
+              csvData.push([
+                '',
+                categoryName,
+                priority,
+                title
+              ]);
+            }
+          });
+
+          // Convert to CSV string
+          const csvContent = csvData.map(row =>
+            row.map(cell => {
+              // Escape quotes and wrap in quotes if contains comma, newline, or quote
+              const cellStr = String(cell).replace(/"/g, '""');
+              if (cellStr.includes(',') || cellStr.includes('\n') || cellStr.includes('"')) {
+                return `"${cellStr}"`;
+              }
+              return cellStr;
+            }).join(',')
+          ).join('\n');
+
+          // Create blob and trigger download
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          const timestamp = new Date().toISOString().split('T')[0];
+
+          link.setAttribute('href', url);
+          link.setAttribute('download', `content-strategy-${timestamp}.csv`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // Show success message
+          const messages = new Drupal.Message();
+          messages.add(Drupal.t('CSV file downloaded successfully.'), {
+            type: 'status',
+            id: `csv-export-success-${Date.now()}`
+          });
+        });
       });
     }
   };

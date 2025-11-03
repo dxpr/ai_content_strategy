@@ -4,12 +4,12 @@
  * Default theme implementation for content strategy recommendations.
  *
  * Available variables:
- * - content_gaps: Array of content gap recommendations.
- * - authority_topics: Array of authority topic recommendations.
- * - expertise_demonstrations: Array of expertise demonstration recommendations.
- * - trust_signals: Array of trust signal recommendations.
+ * - categories: Array of recommendation categories with their items.
  * - button_text: Button text configuration.
  * - last_run: Last generation time as a formatted string.
+ * - pages_analyzed: Number of pages analyzed from the sitemap.
+ * - categories_count: Number of active recommendation categories.
+ * - configure_link: Link to configure categories (optional).
  *
  * @ingroup themeable
  */
@@ -25,18 +25,36 @@
     <p>{{ 'AI-powered content strategy recommendations based on your site structure.'|t }}</p>
   </div>
 
+  {% if last_run %}
+    <div class="content-strategy-status">
+      <div class="status-item status-item--timestamp">
+        <strong>{{ 'Last generated:'|t }}</strong> {{ last_run }}
+      </div>
+      {% if pages_analyzed %}
+        <div class="status-item status-item--pages">
+          <strong>{{ 'Pages analyzed:'|t }}</strong> {{ pages_analyzed }}
+        </div>
+      {% endif %}
+      {% if categories_count %}
+        <div class="status-item status-item--categories">
+          <strong>{{ 'Active categories:'|t }}</strong> {{ categories_count }}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <div class="content-strategy-actions">
-    <button class="generate-recommendations button button--primary">
-      {% if content_gaps is empty and authority_topics is empty and expertise_demonstrations is empty and trust_signals is empty %}
-        {{ button_text.main.generate }}
+    <button class="generate-recommendations button button--primary" data-has-existing="{{ last_run ? 'true' : 'false' }}">
+      {% if last_run %}
+        {{ 'Regenerate recommendations'|t }}
       {% else %}
-        {{ button_text.main.refresh }}
+        {{ 'Generate recommendations'|t }}
       {% endif %}
     </button>
     {% if last_run %}
-      <div class="last-run-time">
-        {{ 'Last generated: @time'|t({'@time': last_run}) }}
-      </div>
+      <button class="export-csv-button button button--secondary">
+        {{ 'Export as CSV'|t }}
+      </button>
     {% endif %}
   </div>
 

@@ -24,7 +24,15 @@
 
   <div class="recommendation-item recommendation-priority-{{ item.priority }}" data-section="{{ section }}" data-title="{{ item_title }}">
     <div class="recommendation-content">
-      <h4 contenteditable="true" data-field="title" data-original="{{ item_title }}" class="editable-field">{{ item_title }}</h4>
+      <div class="recommendation-header">
+        <h4 contenteditable="true" data-field="title" data-original="{{ item_title }}" class="editable-field">{{ item_title }}</h4>
+        <button type="button" class="delete-card-link" data-section="{{ section }}" data-title="{{ item_title }}" title="{{ 'Delete this recommendation (cannot be undone)'|t }}" aria-label="{{ 'Delete recommendation: @title'|t({'@title': item_title}) }}">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+          </svg>
+        </button>
+      </div>
       {# Try to find description - try common fields in order #}
       {% set description = item.description|default(item.rationale|default(item.implementation|default(null))) %}
       {% if description %}
@@ -40,12 +48,21 @@
           <thead>
             <tr>
               <th>{{ 'Content Ideas'|t }}</th>
+              <th class="idea-actions-header"></th>
             </tr>
           </thead>
           <tbody>
             {% for key, idea in item.content_ideas %}
-              <tr>
+              <tr data-idea-index="{{ key }}">
                 <td contenteditable="true" data-field="content_ideas" data-idea-index="{{ key }}" class="editable-field">{{ idea is iterable and idea['#markup'] is defined ? idea['#markup'] : idea }}</td>
+                <td class="idea-actions">
+                  <button type="button" class="delete-idea-link" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}" title="{{ 'Delete this content idea'|t }}" aria-label="{{ 'Delete content idea'|t }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                      <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                    </svg>
+                  </button>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
@@ -53,12 +70,6 @@
       {% endif %}
     </div>
     <div class="recommendation-actions">
-      <a href="#" class="delete-card-link" data-section="{{ section }}" data-title="{{ item_title }}" title="{{ 'Delete this recommendation'|t }}">
-        {{ '✕ Delete'|t }}
-      </a>
-
-      <span class="save-indicator" style="display: none; opacity: 0.6; font-size: 0.9em; margin-left: 8px;"></span>
-
       {% if item.content_ideas is not empty %}
         <a href="#" class="generate-more-link" data-section="{{ section }}" data-title="{{ item_title }}">
           {{ button_text.generate_more[section] }}
@@ -68,6 +79,8 @@
           {{ button_text.generate[section] }}
         </a>
       {% endif %}
+
+      <span class="save-indicator" style="display: none; opacity: 0.6; font-size: 0.9em; margin-left: 8px;"></span>
     </div>
   </div>
 {% endfor %} 
