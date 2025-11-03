@@ -54,6 +54,22 @@ ai_content_strategy.delete_card:
       title:
         type: string
 
+ai_content_strategy.delete_idea:
+  path: '/admin/reports/ai/content-strategy/delete-idea/{section}/{title}/{idea_index}'
+  defaults:
+    _controller: '\Drupal\ai_content_strategy\Controller\ContentStrategyController::deleteIdea'
+    _title: 'Delete Content Idea'
+  requirements:
+    _permission: 'access ai content strategy'
+  options:
+    parameters:
+      section:
+        type: string
+      title:
+        type: string
+      idea_index:
+        type: integer
+
 ai_content_strategy.save_card:
   path: '/admin/reports/ai/content-strategy/save-card/{section}/{title}'
   defaults:
