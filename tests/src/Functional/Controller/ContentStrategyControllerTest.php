@@ -83,7 +83,6 @@ class ContentStrategyControllerTest extends BrowserTestBase {
   public function testUserPermissions() {
     // Create a user without permissions.
     $user = $this->drupalCreateUser([]);
-
     $this->drupalLogin($user);
     $this->drupalGet('/admin/reports/ai/content-strategy');
     $this->assertSession()->statusCodeEquals(403);
@@ -92,7 +91,6 @@ class ContentStrategyControllerTest extends BrowserTestBase {
     $privileged_user = $this->drupalCreateUser([
       'view ai content strategy recommendations',
     ]);
-
     $this->drupalLogin($privileged_user);
     $this->drupalGet('/admin/reports/ai/content-strategy');
     $this->assertSession()->statusCodeEquals(200);
