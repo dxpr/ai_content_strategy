@@ -199,24 +199,46 @@ class ContentAnalyzer {
   /**
    * Gets the sitemap URLs.
    *
+   * @param string|null $sitemap_url
+   *   The sitemap URL to fetch. Defaults to /sitemap.xml.
+   *
    * @return array
    *   An array containing URLs from the sitemap and any error messages.
    */
-  public function getSitemapUrls(): array {
+  public function getSitemapUrls(?string $sitemap_url = NULL): array {
     try {
-      // Generate absolute URL for sitemap.xml.
-      $sitemap_url = Url::fromUserInput('/sitemap.xml')
-        ->setAbsolute()
-        ->toString();
+      if (!$sitemap_url) {
+        // Generate absolute URL for sitemap.xml.
+        $sitemap_url = Url::fromUserInput('/sitemap.xml')
+          ->setAbsolute()
+          ->toString();
+      }
 
       $response = $this->httpClient->request('GET', $sitemap_url);
       $xml_content = $response->getBody()->getContents();
 
       if ($xml = simplexml_load_string($xml_content)) {
         $urls = [];
-        foreach ($xml->url as $url) {
-          $urls[] = (string) $url->loc;
+
+        // Get URLs from sitemap.xml.
+        if (isset($xml->url)) {
+          foreach ($xml->url as $url) {
+            $urls[] = (string) $url->loc;
+          }
         }
+
+        // If there are nested sitemaps, fetch them recursively.
+        if (isset($xml->sitemap)) {
+          foreach ($xml->sitemap as $sitemap) {
+            $recursive_result = $this->getSitemapUrls((string) $sitemap->loc);
+            if ($recursive_result['error']) {
+              return $recursive_result;
+            }
+
+            $urls = array_merge($urls, $recursive_result['urls']);
+          }
+        }
+
         return [
           'urls' => $urls,
           'error' => NULL,
