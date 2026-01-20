@@ -199,44 +199,112 @@ class ContentAnalyzer {
   /**
    * Gets the sitemap URLs.
    *
+   * This method processes sitemaps iteratively to avoid recursion depth issues.
+   * It handles two types of XML structures:
+   *   1. <urlset>: Contains direct page URLs.
+   *   2. <sitemapindex>: Contains links to other sitemaps.
+   *
    * @return array
-   *   An array containing URLs from the sitemap and any error messages.
+   *   An array containing:
+   *   - 'urls': (array) A flat list of all discovered URLs.
+   *   - 'error': (string|null) Error message if fetching or parsing failed.
    */
   public function getSitemapUrls(): array {
-    try {
-      // Generate absolute URL for sitemap.xml.
-      $sitemap_url = Url::fromUserInput('/sitemap.xml')
-        ->setAbsolute()
-        ->toString();
+    // Generate absolute URL for sitemap.xml.
+    $sitemap_url = Url::fromUserInput('/sitemap.xml')
+      ->setAbsolute()
+      ->toString();
 
-      $response = $this->httpClient->request('GET', $sitemap_url);
+    $urls = [];
+    // Queue of sitemap URLs to be processed.
+    $sitemaps_to_process = [$sitemap_url];
+    // Track processed sitemaps to prevent infinite loops
+    // from circular references.
+    $processed_sitemaps = [];
+
+    while (!empty($sitemaps_to_process)) {
+      $current_url = array_shift($sitemaps_to_process);
+
+      // Avoid infinite loops if sitemaps reference each other.
+      if (isset($processed_sitemaps[$current_url])) {
+        continue;
+      }
+      $processed_sitemaps[$current_url] = TRUE;
+
+      $result = $this->fetchSitemapXml($current_url);
+
+      if ($result['error']) {
+        return [
+          'urls' => [],
+          'error' => $result['error'],
+        ];
+      }
+
+      $xml = $result['xml'];
+
+      // Case 1: The sitemap contains direct URLs (<urlset> structure).
+      if (isset($xml->url)) {
+        foreach ($xml->url as $url_entry) {
+          $urls[] = (string) $url_entry->loc;
+        }
+      }
+
+      // Case 2: The sitemap is an index pointing to other sitemaps
+      // (<sitemapindex> structure).
+      if (isset($xml->sitemap)) {
+        foreach ($xml->sitemap as $sub_sitemap) {
+          $sitemaps_to_process[] = (string) $sub_sitemap->loc;
+        }
+      }
+    }
+
+    return [
+      'urls' => $urls,
+      'error' => NULL,
+    ];
+  }
+
+  /**
+   * Fetches and parses a sitemap XML.
+   *
+   * @param string $url
+   *   The URL of the sitemap.
+   *
+   * @return array
+   *   An array with:
+   *   - 'xml': (SimpleXMLElement|null) The parsed XML object on success.
+   *   - 'error': (string|null) Error message on failure.
+   */
+  protected function fetchSitemapXml(string $url): array {
+    try {
+      // Fetch the XML content via HTTP.
+      $response = $this->httpClient->request('GET', $url);
       $xml_content = $response->getBody()->getContents();
 
+      // Attempt to parse the XML string.
       if ($xml = simplexml_load_string($xml_content)) {
-        $urls = [];
-        foreach ($xml->url as $url) {
-          $urls[] = (string) $url->loc;
-        }
         return [
-          'urls' => $urls,
+          'xml' => $xml,
           'error' => NULL,
         ];
       }
 
       return [
-        'urls' => [],
+        'xml' => NULL,
         'error' => $this->t('The sitemap.xml file could not be parsed. Please ensure it contains valid XML.'),
       ];
     }
     catch (GuzzleException $e) {
+      // Handle HTTP-level errors (e.g., 404, connection issues).
       return [
-        'urls' => [],
+        'xml' => NULL,
         'error' => $this->t('Could not fetch sitemap.xml. Error: @error', ['@error' => $e->getMessage()]),
       ];
     }
     catch (\Exception $e) {
+      // Handle any other unexpected exceptions.
       return [
-        'urls' => [],
+        'xml' => NULL,
         'error' => $this->t('An unexpected error occurred while processing sitemap.xml. Error: @error', ['@error' => $e->getMessage()]),
       ];
     }
