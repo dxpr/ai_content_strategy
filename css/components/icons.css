@@ -1,0 +1,89 @@
+/**
+ * @file
+ * Icon styles using CSS mask-image for colorable SVG icons.
+ *
+ * This approach allows SVG icons to be styled with CSS color properties
+ * while keeping the SVG files separate and cacheable.
+ */
+
+/* Base icon styles */
+.cs-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Icon variants */
+.cs-icon--trash {
+  -webkit-mask-image: url(../../images/icons/trash.svg);
+  mask-image: url(../../images/icons/trash.svg);
+}
+
+.cs-icon--edit {
+  -webkit-mask-image: url(../../images/icons/edit.svg);
+  mask-image: url(../../images/icons/edit.svg);
+}
+
+.cs-icon--checkmark {
+  -webkit-mask-image: url(../../images/icons/checkmark.svg);
+  mask-image: url(../../images/icons/checkmark.svg);
+}
+
+.cs-icon--error {
+  -webkit-mask-image: url(../../images/icons/error.svg);
+  mask-image: url(../../images/icons/error.svg);
+}
+
+/* Size variants */
+.cs-icon--sm {
+  width: 14px;
+  height: 14px;
+}
+
+.cs-icon--md {
+  width: 18px;
+  height: 18px;
+}
+
+.cs-icon--lg {
+  width: 25px;
+  height: 25px;
+}
+
+/* Delete idea button icon - fills the 25x25 button */
+.delete-idea-link .cs-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Delete card button icon */
+.delete-card-link .cs-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Edit link icon */
+.idea-link-edit .cs-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Save indicator icons */
+.field-save-indicator__checkmark .cs-icon {
+  width: 16px;
+  height: 16px;
+  background-color: #28a745;
+}
+
+.field-save-indicator__error .cs-icon {
+  width: 16px;
+  height: 16px;
+  background-color: #dc2626;
+}

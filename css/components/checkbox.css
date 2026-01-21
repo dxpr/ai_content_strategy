@@ -1,0 +1,61 @@
+/**
+ * @file
+ * Checkbox styles for AI Content Strategy implemented status.
+ */
+
+/* Idea Checkbox */
+.idea-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.idea-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.idea-checkbox-visual {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fff;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.idea-checkbox-visual::after {
+  content: '';
+  position: absolute;
+  display: none;
+  left: 8px;
+  top: 3px;
+  width: 6px;
+  height: 12px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.idea-checkbox input[type="checkbox"]:checked + .idea-checkbox-visual {
+  background-color: #16a34a;
+  border-color: #16a34a;
+}
+
+.idea-checkbox input[type="checkbox"]:checked + .idea-checkbox-visual::after {
+  display: block;
+}
+
+.idea-checkbox:hover .idea-checkbox-visual {
+  border-color: #16a34a;
+}
+
+.idea-checkbox input[type="checkbox"]:focus + .idea-checkbox-visual {
+  outline: 2px solid #16a34a;
+  outline-offset: 2px;
+}

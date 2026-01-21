@@ -1,0 +1,17 @@
+{#
+/**
+ * @file
+ * Template for rendering icons using CSS mask-image.
+ *
+ * Uses CSS mask-image for colorable icons that inherit color from parent.
+ * The SVG files are referenced via CSS, allowing caching and color control.
+ *
+ * Available variables:
+ * - name: The icon name (trash, edit, checkmark, error).
+ * - class: Optional CSS class(es) to add.
+ * - size: Optional size variant (sm, md, lg). Default is base 16px.
+ *
+ * @ingroup themeable
+ */
+#}
+<span class="cs-icon cs-icon--{{ name }}{% if size %} cs-icon--{{ size }}{% endif %}{% if class %} {{ class }}{% endif %}" aria-hidden="true"></span>

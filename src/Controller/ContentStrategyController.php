@@ -2,11 +2,15 @@
 
 namespace Drupal\ai_content_strategy\Controller;
 
+use Drupal\Core\Ajax\DataCommand;
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai_content_strategy\Service\CategoryPromptBuilder;
+use Drupal\ai_content_strategy\Service\RecommendationStorageService;
+use Drupal\ai_content_strategy\Service\IdeaRowBuilder;
+use Drupal\ai_content_strategy\Service\AjaxResponseBuilder;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Drupal\Component\Serialization\Json;
@@ -28,6 +32,7 @@ use Drupal\Core\Ajax\BeforeCommand;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Component\Datetime\TimeInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Controller for content strategy functionality.
@@ -115,6 +120,34 @@ class ContentStrategyController extends ControllerBase {
   protected $categoryPromptBuilder;
 
   /**
+   * The request stack.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
+  protected $requestStack;
+
+  /**
+   * The recommendation storage service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\RecommendationStorageService
+   */
+  protected $recommendationStorage;
+
+  /**
+   * The idea row builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\IdeaRowBuilder
+   */
+  protected $ideaRowBuilder;
+
+  /**
+   * The AJAX response builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\AjaxResponseBuilder
+   */
+  protected $ajaxResponseBuilder;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -137,6 +170,14 @@ class ContentStrategyController extends ControllerBase {
    *   The time service.
    * @param \Drupal\ai_content_strategy\Service\CategoryPromptBuilder $category_prompt_builder
    *   The category prompt builder service.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
+   *   The request stack.
+   * @param \Drupal\ai_content_strategy\Service\RecommendationStorageService $recommendation_storage
+   *   The recommendation storage service.
+   * @param \Drupal\ai_content_strategy\Service\IdeaRowBuilder $idea_row_builder
+   *   The idea row builder service.
+   * @param \Drupal\ai_content_strategy\Service\AjaxResponseBuilder $ajax_response_builder
+   *   The AJAX response builder service.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -149,6 +190,10 @@ class ContentStrategyController extends ControllerBase {
     KeyValueFactoryInterface $key_value_factory,
     TimeInterface $time,
     CategoryPromptBuilder $category_prompt_builder,
+    RequestStack $request_stack,
+    RecommendationStorageService $recommendation_storage,
+    IdeaRowBuilder $idea_row_builder,
+    AjaxResponseBuilder $ajax_response_builder,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -160,6 +205,10 @@ class ContentStrategyController extends ControllerBase {
     $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
     $this->time = $time;
     $this->categoryPromptBuilder = $category_prompt_builder;
+    $this->requestStack = $request_stack;
+    $this->recommendationStorage = $recommendation_storage;
+    $this->ideaRowBuilder = $idea_row_builder;
+    $this->ajaxResponseBuilder = $ajax_response_builder;
   }
 
   /**
@@ -176,7 +225,11 @@ class ContentStrategyController extends ControllerBase {
       $container->get('date.formatter'),
       $container->get('keyvalue'),
       $container->get('datetime.time'),
-      $container->get('ai_content_strategy.category_prompt_builder')
+      $container->get('ai_content_strategy.category_prompt_builder'),
+      $container->get('request_stack'),
+      $container->get('ai_content_strategy.recommendation_storage'),
+      $container->get('ai_content_strategy.idea_row_builder'),
+      $container->get('ai_content_strategy.ajax_response_builder')
     );
   }
 
@@ -201,17 +254,32 @@ class ContentStrategyController extends ControllerBase {
     $stored_data = $this->keyValue->get(self::KV_KEY);
     $recommendations = [];
     $last_run = NULL;
+    $pages_analyzed = NULL;
 
     if ($stored_data) {
       if (is_array($stored_data) && isset($stored_data['data'],
         $stored_data['timestamp'])) {
         $recommendations = $stored_data['data'];
-        $last_run = (int) $stored_data['timestamp'];
+        $last_run = $stored_data['timestamp'];
+        $pages_analyzed = $stored_data['pages_analyzed'] ?? NULL;
       }
       else {
         // Handle legacy format.
         $recommendations = $stored_data;
         $last_run = $this->time->getRequestTime();
+      }
+
+      // Migrate existing data by adding UUIDs if missing.
+      $original_recommendations = $recommendations;
+      $recommendations = $this->recommendationStorage->ensureUuids($recommendations);
+      $recommendations = $this->recommendationStorage->ensureIdeaUuids($recommendations);
+      if ($recommendations !== $original_recommendations) {
+        // UUIDs were added, save the updated data.
+        $this->keyValue->set(self::KV_KEY, [
+          'data' => $recommendations,
+          'timestamp' => $last_run,
+          'pages_analyzed' => $pages_analyzed,
+        ]);
       }
     }
 
@@ -245,6 +313,8 @@ class ContentStrategyController extends ControllerBase {
       '#categories' => $categories,
       '#last_run' => $last_run ?
       $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
+      '#pages_analyzed' => $pages_analyzed,
+      '#categories_count' => count($category_ids),
       '#attached' => [
         'library' => ['ai_content_strategy/content_strategy'],
       ],
@@ -259,32 +329,115 @@ class ContentStrategyController extends ControllerBase {
    */
   public function generateRecommendationsAjax() {
     try {
+      // Get site data for metadata.
+      $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
+      $pages_count = count($sitemap_urls['urls'] ?? []);
+
       // Get recommendations.
       $recommendations = $this->strategyGenerator->generateRecommendations();
 
-      // Store the results with timestamp in key-value store.
-      $timestamp = (int) $this->time->getCurrentTime();
+      // Ensure all items and ideas have UUIDs for consistent referencing.
+      $recommendations = $this->recommendationStorage->ensureUuids($recommendations);
+      $recommendations = $this->recommendationStorage->ensureIdeaUuids($recommendations);
+
+      // Store the results with timestamp and metadata in key-value store.
+      $timestamp = $this->time->getCurrentTime();
       $this->keyValue->set(self::KV_KEY, [
         'data' => $recommendations,
         'timestamp' => $timestamp,
+        'pages_analyzed' => $pages_count,
       ]);
 
       // Create AJAX response.
       $response = new AjaxResponse();
 
-      // Re-enable the generate button.
+      // Update button text to reflect that recommendations now exist.
       $response->addCommand(new HtmlCommand(
         '.generate-recommendations',
-        $this->t('Regenerate report')
+        $this->t('Regenerate recommendations')
       ));
 
-      // Update the last run time.
+      // Update data attribute to reflect existing recommendations.
+      $response->addCommand(new InvokeCommand(
+        '.generate-recommendations',
+        'attr',
+        ['data-has-existing', 'true']
+      ));
+
+      // Get category count for status display.
+      $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+      $category_count = $category_storage->getQuery()
+        ->condition('status', TRUE)
+        ->accessCheck(FALSE)
+        ->count()
+        ->execute();
+
+      // Build the status area HTML.
+      $status_build = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['content-strategy-status']],
+        'timestamp' => [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['status-item', 'status-item--timestamp']],
+          'label' => [
+            '#type' => 'html_tag',
+            '#tag' => 'strong',
+            '#value' => $this->t('Last generated:'),
+          ],
+          'value' => [
+            '#markup' => ' ' . $this->dateFormatter->formatTimeDiffSince($timestamp),
+          ],
+        ],
+        'pages' => [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['status-item', 'status-item--pages']],
+          'label' => [
+            '#type' => 'html_tag',
+            '#tag' => 'strong',
+            '#value' => $this->t('Pages analyzed:'),
+          ],
+          'value' => [
+            '#markup' => ' ' . $pages_count,
+          ],
+        ],
+        'categories' => [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['status-item', 'status-item--categories']],
+          'label' => [
+            '#type' => 'html_tag',
+            '#tag' => 'strong',
+            '#value' => $this->t('Active categories:'),
+          ],
+          'value' => [
+            '#markup' => ' ' . $category_count,
+          ],
+        ],
+      ];
+
+      // Remove old status area if it exists and add the new one.
+      $response->addCommand(new RemoveCommand('.content-strategy-status'));
       $response->addCommand(
-        new HtmlCommand(
-          '.last-run-time',
-          $this->t('Last generated: @time ago', [
-            '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
-          ])
+        new BeforeCommand(
+          '.content-strategy-actions',
+          $this->renderer->renderRoot($status_build)
+        )
+      );
+
+      // Add CSV export button if it doesn't exist (first generation).
+      // Remove any existing one first to prevent duplicates on regenerate.
+      $response->addCommand(new RemoveCommand('.export-csv-button'));
+      $export_button = [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#attributes' => [
+          'class' => ['export-csv-button', 'button', 'button--secondary'],
+        ],
+        '#value' => $this->t('Export as CSV'),
+      ];
+      $response->addCommand(
+        new AppendCommand(
+          '.content-strategy-actions',
+          $this->renderer->renderRoot($export_button)
         )
       );
 
@@ -349,7 +502,7 @@ class ContentStrategyController extends ControllerBase {
           $has_items = !empty($recommendations[$category_id]);
           $button_class = $has_items ? 'button--secondary' : 'button--primary';
           $button_text = $has_items
-            ? ($button_texts['add_more'][$category_id] ?? $this->t('Add AI recommendations'))
+            ? ($button_texts['add_more'][$category_id] ?? $this->t('Generate AI recommendations'))
             : ($button_texts['generate'][$category_id] ?? $this->t('Generate AI recommendations'));
 
           // Add empty state message for categories with no items.
@@ -479,13 +632,13 @@ class ContentStrategyController extends ControllerBase {
    *
    * @param string $section
    *   The section to generate ideas for (content_gaps, authority_topics, etc.).
-   * @param string $title
-   *   The title of the specific item to generate more ideas for.
+   * @param string $uuid
+   *   The UUID of the specific item to generate more ideas for.
    *
    * @return \Drupal\Core\Ajax\AjaxResponse
    *   AJAX response containing the new content ideas.
    */
-  public function generateMore(string $section, string $title) {
+  public function generateMore(string $section, string $uuid) {
     try {
       // Get current stored data first.
       $stored_data = $this->keyValue->get(self::KV_KEY);
@@ -493,6 +646,13 @@ class ContentStrategyController extends ControllerBase {
         throw new \RuntimeException('No existing recommendations found');
       }
       $recommendations = $stored_data['data'];
+
+      // Find the card by UUID to get its title for the prompt.
+      $card = $this->recommendationStorage->getCardByUuid($section, $uuid);
+      if (!$card) {
+        throw new \RuntimeException('Card not found');
+      }
+      $title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
 
       // Get site data for context.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
@@ -568,81 +728,61 @@ EOT;
         );
       }
 
+      // Normalize ideas to include UUIDs.
+      $normalized_ideas = $this->recommendationStorage->normalizeIdeasWithUuids($ideas);
+
       // After successfully generating and parsing new ideas, update the stored
       // data.
-      $updated = FALSE;
+      $card_index = NULL;
 
-      // Find the correct section and item to update.
+      // Find the correct section and item to update by UUID.
       if (isset($recommendations[$section])) {
         foreach ($recommendations[$section] as $key => $item) {
-          // Try common title fields to match the item.
-          $item_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? NULL;
-
-          if ($item_title === $title) {
+          if (isset($item['uuid']) && $item['uuid'] === $uuid) {
             // Append new ideas to existing ones (or initialize if empty).
             $existing_ideas = $recommendations[$section][$key]['content_ideas'] ?? [];
             $recommendations[$section][$key]['content_ideas'] = array_merge(
               $existing_ideas,
-              $ideas
+              $normalized_ideas
             );
-            $updated = TRUE;
+            $card_index = $key;
             break;
           }
         }
       }
 
-      if ($updated) {
-        // Update the stored data with timestamp.
-        $timestamp = (int) $this->time->getCurrentTime();
-        $this->keyValue->set(self::KV_KEY, [
-          'data' => $recommendations,
-          'timestamp' => $timestamp,
-        ]);
-      }
-      else {
+      if ($card_index === NULL) {
         throw new \RuntimeException('Failed to find matching item to update');
       }
 
-      // Build HTML for new ideas.
-      $rows = [];
-      foreach ($ideas as $idea) {
-        $rows[] = [
-          '#type' => 'html_tag',
-          '#tag' => 'tr',
-          'cell' => [
-            '#type' => 'html_tag',
-            '#tag' => 'td',
-            '#value' => $idea,
-          ],
-        ];
-      }
+      // Update the stored data with timestamp.
+      $timestamp = $this->time->getCurrentTime();
+      $this->keyValue->set(self::KV_KEY, [
+        'data' => $recommendations,
+        'timestamp' => $timestamp,
+      ]);
 
-      // Create AJAX response.
-      $response = new AjaxResponse();
-
-      // Build the HTML for the new rows.
-      $html = $this->renderer->renderRoot($rows);
-
-      // Update the last run time.
-      $response->addCommand(
-        new HtmlCommand(
-          '.last-run-time',
-          $this->t('Last generated: @time ago', [
-            '@time' => $this->dateFormatter->formatTimeDiffSince($timestamp),
-          ])
-        )
+      // Build HTML for new ideas using the idea row builder service.
+      $rows_html = $this->ideaRowBuilder->renderRows(
+        $section,
+        $uuid,
+        $normalized_ideas
       );
+
+      // Create AJAX response and update timestamp.
+      $response = $this->ajaxResponseBuilder->create();
+      $this->ajaxResponseBuilder->addTimestampCommand($response, $timestamp);
 
       // Add command to append the new rows to the table.
       $response->addCommand(
         new AppendCommand(
           sprintf(
-            '.recommendation-item[data-section="%s"][data-title="%s"]' .
+            '.recommendation-item[data-section="%s"][data-uuid="%s"]' .
             ' .content-ideas-table tbody',
             $section,
-            str_replace('"', '\"', $title)
+            $uuid
           ),
-          $html
+          $rows_html
         )
       );
 
@@ -876,7 +1016,7 @@ EOT;
         $response->addCommand(
           new HtmlCommand(
             ".recommendation-section[data-section='$section'] .add-more-recommendations-link",
-            $button_texts['add_more'][$section] ?? $this->t('Add more AI recommendations')
+            $button_texts['add_more'][$section] ?? $this->t('Generate more AI recommendations')
           )
         );
 
@@ -906,14 +1046,12 @@ EOT;
         );
       }
 
-      // Update the last run time.
+      // Update the timestamp in the status area.
       $response->addCommand(
         new HtmlCommand(
-          '.last-run-time',
-          $this->t('Last generated: @time ago', [
-            '@time' => $this->dateFormatter
-              ->formatTimeDiffSince($stored_data['timestamp']),
-          ])
+          '.status-item--timestamp',
+          '<strong>' . $this->t('Last generated:') . '</strong> ' .
+          $this->dateFormatter->formatTimeDiffSince($stored_data['timestamp'])
         )
       );
 
@@ -1058,6 +1196,295 @@ EOT;
 
     // Default to 500 Internal Server Error.
     return 500;
+  }
+
+  /**
+   * Deletes a recommendation card via AJAX.
+   *
+   * @param string $section
+   *   The category section (e.g., 'content_gaps').
+   * @param string $uuid
+   *   The UUID of the card to delete.
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   AJAX response with removal commands.
+   */
+  public function deleteCard(string $section, string $uuid) {
+    $response = new AjaxResponse();
+
+    try {
+      // Load stored data.
+      $stored_data = $this->keyValue->get(self::KV_KEY);
+
+      if (!$stored_data || !isset($stored_data['data'][$section])) {
+        throw new \RuntimeException('No data found for this section');
+      }
+
+      $recommendations = $stored_data['data'];
+
+      // Find and remove the card by UUID.
+      $found = FALSE;
+      foreach ($recommendations[$section] as $key => $card) {
+        if (isset($card['uuid']) && $card['uuid'] === $uuid) {
+          unset($recommendations[$section][$key]);
+          $found = TRUE;
+          break;
+        }
+      }
+
+      if (!$found) {
+        throw new \RuntimeException('Card not found');
+      }
+
+      // Re-index array.
+      $recommendations[$section] = array_values($recommendations[$section]);
+
+      // Save updated data.
+      $stored_data['data'] = $recommendations;
+      $this->keyValue->set(self::KV_KEY, $stored_data);
+
+      // Remove card from DOM.
+      $response->addCommand(
+        new RemoveCommand(".recommendation-item[data-section='$section'][data-uuid='$uuid']")
+      );
+
+      // If category is now empty, show empty state.
+      if (empty($recommendations[$section])) {
+        $category_storage = $this->entityTypeManager()->getStorage('recommendation_category');
+        $category = $category_storage->load($section);
+
+        if ($category) {
+          $button_texts = ai_content_strategy_get_button_texts();
+
+          $empty_state = [
+            '#type' => 'container',
+            '#attributes' => ['class' => ['empty-category-state']],
+            'message' => [
+              '#type' => 'html_tag',
+              '#tag' => 'p',
+              '#value' => $this->t('No recommendations yet. Click below to generate AI-powered content suggestions.'),
+            ],
+            'button_wrapper' => [
+              '#type' => 'container',
+              '#attributes' => ['class' => ['add-more-recommendations-wrapper']],
+              'button' => [
+                '#type' => 'html_tag',
+                '#tag' => 'a',
+                '#attributes' => [
+                  'href' => '#',
+                  'class' => ['add-more-recommendations-link', 'button', 'button--primary'],
+                  'data-section' => $section,
+                ],
+                '#value' => $button_texts['generate'][$section] ?? $this->t('Generate AI recommendations'),
+              ],
+            ],
+          ];
+
+          $html = $this->renderer->renderRoot($empty_state);
+
+          // Remove the recommendation-items container.
+          $response->addCommand(
+            new RemoveCommand(".recommendation-section[data-section='$section'] .recommendation-items")
+          );
+
+          // Add empty state before the existing add-more button wrapper.
+          $response->addCommand(
+            new BeforeCommand(
+              ".recommendation-section[data-section='$section'] .add-more-recommendations-wrapper",
+              $html
+            )
+          );
+
+          // Remove the old add-more wrapper.
+          $response->addCommand(
+            new RemoveCommand(".recommendation-section[data-section='$section'] .add-more-recommendations-wrapper:last-child")
+          );
+        }
+      }
+
+      // Show success message.
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Recommendation deleted successfully.'),
+          NULL,
+          ['type' => 'status']
+        )
+      );
+
+    }
+    catch (\Exception $e) {
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Error deleting recommendation: @error', ['@error' => $e->getMessage()]),
+          NULL,
+          ['type' => 'error']
+        )
+      );
+
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
+    }
+
+    return $response;
+  }
+
+  /**
+   * Deletes an individual content idea from a recommendation card via AJAX.
+   *
+   * @param string $section
+   *   The category section.
+   * @param string $uuid
+   *   The UUID of the recommendation card.
+   * @param string $idea_uuid
+   *   The UUID of the content idea to delete.
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   The AJAX response.
+   */
+  public function deleteIdea(string $section, string $uuid, string $idea_uuid) {
+    $response = new AjaxResponse();
+
+    try {
+      // Use the storage service to delete the idea by UUID.
+      $this->recommendationStorage->deleteIdeaByUuid($section, $uuid, $idea_uuid);
+
+      // Remove the row from DOM using idea UUID selector.
+      $response->addCommand(
+        new RemoveCommand(".recommendation-item[data-section='$section'][data-uuid='$uuid'] tr[data-idea-uuid='$idea_uuid']")
+      );
+
+      // Show success message.
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Content idea deleted successfully.'),
+          NULL,
+          ['type' => 'status']
+        )
+      );
+
+    }
+    catch (\Exception $e) {
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Error deleting content idea: @error', ['@error' => $e->getMessage()]),
+          NULL,
+          ['type' => 'error']
+        )
+      );
+
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
+    }
+
+    return $response;
+  }
+
+  /**
+   * Saves edits to a recommendation card via AJAX.
+   *
+   * @param string $section
+   *   The category section.
+   * @param string $uuid
+   *   The UUID of the card.
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   AJAX response confirming save.
+   */
+  public function saveCard(string $section, string $uuid) {
+    $response = new AjaxResponse();
+
+    try {
+      // Get POST data.
+      $request = $this->requestStack->getCurrentRequest();
+      $field = $request->request->get('field');
+      $value = $request->request->get('value');
+      $idea_uuid = $request->request->get('idea_uuid');
+
+      if (empty($field) || $value === NULL) {
+        throw new \InvalidArgumentException('Missing field or value');
+      }
+
+      // Update the field based on type.
+      switch ($field) {
+        case 'title':
+          $this->recommendationStorage->updateCardFieldByUuid($section, $uuid, 'title', strip_tags($value));
+          break;
+
+        case 'description':
+          $this->recommendationStorage->updateCardFieldByUuid($section, $uuid, 'description', strip_tags($value));
+          break;
+
+        case 'content_ideas':
+          if ($idea_uuid !== NULL) {
+            $this->recommendationStorage->updateIdeaFieldByUuid($section, $uuid, $idea_uuid, 'text', strip_tags($value));
+          }
+          break;
+
+        case 'implemented':
+          if ($idea_uuid !== NULL) {
+            $is_implemented = $value === '1' || $value === 'true';
+            $this->recommendationStorage->updateIdeaFieldByUuid($section, $uuid, $idea_uuid, 'implemented', $is_implemented);
+          }
+          break;
+
+        case 'link':
+          if ($idea_uuid !== NULL) {
+            $link_value = strip_tags(trim($value));
+            $this->recommendationStorage->updateIdeaFieldByUuid($section, $uuid, $idea_uuid, 'link', $link_value);
+
+            // Render the updated link area using the IdeaRowBuilder service.
+            $link_html = $this->ideaRowBuilder->renderLinkArea(
+              $section,
+              $uuid,
+              $idea_uuid,
+              $link_value
+            );
+
+            // Build selector for the link area within this specific idea row.
+            $card_selector = sprintf(
+              '.recommendation-item[data-section="%s"][data-uuid="%s"] tr[data-idea-uuid="%s"] .idea-link-area',
+              $section,
+              $uuid,
+              $idea_uuid
+            );
+
+            // Return HTML replacement command.
+            $response->addCommand(new HtmlCommand($card_selector, $link_html));
+
+            return $response;
+          }
+          break;
+
+        default:
+          throw new \InvalidArgumentException('Invalid field');
+      }
+
+      // Return success (no visual command needed, JS will handle feedback).
+      $response->addCommand(
+        new DataCommand('.save-indicator', 'saved', 'true')
+      );
+
+    }
+    catch (\Exception $e) {
+      Error::logException($this->getLogger('ai_content_strategy'), $e);
+
+      $response->addCommand(
+        new MessageCommand(
+          $this->t('Error saving: @error', ['@error' => $e->getMessage()]),
+          NULL,
+          ['type' => 'error']
+        )
+      );
+
+      $status_code = $this->getHttpStatusFromException($e);
+      $response->setStatusCode($status_code);
+    }
+
+    return $response;
   }
 
 }

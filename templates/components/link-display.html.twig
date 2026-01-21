@@ -1,0 +1,18 @@
+{#
+/**
+ * @file
+ * Template for displaying a saved link with edit button.
+ *
+ * Available variables:
+ * - link: The URL of the link.
+ * - section: The section identifier.
+ * - uuid: The card UUID.
+ * - idea_uuid: The UUID of the idea.
+ *
+ * @ingroup themeable
+ */
+#}
+<a href="{{ link }}" target="_blank" class="idea-link" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}">{{ link }}</a>
+<button type="button" class="idea-link-edit" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}" title="{{ 'Edit link'|t }}">
+  <span class="cs-icon cs-icon--edit cs-icon--sm" aria-hidden="true"></span>
+</button>

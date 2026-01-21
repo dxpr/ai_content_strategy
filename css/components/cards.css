@@ -1,28 +1,7 @@
-/* Main Container */
-.content-strategy-recommendations {
-  max-width: 1200px;
-  margin: 2em auto;
-  padding: 0 1em;
-}
-
-.content-strategy-description {
-  margin-bottom: 2em;
-  font-size: 1.1em;
-  color: #666;
-}
-
-/* Actions */
-.content-strategy-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.last-run-time {
-  color: #666;
-  font-size: 0.9em;
-}
+/**
+ * @file
+ * Recommendation card styles for AI Content Strategy.
+ */
 
 /* Recommendations Grid */
 .recommendation-items {
@@ -47,9 +26,30 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+.recommendation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.recommendation-header h4 {
+  flex: 1;
+  margin: 0;
+}
+
 .recommendation-item p {
   margin-bottom: 1rem;
   color: #4a4a4a;
+}
+
+/* Recommendation Actions */
+.recommendation-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 /* Priority Badges */
@@ -79,13 +79,4 @@
   background-color: #f0fdf4;
   color: #16a34a;
   border: 1px solid #dcfce7;
-}
-
-/* Empty State */
-.empty-recommendations {
-  text-align: center;
-  padding: 3rem;
-  background: #f9fafb;
-  border-radius: 8px;
-  color: #6b7280;
 }

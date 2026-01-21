@@ -1,0 +1,68 @@
+/**
+ * @file
+ * Link styles for AI Content Strategy idea links.
+ */
+
+/* Idea Link Area */
+.idea-link-area {
+  margin-top: 6px;
+  font-size: 0.85em;
+}
+
+/* Add link uses Drupal's action-link class */
+.idea-add-link.action-link {
+  font-size: inherit;
+}
+
+.idea-link {
+  color: #0073aa;
+  text-decoration: none;
+  word-break: break-all;
+  margin-right: 6px;
+}
+
+.idea-link:hover {
+  text-decoration: underline;
+}
+
+.idea-link-edit {
+  background: none;
+  border: none;
+  padding: 2px;
+  color: #6b7280;
+  cursor: pointer;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+}
+
+.idea-link-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.idea-link-edit:hover {
+  color: #0073aa;
+}
+
+/* Idea Link Input */
+.idea-link-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.idea-link-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.idea-link-input:focus {
+  outline: none;
+  border-color: #0073aa;
+  box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}

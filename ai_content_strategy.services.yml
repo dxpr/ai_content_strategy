@@ -3,6 +3,18 @@ services:
     parent: logger.channel_base
     arguments: ['ai_content_strategy']
 
+  ai_content_strategy.recommendation_storage:
+    class: Drupal\ai_content_strategy\Service\RecommendationStorageService
+    arguments: ['@keyvalue', '@datetime.time', '@uuid']
+
+  ai_content_strategy.idea_row_builder:
+    class: Drupal\ai_content_strategy\Service\IdeaRowBuilder
+    arguments: ['@renderer']
+
+  ai_content_strategy.ajax_response_builder:
+    class: Drupal\ai_content_strategy\Service\AjaxResponseBuilder
+    arguments: ['@date.formatter']
+
   ai_content_strategy.category_schema_builder:
     class: Drupal\ai_content_strategy\Service\CategorySchemaBuilder
     arguments: ['@entity_type.manager', '@cache.default']
