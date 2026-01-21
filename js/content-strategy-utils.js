@@ -135,6 +135,7 @@
       },
       success: function(response, status) {
         let hasError = false;
+        let contentInserted = false;
 
         // Clear progress messages (supports multiple instances)
         document.querySelectorAll('[data-drupal-message-type="status"]').forEach((msg) => {
@@ -155,6 +156,7 @@
                   }
                 }
                 DOMUtils.safeInsertHTML(target, command.data, command.method);
+                contentInserted = true;
               }
             }
             else if (command.command === 'message') {
@@ -178,6 +180,14 @@
               }
             }
           });
+
+          // Attach Drupal behaviors to newly inserted content
+          if (contentInserted && !hasError) {
+            const mainContainer = document.querySelector('.content-strategy-recommendations');
+            if (mainContainer) {
+              Drupal.attachBehaviors(mainContainer, drupalSettings);
+            }
+          }
 
           if (onSuccess && !hasError) {
             const mainContainer = document.querySelector('.content-strategy-recommendations');
