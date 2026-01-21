@@ -75,6 +75,19 @@
         }
       });
 
+      // Override the success method to attach behaviors after commands run.
+      // Drupal's AJAX success handler processes commands, then calls this.
+      const originalSuccess = ajaxObject.success;
+      ajaxObject.success = function(response, status) {
+        // Call original success to process AJAX commands (including HtmlCommand).
+        originalSuccess.call(this, response, status);
+        // Now attach behaviors to the updated linkArea.
+        // Use setTimeout to ensure DOM is updated after HtmlCommand.
+        setTimeout(() => {
+          Drupal.attachBehaviors(linkArea);
+        }, 0);
+      };
+
       ajaxObject.execute();
     });
 

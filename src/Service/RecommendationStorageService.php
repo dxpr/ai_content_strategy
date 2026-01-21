@@ -150,7 +150,7 @@ class RecommendationStorageService {
    *   The timestamp of the save operation.
    */
   public function saveRecommendations(array $recommendations, ?int $pages_analyzed = NULL): int {
-    $timestamp = (int) $this->time->getCurrentTime();
+    $timestamp = $this->time->getCurrentTime();
 
     $data = [
       'data' => $recommendations,
@@ -474,7 +474,7 @@ class RecommendationStorageService {
    *   The existing stored data with metadata.
    */
   protected function saveRecommendationsPreservingMetadata(array $recommendations, ?array $stored): void {
-    $timestamp = (int) $this->time->getCurrentTime();
+    $timestamp = $this->time->getCurrentTime();
 
     $data = [
       'data' => $recommendations,

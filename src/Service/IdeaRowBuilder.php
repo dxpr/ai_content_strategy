@@ -3,7 +3,6 @@
 namespace Drupal\ai_content_strategy\Service;
 
 use Drupal\Core\Render\RendererInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * Service for building idea row render arrays and HTML.
@@ -12,8 +11,6 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
  * between initial page load and AJAX-generated content.
  */
 class IdeaRowBuilder {
-
-  use StringTranslationTrait;
 
   /**
    * The renderer service.

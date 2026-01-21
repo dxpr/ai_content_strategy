@@ -207,6 +207,11 @@
                     attachAddMoreRecommendationsBehavior(link, settings);
                   });
                 }
+                // Attach behaviors to the newly added export button.
+                const actionsArea = document.querySelector('.content-strategy-actions');
+                if (actionsArea) {
+                  Drupal.attachBehaviors(actionsArea, settings);
+                }
               }
             }, settings)
           );

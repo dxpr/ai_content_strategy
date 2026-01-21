@@ -260,7 +260,7 @@ class ContentStrategyController extends ControllerBase {
       if (is_array($stored_data) && isset($stored_data['data'],
         $stored_data['timestamp'])) {
         $recommendations = $stored_data['data'];
-        $last_run = (int) $stored_data['timestamp'];
+        $last_run = $stored_data['timestamp'];
         $pages_analyzed = $stored_data['pages_analyzed'] ?? NULL;
       }
       else {
@@ -341,7 +341,7 @@ class ContentStrategyController extends ControllerBase {
       $recommendations = $this->recommendationStorage->ensureIdeaUuids($recommendations);
 
       // Store the results with timestamp and metadata in key-value store.
-      $timestamp = (int) $this->time->getCurrentTime();
+      $timestamp = $this->time->getCurrentTime();
       $this->keyValue->set(self::KV_KEY, [
         'data' => $recommendations,
         'timestamp' => $timestamp,
@@ -420,6 +420,24 @@ class ContentStrategyController extends ControllerBase {
         new BeforeCommand(
           '.content-strategy-actions',
           $this->renderer->renderRoot($status_build)
+        )
+      );
+
+      // Add CSV export button if it doesn't exist (first generation).
+      // Remove any existing one first to prevent duplicates on regenerate.
+      $response->addCommand(new RemoveCommand('.export-csv-button'));
+      $export_button = [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#attributes' => [
+          'class' => ['export-csv-button', 'button', 'button--secondary'],
+        ],
+        '#value' => $this->t('Export as CSV'),
+      ];
+      $response->addCommand(
+        new AppendCommand(
+          '.content-strategy-actions',
+          $this->renderer->renderRoot($export_button)
         )
       );
 
@@ -738,7 +756,7 @@ EOT;
       }
 
       // Update the stored data with timestamp.
-      $timestamp = (int) $this->time->getCurrentTime();
+      $timestamp = $this->time->getCurrentTime();
       $this->keyValue->set(self::KV_KEY, [
         'data' => $recommendations,
         'timestamp' => $timestamp,
