@@ -1,0 +1,30 @@
+{#
+/**
+ * @file
+ * Template for rendering SVG icons.
+ *
+ * Available variables:
+ * - name: The icon name (trash, edit, checkmark, error).
+ * - class: Optional CSS class(es) to add to the SVG.
+ *
+ * @ingroup themeable
+ */
+#}
+{% if name == 'trash' %}
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"{% if class %} class="{{ class }}"{% endif %}>
+    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+  </svg>
+{% elseif name == 'edit' %}
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"{% if class %} class="{{ class }}"{% endif %}>
+    <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.305 10.22a.75.75 0 0 0-.2.336l-.828 2.899a.75.75 0 0 0 .927.927l2.899-.828a.75.75 0 0 0 .336-.2l7.707-7.707a1.75 1.75 0 0 0 0-2.475l-.658-.659ZM12.073 3.573l.659.659a.25.25 0 0 1 0 .354l-7.707 7.707-1.586.453.453-1.586 7.707-7.707a.25.25 0 0 1 .354 0l.12.12Z"/>
+  </svg>
+{% elseif name == 'checkmark' %}
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"{% if class %} class="{{ class }}"{% endif %}>
+    <path fill-rule="evenodd" d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/>
+  </svg>
+{% elseif name == 'error' %}
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"{% if class %} class="{{ class }}"{% endif %}>
+    <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7.25 4.5a.75.75 0 0 1 1.5 0v3.25a.75.75 0 0 1-1.5 0V4.5ZM8 10a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/>
+  </svg>
+{% endif %}

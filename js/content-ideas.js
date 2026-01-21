@@ -507,7 +507,62 @@
         const card = field.closest('.recommendation-item');
         const section = card.dataset.section;
         const originalTitle = card.dataset.title;
-        const saveIndicator = card.querySelector('.save-indicator');
+
+        // Get icons from drupalSettings templates
+        const templates = settings.aiContentStrategy?.templates || {};
+        const icons = templates.icons || {};
+        const checkmarkHTML = icons.checkmark ? `<span class="field-save-indicator__checkmark">${icons.checkmark}</span>` : '';
+        const errorHTML = icons.error ? `<span class="field-save-indicator__error">${icons.error}</span>` : '';
+
+        // Create or get field-specific save indicator
+        const getOrCreateIndicator = () => {
+          let indicator = field.querySelector('.field-save-indicator');
+          if (!indicator) {
+            indicator = document.createElement('span');
+            indicator.className = 'field-save-indicator';
+            // For table cells, append inside; for others, append after
+            if (field.tagName === 'TD') {
+              field.appendChild(indicator);
+            } else {
+              field.insertAdjacentElement('afterend', indicator);
+            }
+          }
+          return indicator;
+        };
+
+        // Show spinner indicator using Drupal's theme function
+        const showSaving = () => {
+          field.classList.add('editable-field--saving');
+          field.classList.remove('editable-field--saved');
+          const indicator = getOrCreateIndicator();
+          // Use Drupal.theme.ajaxProgressThrobber() for theme-compatible spinner
+          indicator.innerHTML = Drupal.theme.ajaxProgressThrobber();
+        };
+
+        // Show checkmark indicator with green flash
+        const showSaved = () => {
+          field.classList.remove('editable-field--saving');
+          field.classList.add('editable-field--saved');
+          const indicator = getOrCreateIndicator();
+          indicator.innerHTML = checkmarkHTML;
+
+          // Remove indicator and class after animation
+          setTimeout(() => {
+            field.classList.remove('editable-field--saved');
+            indicator.remove();
+          }, 2000);
+        };
+
+        // Show error state
+        const showError = () => {
+          field.classList.remove('editable-field--saving');
+          const indicator = getOrCreateIndicator();
+          indicator.innerHTML = errorHTML;
+
+          setTimeout(() => {
+            indicator.remove();
+          }, 3000);
+        };
 
         // Save function with debouncing
         const saveEdit = () => {
@@ -515,11 +570,8 @@
           const value = field.textContent.trim();
           const ideaIndex = field.dataset.ideaIndex || null;
 
-          // Show "Saving..." indicator
-          if (saveIndicator) {
-            saveIndicator.textContent = Drupal.t('Saving...');
-            saveIndicator.style.display = 'inline';
-          }
+          // Show saving state
+          showSaving();
 
           // Prepare data
           const formData = new FormData();
@@ -541,13 +593,8 @@
           })
           .then(response => response.json())
           .then(data => {
-            // Show "Saved" indicator briefly
-            if (saveIndicator) {
-              saveIndicator.textContent = Drupal.t('Saved');
-              setTimeout(() => {
-                saveIndicator.style.display = 'none';
-              }, 2000);
-            }
+            // Show saved state with checkmark
+            showSaved();
 
             // If title changed, update data-title attribute
             if (fieldName === 'title') {
@@ -555,14 +602,7 @@
             }
           })
           .catch(error => {
-            if (saveIndicator) {
-              saveIndicator.textContent = Drupal.t('Error saving');
-              saveIndicator.style.color = 'red';
-              setTimeout(() => {
-                saveIndicator.style.display = 'none';
-                saveIndicator.style.color = '';
-              }, 3000);
-            }
+            showError();
           });
         };
 
@@ -676,6 +716,211 @@
         });
       });
 
+      // Handle implemented checkbox toggle
+      once('implemented-checkbox', '.idea-implemented-checkbox', context).forEach((checkbox) => {
+        checkbox.addEventListener('change', function(event) {
+          const section = checkbox.dataset.section;
+          const title = checkbox.dataset.title;
+          const ideaIndex = checkbox.dataset.ideaIndex;
+          const isImplemented = checkbox.checked;
+
+          // Update row styling immediately
+          const row = checkbox.closest('tr');
+          if (isImplemented) {
+            row.classList.add('idea-implemented');
+          } else {
+            row.classList.remove('idea-implemented');
+          }
+
+          // Show/hide link area based on implemented status
+          const linkArea = row.querySelector('.idea-link-area');
+          if (linkArea) {
+            linkArea.style.display = isImplemented ? '' : 'none';
+          }
+
+          // Prepare data
+          const formData = new FormData();
+          formData.append('field', 'implemented');
+          formData.append('value', isImplemented ? '1' : '0');
+          formData.append('idea_index', ideaIndex);
+
+          // Make AJAX request to save
+          const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/save-card/${section}/${encodeURIComponent(title)}`;
+
+          fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            // Success - no need for visible feedback, checkbox state is already updated
+          })
+          .catch(error => {
+            // Revert checkbox state on error
+            checkbox.checked = !isImplemented;
+            if (!isImplemented) {
+              row.classList.add('idea-implemented');
+            } else {
+              row.classList.remove('idea-implemented');
+            }
+            // Revert link area visibility
+            if (linkArea) {
+              linkArea.style.display = !isImplemented ? '' : 'none';
+            }
+
+            const messages = new Drupal.Message();
+            messages.add(Drupal.t('Error saving implementation status.'), {
+              type: 'error',
+              id: `content-strategy-error-${Date.now()}`
+            });
+          });
+        });
+      });
+
+      // Helper function to save idea link
+      const saveIdeaLink = (section, title, ideaIndex, link, linkArea) => {
+        const formData = new FormData();
+        formData.append('field', 'link');
+        formData.append('value', link);
+        formData.append('idea_index', ideaIndex);
+
+        const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/save-card/${section}/${encodeURIComponent(title)}`;
+
+        // Get templates and translations from drupalSettings
+        const templates = settings.aiContentStrategy?.templates || {};
+        const icons = templates.icons || {};
+        const translations = settings.aiContentStrategy?.translations || {};
+
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Update link area with saved link
+          if (link) {
+            const editIcon = icons.edit || '';
+            linkArea.innerHTML = `
+              <a href="${link}" target="_blank" class="idea-link" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}">${link}</a>
+              <button type="button" class="idea-link-edit" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}" title="${translations.editLink || Drupal.t('Edit link')}">
+                ${editIcon}
+              </button>
+            `;
+            // Reattach behaviors to new elements
+            Drupal.attachBehaviors(linkArea);
+          } else {
+            linkArea.innerHTML = `<button type="button" class="idea-add-link action-link" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}">${translations.addLink || Drupal.t('+ Add link')}</button>`;
+            Drupal.attachBehaviors(linkArea);
+          }
+        });
+      };
+
+      // Helper function to show link input
+      const showLinkInput = (linkArea, section, title, ideaIndex, currentLink = '') => {
+        const originalContent = linkArea.innerHTML;
+
+        // Get template from drupalSettings or use fallback
+        const templates = settings.aiContentStrategy?.templates || {};
+        const translations = settings.aiContentStrategy?.translations || {};
+        let linkInputHTML = templates.linkInput || '';
+
+        // If we have a template, replace the placeholder value with current link
+        if (linkInputHTML && currentLink) {
+          // Create a temporary container to manipulate the HTML
+          const temp = document.createElement('div');
+          temp.innerHTML = linkInputHTML;
+          const input = temp.querySelector('.idea-link-input');
+          if (input) {
+            input.value = currentLink;
+          }
+          linkInputHTML = temp.innerHTML;
+        } else if (!linkInputHTML) {
+          // Fallback if template not available
+          linkInputHTML = `
+            <div class="idea-link-input-wrapper">
+              <input type="url" class="idea-link-input form-url" placeholder="${translations.enterUrl || Drupal.t('Enter URL...')}" value="${currentLink}">
+              <button type="button" class="button button--small button--primary idea-link-save">${translations.save || Drupal.t('Save')}</button>
+              <button type="button" class="button button--small idea-link-cancel">${translations.cancel || Drupal.t('Cancel')}</button>
+            </div>
+          `;
+        }
+
+        linkArea.innerHTML = linkInputHTML;
+
+        const input = linkArea.querySelector('.idea-link-input');
+        const saveBtn = linkArea.querySelector('.idea-link-save');
+        const cancelBtn = linkArea.querySelector('.idea-link-cancel');
+
+        // Set the current link value (in case template didn't have it)
+        if (input && currentLink) {
+          input.value = currentLink;
+        }
+
+        input.focus();
+
+        saveBtn.addEventListener('click', () => {
+          const link = input.value.trim();
+          saveIdeaLink(section, title, ideaIndex, link, linkArea)
+            .catch(error => {
+              const messages = new Drupal.Message();
+              messages.add(Drupal.t('Error saving link.'), {
+                type: 'error',
+                id: `content-strategy-error-${Date.now()}`
+              });
+              linkArea.innerHTML = originalContent;
+              Drupal.attachBehaviors(linkArea);
+            });
+        });
+
+        cancelBtn.addEventListener('click', () => {
+          linkArea.innerHTML = originalContent;
+          Drupal.attachBehaviors(linkArea);
+        });
+
+        // Save on Enter key
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveBtn.click();
+          } else if (e.key === 'Escape') {
+            cancelBtn.click();
+          }
+        });
+      };
+
+      // Handle "Add link" button click
+      once('add-link', '.idea-add-link', context).forEach((button) => {
+        button.addEventListener('click', function(event) {
+          event.preventDefault();
+          const section = button.dataset.section;
+          const title = button.dataset.title;
+          const ideaIndex = button.dataset.ideaIndex;
+          const linkArea = button.closest('.idea-link-area');
+
+          showLinkInput(linkArea, section, title, ideaIndex);
+        });
+      });
+
+      // Handle "Edit link" button click
+      once('edit-link', '.idea-link-edit', context).forEach((button) => {
+        button.addEventListener('click', function(event) {
+          event.preventDefault();
+          const section = button.dataset.section;
+          const title = button.dataset.title;
+          const ideaIndex = button.dataset.ideaIndex;
+          const linkArea = button.closest('.idea-link-area');
+          const currentLink = linkArea.querySelector('.idea-link')?.href || '';
+
+          showLinkInput(linkArea, section, title, ideaIndex, currentLink);
+        });
+      });
+
       // Handle CSV export button
       once('export-csv', '.export-csv-button', context).forEach((button) => {
         button.addEventListener('click', function(event) {
@@ -685,7 +930,7 @@
           const csvData = [];
 
           // Add header row - Content Idea first, Recommendation Title last
-          csvData.push(['Content Idea', 'Category', 'Priority', 'Recommendation Title']);
+          csvData.push(['Content Idea', 'Implemented', 'Link', 'Category', 'Priority', 'Recommendation Title']);
 
           // Loop through all recommendation cards
           document.querySelectorAll('.recommendation-item').forEach((card) => {
@@ -703,9 +948,13 @@
             if (ideas.length > 0) {
               // One row per idea
               ideas.forEach((ideaRow) => {
-                const idea = ideaRow.querySelector('td.editable-field')?.textContent?.trim() || '';
+                const idea = ideaRow.querySelector('.editable-field')?.textContent?.trim() || '';
+                const isImplemented = ideaRow.classList.contains('idea-implemented') ? 'Yes' : 'No';
+                const link = ideaRow.querySelector('.idea-link')?.href || '';
                 csvData.push([
                   idea,
+                  isImplemented,
+                  link,
                   categoryName,
                   priority,
                   title
@@ -714,6 +963,8 @@
             } else {
               // Card without ideas
               csvData.push([
+                '',
+                '',
                 '',
                 categoryName,
                 priority,

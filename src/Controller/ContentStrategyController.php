@@ -415,7 +415,7 @@ class ContentStrategyController extends ControllerBase {
           $has_items = !empty($recommendations[$category_id]);
           $button_class = $has_items ? 'button--secondary' : 'button--primary';
           $button_text = $has_items
-            ? ($button_texts['add_more'][$category_id] ?? $this->t('Add AI recommendations'))
+            ? ($button_texts['add_more'][$category_id] ?? $this->t('Generate AI recommendations'))
             : ($button_texts['generate'][$category_id] ?? $this->t('Generate AI recommendations'));
 
           // Add empty state message for categories with no items.
@@ -941,7 +941,7 @@ EOT;
         $response->addCommand(
           new HtmlCommand(
             ".recommendation-section[data-section='$section'] .add-more-recommendations-link",
-            $button_texts['add_more'][$section] ?? $this->t('Add more AI recommendations')
+            $button_texts['add_more'][$section] ?? $this->t('Generate more AI recommendations')
           )
         );
 
@@ -1413,7 +1413,55 @@ EOT;
 
         case 'content_ideas':
           if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
-            $recommendations[$section][$card_index]['content_ideas'][$idea_index] = strip_tags($value);
+            $idea = $recommendations[$section][$card_index]['content_ideas'][$idea_index];
+            // Handle both legacy string format and new object format.
+            if (is_array($idea)) {
+              $recommendations[$section][$card_index]['content_ideas'][$idea_index]['text'] = strip_tags($value);
+            }
+            else {
+              // Convert from string to object format.
+              $recommendations[$section][$card_index]['content_ideas'][$idea_index] = [
+                'text' => strip_tags($value),
+                'implemented' => FALSE,
+              ];
+            }
+          }
+          break;
+
+        case 'implemented':
+          if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
+            $idea = $recommendations[$section][$card_index]['content_ideas'][$idea_index];
+            $is_implemented = $value === '1' || $value === 'true';
+            // Handle both legacy string format and new object format.
+            if (is_array($idea)) {
+              $recommendations[$section][$card_index]['content_ideas'][$idea_index]['implemented'] = $is_implemented;
+            }
+            else {
+              // Convert from string to object format.
+              $recommendations[$section][$card_index]['content_ideas'][$idea_index] = [
+                'text' => $idea,
+                'implemented' => $is_implemented,
+              ];
+            }
+          }
+          break;
+
+        case 'link':
+          if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
+            $idea = $recommendations[$section][$card_index]['content_ideas'][$idea_index];
+            $link_value = strip_tags(trim($value));
+            // Handle both legacy string format and new object format.
+            if (is_array($idea)) {
+              $recommendations[$section][$card_index]['content_ideas'][$idea_index]['link'] = $link_value;
+            }
+            else {
+              // Convert from string to object format.
+              $recommendations[$section][$card_index]['content_ideas'][$idea_index] = [
+                'text' => $idea,
+                'implemented' => FALSE,
+                'link' => $link_value,
+              ];
+            }
           }
           break;
 

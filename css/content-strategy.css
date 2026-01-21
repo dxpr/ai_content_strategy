@@ -158,11 +158,164 @@
   vertical-align: middle;
 }
 
+.content-ideas-table tbody td.idea-actions > * {
+  display: block;
+  margin: 0 auto 4px auto;
+}
+
+.content-ideas-table tbody td.idea-actions > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Implemented Row Styling */
+.content-ideas-table tbody tr.idea-implemented {
+  background-color: #f0fdf4;
+}
+
+.content-ideas-table tbody tr.idea-implemented .editable-field {
+  text-decoration: line-through;
+  color: #6b7280;
+}
+
+.content-ideas-table tbody tr.idea-implemented:hover {
+  background-color: #dcfce7;
+}
+
+/* Idea Content Cell */
+.idea-content-cell {
+  vertical-align: top;
+}
+
+/* Idea Link Area */
+.idea-link-area {
+  margin-top: 6px;
+  font-size: 0.85em;
+}
+
+/* Add link uses Drupal's action-link class */
+.idea-add-link.action-link {
+  font-size: inherit;
+}
+
+.idea-link {
+  color: #0073aa;
+  text-decoration: none;
+  word-break: break-all;
+  margin-right: 6px;
+}
+
+.idea-link:hover {
+  text-decoration: underline;
+}
+
+.idea-link-edit {
+  background: none;
+  border: none;
+  padding: 2px;
+  color: #6b7280;
+  cursor: pointer;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+}
+
+.idea-link-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.idea-link-edit:hover {
+  color: #0073aa;
+}
+
+/* Idea Link Input */
+.idea-link-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.idea-link-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.idea-link-input:focus {
+  outline: none;
+  border-color: #0073aa;
+  box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+/* Link buttons use Drupal's native button classes */
+
+/* Idea Checkbox */
+.idea-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.idea-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.idea-checkbox-visual {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fff;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.idea-checkbox-visual::after {
+  content: '';
+  position: absolute;
+  display: none;
+  left: 8px;
+  top: 3px;
+  width: 6px;
+  height: 12px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.idea-checkbox input[type="checkbox"]:checked + .idea-checkbox-visual {
+  background-color: #16a34a;
+  border-color: #16a34a;
+}
+
+.idea-checkbox input[type="checkbox"]:checked + .idea-checkbox-visual::after {
+  display: block;
+}
+
+.idea-checkbox:hover .idea-checkbox-visual {
+  border-color: #16a34a;
+}
+
+.idea-checkbox input[type="checkbox"]:focus + .idea-checkbox-visual {
+  outline: 2px solid #16a34a;
+  outline-offset: 2px;
+}
+
 /* Delete Idea Button */
 .delete-idea-link {
   background: none;
   border: none;
-  padding: 0.25rem;
+  padding: 0;
+  width: 25px;
+  height: 25px;
   color: #dc2626;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -183,8 +336,11 @@
 }
 
 .delete-idea-link svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  flex-shrink: 0;
 }
 
 .delete-idea-link:focus {
@@ -213,6 +369,8 @@
 /* Editable Fields */
 .editable-field {
   cursor: text;
+  position: relative;
+  transition: background-color 0.2s ease, outline-color 0.2s ease;
 }
 
 .editable-field:hover {
@@ -226,16 +384,102 @@
   background-color: #f9f9f9;
 }
 
-/* Save Indicator */
-.save-indicator {
-  font-size: 0.9em;
-  color: #666;
-  font-style: italic;
+/* Editable Field States */
+.editable-field--saving {
+  outline: 2px solid #0073aa;
+  outline-offset: 2px;
+  background-color: #f0f7ff;
 }
 
-/* Delete Buttons - Shared styles */
-.delete-card-link,
-.delete-idea-link {
+.editable-field--saved {
+  animation: field-saved-flash 0.6s ease-out;
+}
+
+@keyframes field-saved-flash {
+  0% {
+    background-color: #d4edda;
+    outline: 2px solid #28a745;
+    outline-offset: 2px;
+  }
+  100% {
+    background-color: transparent;
+    outline: none;
+  }
+}
+
+/* Inline Save Indicator (per field) */
+.field-save-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Adjust Drupal core/Claro throbber when used inline */
+.field-save-indicator .ajax-progress,
+.field-save-indicator .ajax-progress-throbber,
+.field-save-indicator .ajax-progress--throbber {
+  margin: 0;
+  padding: 0;
+}
+
+/* Checkmark Icon */
+.field-save-indicator__checkmark {
+  display: inline-flex;
+  color: #28a745;
+  animation: checkmark-appear 0.3s ease-out;
+}
+
+.field-save-indicator__checkmark svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Error Icon */
+.field-save-indicator__error {
+  display: inline-flex;
+  color: #dc2626;
+}
+
+.field-save-indicator__error svg {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes checkmark-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Table cell editable fields need special handling for indicator */
+td.editable-field {
+  position: relative;
+}
+
+td.editable-field .field-save-indicator {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Card-level save indicator (legacy, hidden by default) */
+.save-indicator {
+  display: none !important;
+}
+
+/* Delete Card Button (in card header) */
+.delete-card-link {
   background: none;
   border: none;
   padding: 0.5rem;
@@ -246,15 +490,14 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-}
-
-.delete-card-link {
   flex-shrink: 0;
   opacity: 0.6;
 }
 
 .delete-card-link:hover {
   opacity: 1;
+  color: #991b1b;
+  background-color: #fee2e2;
 }
 
 .delete-card-link svg {
@@ -263,25 +506,11 @@
   transition: transform 0.2s ease;
 }
 
-.delete-idea-link svg {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.2s ease;
-}
-
-.delete-card-link:hover,
-.delete-idea-link:hover {
-  color: #991b1b;
-  background-color: #fee2e2;
-}
-
-.delete-card-link:hover svg,
-.delete-idea-link:hover svg {
+.delete-card-link:hover svg {
   transform: scale(1.1);
 }
 
-.delete-card-link:focus,
-.delete-idea-link:focus {
+.delete-card-link:focus {
   outline: 2px solid #dc2626;
   outline-offset: 2px;
   color: #dc2626;

@@ -39,8 +39,8 @@ function ai_content_strategy_get_button_texts() {
     foreach ($categories as $category) {
       $category_id = $category->id();
       $button_texts['generate'][$category_id] = t('Generate AI recommendations');
-      $button_texts['generate_more'][$category_id] = t('Add more AI @type', ['@type' => t('ideas')]);
-      $button_texts['add_more'][$category_id] = t('Add more AI recommendations');
+      $button_texts['generate_more'][$category_id] = t('Generate more AI @type', ['@type' => t('ideas')]);
+      $button_texts['add_more'][$category_id] = t('Generate more AI recommendations');
     }
   }
 
@@ -65,6 +65,36 @@ function ai_content_strategy_theme() {
         'section' => NULL,
         'button_text' => [],
       ],
+    ],
+    'ai_content_strategy_icon' => [
+      'variables' => [
+        'name' => NULL,
+        'class' => NULL,
+      ],
+      'template' => 'components/icon',
+    ],
+    'ai_content_strategy_link_display' => [
+      'variables' => [
+        'link' => NULL,
+        'section' => NULL,
+        'title' => NULL,
+        'idea_index' => NULL,
+      ],
+      'template' => 'components/link-display',
+    ],
+    'ai_content_strategy_link_add_button' => [
+      'variables' => [
+        'section' => NULL,
+        'title' => NULL,
+        'idea_index' => NULL,
+      ],
+      'template' => 'components/link-add-button',
+    ],
+    'ai_content_strategy_link_input' => [
+      'variables' => [
+        'current_link' => '',
+      ],
+      'template' => 'components/link-input',
     ],
   ];
 }
@@ -102,8 +132,39 @@ function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$va
     }
   }
 
+  // Render templates for JavaScript use.
+  $renderer = \Drupal::service('renderer');
+
+  // Render icon templates.
+  $icons = [];
+  foreach (['trash', 'edit', 'checkmark', 'error'] as $icon_name) {
+    $icon_render = [
+      '#theme' => 'ai_content_strategy_icon',
+      '#name' => $icon_name,
+    ];
+    $icons[$icon_name] = $renderer->renderPlain($icon_render);
+  }
+
+  // Render link input template.
+  $link_input_render = [
+    '#theme' => 'ai_content_strategy_link_input',
+    '#current_link' => '',
+  ];
+  $link_input_template = $renderer->renderPlain($link_input_render);
+
   // Add to JavaScript settings.
   $variables['#attached']['drupalSettings']['aiContentStrategy'] = [
     'buttonText' => $variables['button_text'],
+    'templates' => [
+      'icons' => $icons,
+      'linkInput' => (string) $link_input_template,
+    ],
+    'translations' => [
+      'addLink' => t('+ Add link'),
+      'editLink' => t('Edit link'),
+      'save' => t('Save'),
+      'cancel' => t('Cancel'),
+      'enterUrl' => t('Enter URL...'),
+    ],
   ];
 }

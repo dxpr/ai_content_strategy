@@ -13,6 +13,21 @@
  */
 #}
 
+{# Trash icon SVG #}
+{% set trash_icon %}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+</svg>
+{% endset %}
+
+{# Edit icon SVG #}
+{% set edit_icon %}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+  <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.305 10.22a.75.75 0 0 0-.2.336l-.828 2.899a.75.75 0 0 0 .927.927l2.899-.828a.75.75 0 0 0 .336-.2l7.707-7.707a1.75 1.75 0 0 0 0-2.475l-.658-.659ZM12.073 3.573l.659.659a.25.25 0 0 1 0 .354l-7.707 7.707-1.586.453.453-1.586 7.707-7.707a.25.25 0 0 1 .354 0l.12.12Z"/>
+</svg>
+{% endset %}
+
 {% for item in items %}
   {# Determine title field - try common fields in order #}
   {% set item_title = item.title|default(item.topic|default(item.content_type|default(item.signal|default('Recommendation'|t)))) %}
@@ -27,10 +42,7 @@
       <div class="recommendation-header">
         <h4 contenteditable="true" data-field="title" data-original="{{ item_title }}" class="editable-field">{{ item_title }}</h4>
         <button type="button" class="delete-card-link" data-section="{{ section }}" data-title="{{ item_title }}" title="{{ 'Delete this recommendation (cannot be undone)'|t }}" aria-label="{{ 'Delete recommendation: @title'|t({'@title': item_title}) }}">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-          </svg>
+          {{ trash_icon }}
         </button>
       </div>
       {# Try to find description - try common fields in order #}
@@ -53,14 +65,31 @@
           </thead>
           <tbody>
             {% for key, idea in item.content_ideas %}
-              <tr data-idea-index="{{ key }}">
-                <td contenteditable="true" data-field="content_ideas" data-idea-index="{{ key }}" class="editable-field">{{ idea is iterable and idea['#markup'] is defined ? idea['#markup'] : idea }}</td>
+              {# Support both string ideas (legacy) and object ideas with implemented status #}
+              {% set idea_text = idea.text is defined ? idea.text : idea %}
+              {% set idea_implemented = idea.implemented is defined ? idea.implemented : false %}
+              {% set idea_link = idea.link is defined ? idea.link : '' %}
+              <tr data-idea-index="{{ key }}"{{ idea_implemented ? ' class="idea-implemented"' : '' }}>
+                <td class="idea-content-cell">
+                  <div contenteditable="true" data-field="content_ideas" data-idea-index="{{ key }}" class="editable-field">{{ idea_text is iterable and idea_text['#markup'] is defined ? idea_text['#markup'] : idea_text }}</div>
+                  <div class="idea-link-area"{{ idea_implemented ? '' : ' style="display: none;"' }}>
+                    {% if idea_link %}
+                      <a href="{{ idea_link }}" target="_blank" class="idea-link" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}">{{ idea_link }}</a>
+                      <button type="button" class="idea-link-edit" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}" title="{{ 'Edit link'|t }}">
+                        {{ edit_icon }}
+                      </button>
+                    {% else %}
+                      <button type="button" class="idea-add-link action-link" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}">{{ '+ Add link'|t }}</button>
+                    {% endif %}
+                  </div>
+                </td>
                 <td class="idea-actions">
+                  <label class="idea-checkbox" title="{{ 'Mark as implemented'|t }}">
+                    <input type="checkbox" class="idea-implemented-checkbox" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}"{{ idea_implemented ? ' checked' : '' }}>
+                    <span class="idea-checkbox-visual"></span>
+                  </label>
                   <button type="button" class="delete-idea-link" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}" title="{{ 'Delete this content idea'|t }}" aria-label="{{ 'Delete content idea'|t }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                      <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                      <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                    </svg>
+                    {{ trash_icon }}
                   </button>
                 </td>
               </tr>
@@ -79,8 +108,6 @@
           {{ button_text.generate[section] }}
         </a>
       {% endif %}
-
-      <span class="save-indicator" style="display: none; opacity: 0.6; font-size: 0.9em; margin-left: 8px;"></span>
     </div>
   </div>
-{% endfor %} 
+{% endfor %}
