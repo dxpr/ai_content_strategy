@@ -716,7 +716,6 @@ EOT;
       // After successfully generating and parsing new ideas, update the stored
       // data.
       $card_index = NULL;
-      $card_title = NULL;
 
       // Find the correct section and item to update by UUID.
       if (isset($recommendations[$section])) {
@@ -729,7 +728,6 @@ EOT;
               $normalized_ideas
             );
             $card_index = $key;
-            $card_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? '';
             break;
           }
         }

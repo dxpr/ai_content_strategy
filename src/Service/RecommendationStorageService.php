@@ -500,7 +500,7 @@ class RecommendationStorageService {
    *   The recommendations with UUIDs added to any items missing them.
    */
   public function ensureUuids(array $recommendations): array {
-    foreach ($recommendations as $section => &$items) {
+    foreach ($recommendations as &$items) {
       if (!is_array($items)) {
         continue;
       }
@@ -526,7 +526,7 @@ class RecommendationStorageService {
    *   The recommendations with UUIDs added to any ideas missing them.
    */
   public function ensureIdeaUuids(array $recommendations): array {
-    foreach ($recommendations as $section => &$items) {
+    foreach ($recommendations as &$items) {
       if (!is_array($items)) {
         continue;
       }
