@@ -27,7 +27,12 @@
          * @returns {HTMLElement} The indicator element.
          */
         const getOrCreateIndicator = () => {
+          // Check inside field first (for TD elements)
           let indicator = field.querySelector('.field-save-indicator');
+          // Also check next sibling (for non-TD elements where indicator is placed after)
+          if (!indicator && field.nextElementSibling?.classList.contains('field-save-indicator')) {
+            indicator = field.nextElementSibling;
+          }
           if (!indicator) {
             indicator = document.createElement('span');
             indicator.className = 'field-save-indicator';

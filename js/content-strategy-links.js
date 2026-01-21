@@ -46,7 +46,7 @@
         `;
         Drupal.attachBehaviors(linkArea);
       } else {
-        linkArea.innerHTML = `<button type="button" class="idea-add-link action-link" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}">${translations.addLink || Drupal.t('+ Add link')}</button>`;
+        linkArea.innerHTML = `<button type="button" class="idea-add-link action-link button--small" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}">${translations.addLink || Drupal.t('+ Add link')}</button>`;
         Drupal.attachBehaviors(linkArea);
       }
     });
