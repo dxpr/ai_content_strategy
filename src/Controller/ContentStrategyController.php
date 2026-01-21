@@ -29,6 +29,7 @@ use Drupal\Core\Ajax\BeforeCommand;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Component\Datetime\TimeInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Controller for content strategy functionality.
@@ -116,6 +117,13 @@ class ContentStrategyController extends ControllerBase {
   protected $categoryPromptBuilder;
 
   /**
+   * The request stack.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
+  protected $requestStack;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -138,6 +146,8 @@ class ContentStrategyController extends ControllerBase {
    *   The time service.
    * @param \Drupal\ai_content_strategy\Service\CategoryPromptBuilder $category_prompt_builder
    *   The category prompt builder service.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
+   *   The request stack.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -150,6 +160,7 @@ class ContentStrategyController extends ControllerBase {
     KeyValueFactoryInterface $key_value_factory,
     TimeInterface $time,
     CategoryPromptBuilder $category_prompt_builder,
+    RequestStack $request_stack,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -161,6 +172,7 @@ class ContentStrategyController extends ControllerBase {
     $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
     $this->time = $time;
     $this->categoryPromptBuilder = $category_prompt_builder;
+    $this->requestStack = $request_stack;
   }
 
   /**
@@ -177,7 +189,8 @@ class ContentStrategyController extends ControllerBase {
       $container->get('date.formatter'),
       $container->get('keyvalue'),
       $container->get('datetime.time'),
-      $container->get('ai_content_strategy.category_prompt_builder')
+      $container->get('ai_content_strategy.category_prompt_builder'),
+      $container->get('request_stack')
     );
   }
 
@@ -1303,9 +1316,6 @@ EOT;
         throw new \RuntimeException('No content ideas found for this card');
       }
 
-      // Store the deleted idea text for confirmation message.
-      $deleted_idea = $recommendations[$section][$card_key]['content_ideas'][$idea_index] ?? '';
-
       // Remove the specific idea.
       unset($recommendations[$section][$card_key]['content_ideas'][$idea_index]);
 
@@ -1367,7 +1377,7 @@ EOT;
 
     try {
       // Get POST data.
-      $request = \Drupal::request();
+      $request = $this->requestStack->getCurrentRequest();
       $field = $request->request->get('field');
       $value = $request->request->get('value');
       $idea_index = $request->request->get('idea_index');
