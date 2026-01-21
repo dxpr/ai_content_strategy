@@ -682,25 +682,43 @@ EOT;
         throw new \RuntimeException('Failed to find matching item to update');
       }
 
-      // Build HTML for new ideas.
-      $rows = [];
-      foreach ($ideas as $idea) {
-        $rows[] = [
-          '#type' => 'html_tag',
-          '#tag' => 'tr',
-          'cell' => [
-            '#type' => 'html_tag',
-            '#tag' => 'td',
-            '#value' => $idea,
-          ],
-        ];
+      // Build HTML for new ideas with full interactive structure.
+      // Calculate starting index based on existing ideas count.
+      $existing_count = count($existing_ideas);
+      $rows_html = '';
+
+      // Pre-compute translated strings to avoid concatenation warnings.
+      $add_link_text = $this->t('+ Add link');
+      $mark_implemented_text = $this->t('Mark as implemented');
+      $delete_title_text = $this->t('Delete this content idea');
+      $delete_aria_text = $this->t('Delete content idea');
+      $escaped_title = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+
+      foreach ($ideas as $index => $idea) {
+        $idea_index = $existing_count + $index;
+        $escaped_idea = htmlspecialchars($idea, ENT_QUOTES, 'UTF-8');
+
+        $rows_html .= '<tr data-idea-index="' . $idea_index . '">';
+        $rows_html .= '<td class="idea-content-cell">';
+        $rows_html .= '<div contenteditable="true" data-field="content_ideas" data-idea-index="' . $idea_index . '" class="editable-field">' . $escaped_idea . '</div>';
+        $rows_html .= '<div class="idea-link-area" style="display: none;">';
+        $rows_html .= '<button type="button" class="idea-add-link action-link button--small" data-section="' . $section . '" data-title="' . $escaped_title . '" data-idea-index="' . $idea_index . '">' . $add_link_text . '</button>';
+        $rows_html .= '</div>';
+        $rows_html .= '</td>';
+        $rows_html .= '<td class="idea-actions">';
+        $rows_html .= '<label class="idea-checkbox" title="' . $mark_implemented_text . '">';
+        $rows_html .= '<input type="checkbox" class="idea-implemented-checkbox" data-section="' . $section . '" data-title="' . $escaped_title . '" data-idea-index="' . $idea_index . '">';
+        $rows_html .= '<span class="idea-checkbox-visual"></span>';
+        $rows_html .= '</label>';
+        $rows_html .= '<button type="button" class="delete-idea-link" data-section="' . $section . '" data-title="' . $escaped_title . '" data-idea-index="' . $idea_index . '" title="' . $delete_title_text . '" aria-label="' . $delete_aria_text . '">';
+        $rows_html .= '<span class="cs-icon cs-icon--trash cs-icon--md" aria-hidden="true"></span>';
+        $rows_html .= '</button>';
+        $rows_html .= '</td>';
+        $rows_html .= '</tr>';
       }
 
       // Create AJAX response.
       $response = new AjaxResponse();
-
-      // Build the HTML for the new rows.
-      $html = $this->renderer->renderRoot($rows);
 
       // Update the timestamp in the status area.
       $response->addCommand(
@@ -720,7 +738,7 @@ EOT;
             $section,
             str_replace('"', '\"', $title)
           ),
-          $html
+          $rows_html
         )
       );
 
