@@ -97,6 +97,17 @@ function ai_content_strategy_theme() {
       ],
       'template' => 'components/link-input',
     ],
+    'ai_content_strategy_idea_row' => [
+      'variables' => [
+        'section' => NULL,
+        'title' => NULL,
+        'idea_index' => NULL,
+        'idea_text' => NULL,
+        'idea_implemented' => FALSE,
+        'idea_link' => '',
+      ],
+      'template' => 'components/idea-row',
+    ],
   ];
 }
 

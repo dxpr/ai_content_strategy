@@ -1,6 +1,9 @@
 /**
  * @file
  * Editable field behaviors for AI Content Strategy recommendations.
+ *
+ * Uses Drupal's AJAX framework for proper command processing and behavior
+ * attachment.
  */
 
 ((Drupal, once) => {
@@ -17,7 +20,7 @@
         const section = card.dataset.section;
         const originalTitle = card.dataset.title;
 
-        // CSS icon markup (uses mask-image for color control)
+        // CSS icon markup (uses mask-image for color control).
         const checkmarkHTML = '<span class="field-save-indicator__checkmark"><span class="cs-icon cs-icon--checkmark" aria-hidden="true"></span></span>';
         const errorHTML = '<span class="field-save-indicator__error"><span class="cs-icon cs-icon--error" aria-hidden="true"></span></span>';
 
@@ -27,9 +30,9 @@
          * @returns {HTMLElement} The indicator element.
          */
         const getOrCreateIndicator = () => {
-          // Check inside field first (for TD elements)
+          // Check inside field first (for TD elements).
           let indicator = field.querySelector('.field-save-indicator');
-          // Also check next sibling (for non-TD elements where indicator is placed after)
+          // Also check next sibling (for non-TD elements where indicator is placed after).
           if (!indicator && field.nextElementSibling?.classList.contains('field-save-indicator')) {
             indicator = field.nextElementSibling;
           }
@@ -38,7 +41,8 @@
             indicator.className = 'field-save-indicator';
             if (field.tagName === 'TD') {
               field.appendChild(indicator);
-            } else {
+            }
+            else {
               field.insertAdjacentElement('afterend', indicator);
             }
           }
@@ -84,7 +88,7 @@
         };
 
         /**
-         * Saves the field content to the server.
+         * Saves the field content to the server using Drupal AJAX.
          */
         const saveEdit = () => {
           const fieldName = field.dataset.field;
@@ -93,48 +97,56 @@
 
           showSaving();
 
-          const formData = new FormData();
-          formData.append('field', fieldName);
-          formData.append('value', value);
-          if (ideaIndex !== null) {
-            formData.append('idea_index', ideaIndex);
+          // Ensure element has an ID for Drupal.ajax.
+          if (!field.id) {
+            field.id = 'editable-' + Date.now();
           }
 
-          const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/save-card/${section}/${encodeURIComponent(originalTitle)}`;
+          // Build submit data.
+          const submitData = {
+            field: fieldName,
+            value: value
+          };
+          if (ideaIndex !== null) {
+            submitData.idea_index = ideaIndex;
+          }
 
-          fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
+          // Use Drupal's AJAX framework.
+          const ajaxObject = Drupal.ajax({
+            url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + encodeURIComponent(originalTitle)),
+            base: field.id,
+            element: field,
+            submit: submitData,
+            progress: { type: 'none' },
+            success: function(response, status) {
+              showSaved();
+
+              // Update card title reference if title field was edited.
+              if (fieldName === 'title') {
+                card.dataset.title = value;
+              }
             },
-            body: formData
-          })
-          .then(response => response.json())
-          .then(data => {
-            showSaved();
-
-            if (fieldName === 'title') {
-              card.dataset.title = value;
+            error: function(xhr, status, error) {
+              showError();
             }
-          })
-          .catch(error => {
-            showError();
           });
+
+          ajaxObject.execute();
         };
 
-        // Debounced save on input
+        // Debounced save on input.
         field.addEventListener('input', () => {
           clearTimeout(saveTimeout);
           saveTimeout = setTimeout(saveEdit, 1000);
         });
 
-        // Save on blur
+        // Save on blur.
         field.addEventListener('blur', () => {
           clearTimeout(saveTimeout);
           saveEdit();
         });
 
-        // Prevent Enter key creating new lines in title
+        // Prevent Enter key creating new lines in title.
         if (field.dataset.field === 'title') {
           field.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {

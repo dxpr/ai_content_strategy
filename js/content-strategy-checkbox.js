@@ -1,6 +1,9 @@
 /**
  * @file
  * Implemented checkbox behavior for AI Content Strategy recommendations.
+ *
+ * Uses Drupal's AJAX framework for proper command processing and behavior
+ * attachment.
  */
 
 ((Drupal, once) => {
@@ -18,57 +21,68 @@
           const ideaIndex = checkbox.dataset.ideaIndex;
           const isImplemented = checkbox.checked;
 
-          // Update row styling immediately
+          // Optimistic UI update - apply changes immediately.
           const row = checkbox.closest('tr');
           if (isImplemented) {
             row.classList.add('idea-implemented');
-          } else {
+          }
+          else {
             row.classList.remove('idea-implemented');
           }
 
-          // Show/hide link area based on implemented status
+          // Show/hide link area based on implemented status.
           const linkArea = row.querySelector('.idea-link-area');
           if (linkArea) {
             linkArea.style.display = isImplemented ? '' : 'none';
           }
 
-          // Prepare data
-          const formData = new FormData();
-          formData.append('field', 'implemented');
-          formData.append('value', isImplemented ? '1' : '0');
-          formData.append('idea_index', ideaIndex);
+          // Disable checkbox during request.
+          checkbox.disabled = true;
 
-          const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/save-card/${section}/${encodeURIComponent(title)}`;
+          // Ensure element has an ID for Drupal.ajax.
+          if (!checkbox.id) {
+            checkbox.id = 'checkbox-' + Date.now();
+          }
 
-          fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
+          // Use Drupal's AJAX framework.
+          const ajaxObject = Drupal.ajax({
+            url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + encodeURIComponent(title)),
+            base: checkbox.id,
+            element: checkbox,
+            submit: {
+              field: 'implemented',
+              value: isImplemented ? '1' : '0',
+              idea_index: ideaIndex
             },
-            body: formData
-          })
-          .then(response => response.json())
-          .then(data => {
-            // Success - checkbox state already updated
-          })
-          .catch(error => {
-            // Revert on error
-            checkbox.checked = !isImplemented;
-            if (!isImplemented) {
-              row.classList.add('idea-implemented');
-            } else {
-              row.classList.remove('idea-implemented');
-            }
-            if (linkArea) {
-              linkArea.style.display = !isImplemented ? '' : 'none';
-            }
+            progress: { type: 'none' },
+            success: function(response, status) {
+              // Re-enable checkbox.
+              checkbox.disabled = false;
+            },
+            error: function(xhr, status, error) {
+              // Revert on error.
+              checkbox.checked = !isImplemented;
+              checkbox.disabled = false;
 
-            const messages = new Drupal.Message();
-            messages.add(Drupal.t('Error saving implementation status.'), {
-              type: 'error',
-              id: `content-strategy-error-${Date.now()}`
-            });
+              if (!isImplemented) {
+                row.classList.add('idea-implemented');
+              }
+              else {
+                row.classList.remove('idea-implemented');
+              }
+              if (linkArea) {
+                linkArea.style.display = !isImplemented ? '' : 'none';
+              }
+
+              const messages = new Drupal.Message();
+              messages.add(Drupal.t('Error saving implementation status.'), {
+                type: 'error',
+                id: 'content-strategy-error-' + Date.now()
+              });
+            }
           });
+
+          ajaxObject.execute();
         });
       });
     }

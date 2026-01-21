@@ -1,0 +1,46 @@
+{#
+/**
+ * @file
+ * Template for a single content idea row.
+ *
+ * Available variables:
+ * - section: The section identifier.
+ * - title: The card title.
+ * - idea_index: The index of the idea within the card.
+ * - idea_text: The idea content text.
+ * - idea_implemented: Boolean indicating if the idea is implemented.
+ * - idea_link: Optional URL link for the idea.
+ *
+ * @ingroup themeable
+ */
+#}
+<tr data-idea-index="{{ idea_index }}"{{ idea_implemented ? ' class="idea-implemented"' : '' }}>
+  <td class="idea-content-cell">
+    <div contenteditable="true" data-field="content_ideas" data-idea-index="{{ idea_index }}" class="editable-field">{{ idea_text }}</div>
+    <div class="idea-link-area"{{ idea_implemented ? '' : ' style="display: none;"' }}>
+      {% if idea_link %}
+        {% include '@ai_content_strategy/components/link-display.html.twig' with {
+          'link': idea_link,
+          'section': section,
+          'title': title,
+          'idea_index': idea_index,
+        } only %}
+      {% else %}
+        {% include '@ai_content_strategy/components/link-add-button.html.twig' with {
+          'section': section,
+          'title': title,
+          'idea_index': idea_index,
+        } only %}
+      {% endif %}
+    </div>
+  </td>
+  <td class="idea-actions">
+    <label class="idea-checkbox" title="{{ 'Mark as implemented'|t }}">
+      <input type="checkbox" class="idea-implemented-checkbox" data-section="{{ section }}" data-title="{{ title }}" data-idea-index="{{ idea_index }}"{{ idea_implemented ? ' checked' : '' }}>
+      <span class="idea-checkbox-visual"></span>
+    </label>
+    <button type="button" class="delete-idea-link" data-section="{{ section }}" data-title="{{ title }}" data-idea-index="{{ idea_index }}" title="{{ 'Delete this content idea'|t }}" aria-label="{{ 'Delete content idea'|t }}">
+      <span class="cs-icon cs-icon--trash cs-icon--md" aria-hidden="true"></span>
+    </button>
+  </td>
+</tr>

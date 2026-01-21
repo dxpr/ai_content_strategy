@@ -1,56 +1,13 @@
 /**
  * @file
  * Link handlers for AI Content Strategy idea links.
+ *
+ * Uses Drupal's AJAX framework for proper command processing and behavior
+ * attachment.
  */
 
 ((Drupal, once) => {
   'use strict';
-
-  /**
-   * Saves an idea link to the server.
-   *
-   * @param {string} section - Section identifier.
-   * @param {string} title - Card title.
-   * @param {string} ideaIndex - Idea index.
-   * @param {string} link - The URL to save.
-   * @param {HTMLElement} linkArea - The link area element.
-   * @param {Object} settings - drupalSettings object.
-   * @returns {Promise} Fetch promise.
-   */
-  function saveIdeaLink(section, title, ideaIndex, link, linkArea, settings) {
-    const formData = new FormData();
-    formData.append('field', 'link');
-    formData.append('value', link);
-    formData.append('idea_index', ideaIndex);
-
-    const url = `${settings.path.baseUrl}admin/reports/ai/content-strategy/save-card/${section}/${encodeURIComponent(title)}`;
-
-    const translations = settings.aiContentStrategy?.translations || {};
-
-    return fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (link) {
-        // Use CSS icon class for edit button
-        linkArea.innerHTML = `
-          <a href="${link}" target="_blank" class="idea-link" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}">${link}</a>
-          <button type="button" class="idea-link-edit" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}" title="${translations.editLink || Drupal.t('Edit link')}">
-            <span class="cs-icon cs-icon--edit cs-icon--sm" aria-hidden="true"></span>
-          </button>
-        `;
-        Drupal.attachBehaviors(linkArea);
-      } else {
-        linkArea.innerHTML = `<button type="button" class="idea-add-link action-link button--small" data-section="${section}" data-title="${title}" data-idea-index="${ideaIndex}">${translations.addLink || Drupal.t('+ Add link')}</button>`;
-        Drupal.attachBehaviors(linkArea);
-      }
-    });
-  }
 
   /**
    * Shows the link input form.
@@ -66,7 +23,7 @@
     const originalContent = linkArea.innerHTML;
     const translations = settings.aiContentStrategy?.translations || {};
 
-    // Generate link input HTML
+    // Generate link input HTML (this stays client-side as it's temporary UI).
     const linkInputHTML = `
       <div class="idea-link-input-wrapper">
         <input type="url" class="idea-link-input form-url" placeholder="${translations.enterUrl || Drupal.t('Enter URL...')}" value="${currentLink}">
@@ -85,16 +42,46 @@
 
     saveBtn.addEventListener('click', () => {
       const link = input.value.trim();
-      saveIdeaLink(section, title, ideaIndex, link, linkArea, settings)
-        .catch(error => {
+
+      // Disable buttons during request.
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      saveBtn.textContent = Drupal.t('Saving...');
+
+      // Ensure we have an ID for Drupal.ajax.
+      if (!saveBtn.id) {
+        saveBtn.id = 'save-link-' + Date.now();
+      }
+
+      // Build form data.
+      const formData = new FormData();
+      formData.append('field', 'link');
+      formData.append('value', link);
+      formData.append('idea_index', ideaIndex);
+
+      // Use Drupal's AJAX framework.
+      const ajaxObject = Drupal.ajax({
+        url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + encodeURIComponent(title)),
+        base: saveBtn.id,
+        element: saveBtn,
+        submit: {
+          field: 'link',
+          value: link,
+          idea_index: ideaIndex
+        },
+        progress: { type: 'none' },
+        error: function(xhr, status, error) {
           const messages = new Drupal.Message();
           messages.add(Drupal.t('Error saving link.'), {
             type: 'error',
-            id: `content-strategy-error-${Date.now()}`
+            id: 'content-strategy-error-' + Date.now()
           });
           linkArea.innerHTML = originalContent;
           Drupal.attachBehaviors(linkArea);
-        });
+        }
+      });
+
+      ajaxObject.execute();
     });
 
     cancelBtn.addEventListener('click', () => {
@@ -102,7 +89,7 @@
       Drupal.attachBehaviors(linkArea);
     });
 
-    // Keyboard shortcuts
+    // Keyboard shortcuts.
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();

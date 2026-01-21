@@ -8,6 +8,9 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai_content_strategy\Service\CategoryPromptBuilder;
+use Drupal\ai_content_strategy\Service\RecommendationStorageService;
+use Drupal\ai_content_strategy\Service\IdeaRowBuilder;
+use Drupal\ai_content_strategy\Service\AjaxResponseBuilder;
 use Drupal\ai\AiProviderPluginManager;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Drupal\Component\Serialization\Json;
@@ -124,6 +127,27 @@ class ContentStrategyController extends ControllerBase {
   protected $requestStack;
 
   /**
+   * The recommendation storage service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\RecommendationStorageService
+   */
+  protected $recommendationStorage;
+
+  /**
+   * The idea row builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\IdeaRowBuilder
+   */
+  protected $ideaRowBuilder;
+
+  /**
+   * The AJAX response builder service.
+   *
+   * @var \Drupal\ai_content_strategy\Service\AjaxResponseBuilder
+   */
+  protected $ajaxResponseBuilder;
+
+  /**
    * Constructs a ContentStrategyController object.
    *
    * @param \Drupal\ai_content_strategy\Service\StrategyGenerator $strategy_generator
@@ -148,6 +172,12 @@ class ContentStrategyController extends ControllerBase {
    *   The category prompt builder service.
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
    *   The request stack.
+   * @param \Drupal\ai_content_strategy\Service\RecommendationStorageService $recommendation_storage
+   *   The recommendation storage service.
+   * @param \Drupal\ai_content_strategy\Service\IdeaRowBuilder $idea_row_builder
+   *   The idea row builder service.
+   * @param \Drupal\ai_content_strategy\Service\AjaxResponseBuilder $ajax_response_builder
+   *   The AJAX response builder service.
    */
   public function __construct(
     StrategyGenerator $strategy_generator,
@@ -161,6 +191,9 @@ class ContentStrategyController extends ControllerBase {
     TimeInterface $time,
     CategoryPromptBuilder $category_prompt_builder,
     RequestStack $request_stack,
+    RecommendationStorageService $recommendation_storage,
+    IdeaRowBuilder $idea_row_builder,
+    AjaxResponseBuilder $ajax_response_builder,
   ) {
     $this->strategyGenerator = $strategy_generator;
     $this->contentAnalyzer = $content_analyzer;
@@ -173,6 +206,9 @@ class ContentStrategyController extends ControllerBase {
     $this->time = $time;
     $this->categoryPromptBuilder = $category_prompt_builder;
     $this->requestStack = $request_stack;
+    $this->recommendationStorage = $recommendation_storage;
+    $this->ideaRowBuilder = $idea_row_builder;
+    $this->ajaxResponseBuilder = $ajax_response_builder;
   }
 
   /**
@@ -190,7 +226,10 @@ class ContentStrategyController extends ControllerBase {
       $container->get('keyvalue'),
       $container->get('datetime.time'),
       $container->get('ai_content_strategy.category_prompt_builder'),
-      $container->get('request_stack')
+      $container->get('request_stack'),
+      $container->get('ai_content_strategy.recommendation_storage'),
+      $container->get('ai_content_strategy.idea_row_builder'),
+      $container->get('ai_content_strategy.ajax_response_builder')
     );
   }
 
@@ -682,52 +721,18 @@ EOT;
         throw new \RuntimeException('Failed to find matching item to update');
       }
 
-      // Build HTML for new ideas with full interactive structure.
-      // Calculate starting index based on existing ideas count.
+      // Build HTML for new ideas using the idea row builder service.
       $existing_count = count($existing_ideas);
-      $rows_html = '';
-
-      // Pre-compute translated strings to avoid concatenation warnings.
-      $add_link_text = $this->t('+ Add link');
-      $mark_implemented_text = $this->t('Mark as implemented');
-      $delete_title_text = $this->t('Delete this content idea');
-      $delete_aria_text = $this->t('Delete content idea');
-      $escaped_title = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-
-      foreach ($ideas as $index => $idea) {
-        $idea_index = $existing_count + $index;
-        $escaped_idea = htmlspecialchars($idea, ENT_QUOTES, 'UTF-8');
-
-        $rows_html .= '<tr data-idea-index="' . $idea_index . '">';
-        $rows_html .= '<td class="idea-content-cell">';
-        $rows_html .= '<div contenteditable="true" data-field="content_ideas" data-idea-index="' . $idea_index . '" class="editable-field">' . $escaped_idea . '</div>';
-        $rows_html .= '<div class="idea-link-area" style="display: none;">';
-        $rows_html .= '<button type="button" class="idea-add-link action-link button--small" data-section="' . $section . '" data-title="' . $escaped_title . '" data-idea-index="' . $idea_index . '">' . $add_link_text . '</button>';
-        $rows_html .= '</div>';
-        $rows_html .= '</td>';
-        $rows_html .= '<td class="idea-actions">';
-        $rows_html .= '<label class="idea-checkbox" title="' . $mark_implemented_text . '">';
-        $rows_html .= '<input type="checkbox" class="idea-implemented-checkbox" data-section="' . $section . '" data-title="' . $escaped_title . '" data-idea-index="' . $idea_index . '">';
-        $rows_html .= '<span class="idea-checkbox-visual"></span>';
-        $rows_html .= '</label>';
-        $rows_html .= '<button type="button" class="delete-idea-link" data-section="' . $section . '" data-title="' . $escaped_title . '" data-idea-index="' . $idea_index . '" title="' . $delete_title_text . '" aria-label="' . $delete_aria_text . '">';
-        $rows_html .= '<span class="cs-icon cs-icon--trash cs-icon--md" aria-hidden="true"></span>';
-        $rows_html .= '</button>';
-        $rows_html .= '</td>';
-        $rows_html .= '</tr>';
-      }
-
-      // Create AJAX response.
-      $response = new AjaxResponse();
-
-      // Update the timestamp in the status area.
-      $response->addCommand(
-        new HtmlCommand(
-          '.status-item--timestamp',
-          '<strong>' . $this->t('Last generated:') . '</strong> ' .
-          $this->dateFormatter->formatTimeDiffSince($timestamp)
-        )
+      $rows_html = $this->ideaRowBuilder->renderRows(
+        $section,
+        $title,
+        $ideas,
+        $existing_count
       );
+
+      // Create AJAX response and update timestamp.
+      $response = $this->ajaxResponseBuilder->create();
+      $this->ajaxResponseBuilder->addTimestampCommand($response, $timestamp);
 
       // Add command to append the new rows to the table.
       $response->addCommand(
@@ -1490,6 +1495,31 @@ EOT;
                 'link' => $link_value,
               ];
             }
+
+            // Save updated data now so we can return HTML.
+            $stored_data['data'] = $recommendations;
+            $this->keyValue->set(self::KV_KEY, $stored_data);
+
+            // Render the updated link area using the IdeaRowBuilder service.
+            $link_html = $this->ideaRowBuilder->renderLinkArea(
+              $section,
+              $title,
+              (int) $idea_index,
+              $link_value
+            );
+
+            // Build selector for the link area within this specific idea row.
+            $card_selector = sprintf(
+              '.recommendation-item[data-section="%s"][data-title="%s"] tr[data-idea-index="%s"] .idea-link-area',
+              $section,
+              $title,
+              $idea_index
+            );
+
+            // Return HTML replacement command.
+            $response->addCommand(new HtmlCommand($card_selector, $link_html));
+
+            return $response;
           }
           break;
 

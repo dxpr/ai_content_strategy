@@ -1,6 +1,9 @@
 /**
  * @file
  * Generate behaviors for AI Content Strategy recommendations.
+ *
+ * Uses Drupal's AJAX framework for proper command processing and behavior
+ * attachment.
  */
 
 ((Drupal, once) => {
@@ -37,7 +40,6 @@
           loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
           successText: buttonText || link.textContent,
           errorText: buttonText || link.textContent,
-          method: 'append',
           onSuccess: (target) => {
             const item = link.closest('.recommendation-item');
             if (item) {
@@ -64,8 +66,9 @@
         event.preventDefault();
         ajaxHandler.execute();
       });
-    } catch (e) {
-      // Error handling without console.error
+    }
+    catch (e) {
+      // Error handling without console.error.
     }
   }
 
@@ -97,8 +100,7 @@
           url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
           loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
           successText: buttonText || link.textContent,
-          errorText: buttonText || link.textContent,
-          method: 'append'
+          errorText: buttonText || link.textContent
         }, settings)
       );
 
@@ -106,8 +108,9 @@
         event.preventDefault();
         ajaxHandler.execute();
       });
-    } catch (e) {
-      // Error handling without console.error
+    }
+    catch (e) {
+      // Error handling without console.error.
     }
   }
 
@@ -140,7 +143,6 @@
           loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading_more,
           successText: buttonText || link.textContent,
           errorText: buttonText || link.textContent,
-          method: 'append',
           onSuccess: (target) => {
             target.querySelectorAll('.generate-more-link').forEach((newLink, index) => {
               attachGenerateMoreBehavior(newLink, index, settings);
@@ -153,12 +155,13 @@
         event.preventDefault();
         ajaxHandler.execute();
       });
-    } catch (e) {
-      // Error handling without console.error
+    }
+    catch (e) {
+      // Error handling without console.error.
     }
   }
 
-  // Export functions to namespace for cross-module access
+  // Export functions to namespace for cross-module access.
   Drupal.aiContentStrategy.attachGenerateIdeasBehavior = attachGenerateIdeasBehavior;
   Drupal.aiContentStrategy.attachGenerateMoreBehavior = attachGenerateMoreBehavior;
   Drupal.aiContentStrategy.attachAddMoreRecommendationsBehavior = attachAddMoreRecommendationsBehavior;
@@ -168,7 +171,7 @@
    */
   Drupal.behaviors.contentStrategyGenerate = {
     attach: function(context, settings) {
-      // Handle main generate button
+      // Handle main generate button.
       once('contentStrategyGenerate', '.generate-recommendations', context).forEach((button) => {
         try {
           DOMUtils.ensureElementId(button, 'content-strategy');
@@ -223,22 +226,23 @@
 
             ajaxHandler.execute();
           });
-        } catch (e) {
-          // Error handling without console.error
+        }
+        catch (e) {
+          // Error handling without console.error.
         }
       });
 
-      // Handle generate ideas links
+      // Handle generate ideas links.
       once('generateIdeas', '.generate-ideas-link', context).forEach((link, index) => {
         attachGenerateIdeasBehavior(link, index, settings);
       });
 
-      // Handle generate more links
+      // Handle generate more links.
       once('generateMore', '.generate-more-link', context).forEach((link, index) => {
         attachGenerateMoreBehavior(link, index, settings);
       });
 
-      // Handle add more recommendations links
+      // Handle add more recommendations links.
       once('addMoreRecs', '.add-more-recommendations-link', context).forEach((link) => {
         attachAddMoreRecommendationsBehavior(link, settings);
       });

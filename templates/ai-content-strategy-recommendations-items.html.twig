@@ -54,30 +54,14 @@
               {% set idea_text = idea.text is defined ? idea.text : idea %}
               {% set idea_implemented = idea.implemented is defined ? idea.implemented : false %}
               {% set idea_link = idea.link is defined ? idea.link : '' %}
-              <tr data-idea-index="{{ key }}"{{ idea_implemented ? ' class="idea-implemented"' : '' }}>
-                <td class="idea-content-cell">
-                  <div contenteditable="true" data-field="content_ideas" data-idea-index="{{ key }}" class="editable-field">{{ idea_text is iterable and idea_text['#markup'] is defined ? idea_text['#markup'] : idea_text }}</div>
-                  <div class="idea-link-area"{{ idea_implemented ? '' : ' style="display: none;"' }}>
-                    {% if idea_link %}
-                      <a href="{{ idea_link }}" target="_blank" class="idea-link" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}">{{ idea_link }}</a>
-                      <button type="button" class="idea-link-edit" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}" title="{{ 'Edit link'|t }}">
-                        <span class="cs-icon cs-icon--edit cs-icon--sm" aria-hidden="true"></span>
-                      </button>
-                    {% else %}
-                      <button type="button" class="idea-add-link action-link button--small" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}">{{ '+ Add link'|t }}</button>
-                    {% endif %}
-                  </div>
-                </td>
-                <td class="idea-actions">
-                  <label class="idea-checkbox" title="{{ 'Mark as implemented'|t }}">
-                    <input type="checkbox" class="idea-implemented-checkbox" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}"{{ idea_implemented ? ' checked' : '' }}>
-                    <span class="idea-checkbox-visual"></span>
-                  </label>
-                  <button type="button" class="delete-idea-link" data-section="{{ section }}" data-title="{{ item_title }}" data-idea-index="{{ key }}" title="{{ 'Delete this content idea'|t }}" aria-label="{{ 'Delete content idea'|t }}">
-                    <span class="cs-icon cs-icon--trash cs-icon--md" aria-hidden="true"></span>
-                  </button>
-                </td>
-              </tr>
+              {% include '@ai_content_strategy/components/idea-row.html.twig' with {
+                'section': section,
+                'title': item_title,
+                'idea_index': key,
+                'idea_text': idea_text is iterable and idea_text['#markup'] is defined ? idea_text['#markup'] : idea_text,
+                'idea_implemented': idea_implemented,
+                'idea_link': idea_link,
+              } only %}
             {% endfor %}
           </tbody>
         </table>
