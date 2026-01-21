@@ -6,13 +6,13 @@
  * Available variables:
  * - link: The URL of the link.
  * - section: The section identifier.
- * - title: The card title.
- * - idea_index: The index of the idea within the card.
+ * - uuid: The card UUID.
+ * - idea_uuid: The UUID of the idea.
  *
  * @ingroup themeable
  */
 #}
-<a href="{{ link }}" target="_blank" class="idea-link" data-section="{{ section }}" data-title="{{ title }}" data-idea-index="{{ idea_index }}">{{ link }}</a>
-<button type="button" class="idea-link-edit" data-section="{{ section }}" data-title="{{ title }}" data-idea-index="{{ idea_index }}" title="{{ 'Edit link'|t }}">
+<a href="{{ link }}" target="_blank" class="idea-link" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}">{{ link }}</a>
+<button type="button" class="idea-link-edit" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}" title="{{ 'Edit link'|t }}">
   <span class="cs-icon cs-icon--edit cs-icon--sm" aria-hidden="true"></span>
 </button>

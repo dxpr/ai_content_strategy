@@ -78,16 +78,16 @@ function ai_content_strategy_theme() {
       'variables' => [
         'link' => NULL,
         'section' => NULL,
-        'title' => NULL,
-        'idea_index' => NULL,
+        'uuid' => NULL,
+        'idea_uuid' => NULL,
       ],
       'template' => 'components/link-display',
     ],
     'ai_content_strategy_link_add_button' => [
       'variables' => [
         'section' => NULL,
-        'title' => NULL,
-        'idea_index' => NULL,
+        'uuid' => NULL,
+        'idea_uuid' => NULL,
       ],
       'template' => 'components/link-add-button',
     ],
@@ -100,8 +100,8 @@ function ai_content_strategy_theme() {
     'ai_content_strategy_idea_row' => [
       'variables' => [
         'section' => NULL,
-        'title' => NULL,
-        'idea_index' => NULL,
+        'uuid' => NULL,
+        'idea_uuid' => NULL,
         'idea_text' => NULL,
         'idea_implemented' => FALSE,
         'idea_link' => '',

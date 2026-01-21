@@ -17,8 +17,8 @@
       once('contentStrategyCheckbox', '.idea-implemented-checkbox', context).forEach((checkbox) => {
         checkbox.addEventListener('change', function(event) {
           const section = checkbox.dataset.section;
-          const title = checkbox.dataset.title;
-          const ideaIndex = checkbox.dataset.ideaIndex;
+          const uuid = checkbox.dataset.uuid;
+          const ideaUuid = checkbox.dataset.ideaUuid;
           const isImplemented = checkbox.checked;
 
           // Optimistic UI update - apply changes immediately.
@@ -46,13 +46,13 @@
 
           // Use Drupal's AJAX framework.
           const ajaxObject = Drupal.ajax({
-            url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + encodeURIComponent(title)),
+            url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + uuid),
             base: checkbox.id,
             element: checkbox,
             submit: {
               field: 'implemented',
               value: isImplemented ? '1' : '0',
-              idea_index: ideaIndex
+              idea_uuid: ideaUuid
             },
             progress: { type: 'none' },
             success: function(response, status) {

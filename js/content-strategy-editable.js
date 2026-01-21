@@ -18,7 +18,7 @@
         let saveTimeout;
         const card = field.closest('.recommendation-item');
         const section = card.dataset.section;
-        const originalTitle = card.dataset.title;
+        const uuid = card.dataset.uuid;
 
         // CSS icon markup (uses mask-image for color control).
         const checkmarkHTML = '<span class="field-save-indicator__checkmark"><span class="cs-icon cs-icon--checkmark" aria-hidden="true"></span></span>';
@@ -93,7 +93,7 @@
         const saveEdit = () => {
           const fieldName = field.dataset.field;
           const value = field.textContent.trim();
-          const ideaIndex = field.dataset.ideaIndex || null;
+          const ideaUuid = field.dataset.ideaUuid || null;
 
           showSaving();
 
@@ -107,24 +107,19 @@
             field: fieldName,
             value: value
           };
-          if (ideaIndex !== null) {
-            submitData.idea_index = ideaIndex;
+          if (ideaUuid !== null) {
+            submitData.idea_uuid = ideaUuid;
           }
 
           // Use Drupal's AJAX framework.
           const ajaxObject = Drupal.ajax({
-            url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + encodeURIComponent(originalTitle)),
+            url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + uuid),
             base: field.id,
             element: field,
             submit: submitData,
             progress: { type: 'none' },
             success: function(response, status) {
               showSaved();
-
-              // Update card title reference if title field was edited.
-              if (fieldName === 'title') {
-                card.dataset.title = value;
-              }
             },
             error: function(xhr, status, error) {
               showError();

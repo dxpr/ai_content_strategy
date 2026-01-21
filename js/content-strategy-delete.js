@@ -19,14 +19,15 @@
           event.preventDefault();
 
           const section = link.dataset.section;
-          const title = link.dataset.title;
+          const uuid = link.dataset.uuid;
 
           const card = link.closest('.recommendation-item');
+          const cardTitle = card.querySelector('h4')?.textContent || 'this recommendation';
           const ideasTable = card.querySelector('.content-ideas-table tbody');
           const ideasCount = ideasTable ? ideasTable.querySelectorAll('tr').length : 0;
 
           // Build contextual confirmation message.
-          let confirmMessage = Drupal.t('Delete "@title"?', {'@title': title});
+          let confirmMessage = Drupal.t('Delete "@title"?', {'@title': cardTitle});
           if (ideasCount > 0) {
             confirmMessage += '\n\n' + Drupal.t('This will permanently delete @count content idea(s).', {'@count': ideasCount});
           }
@@ -51,7 +52,7 @@
           // Use Drupal's AJAX framework - automatically processes commands
           // and attaches behaviors.
           const ajaxObject = Drupal.ajax({
-            url: Drupal.url('admin/reports/ai/content-strategy/delete-card/' + section + '/' + encodeURIComponent(title)),
+            url: Drupal.url('admin/reports/ai/content-strategy/delete-card/' + section + '/' + uuid),
             base: link.id,
             element: link,
             progress: { type: 'none' },
@@ -82,8 +83,8 @@
           event.preventDefault();
 
           const section = button.dataset.section;
-          const title = button.dataset.title;
-          const ideaIndex = button.dataset.ideaIndex;
+          const uuid = button.dataset.uuid;
+          const ideaUuid = button.dataset.ideaUuid;
 
           const row = button.closest('tr');
           const ideaCell = row.querySelector('.editable-field');
@@ -112,7 +113,7 @@
 
           // Use Drupal's AJAX framework.
           const ajaxObject = Drupal.ajax({
-            url: Drupal.url('admin/reports/ai/content-strategy/delete-idea/' + section + '/' + encodeURIComponent(title) + '/' + ideaIndex),
+            url: Drupal.url('admin/reports/ai/content-strategy/delete-idea/' + section + '/' + uuid + '/' + ideaUuid),
             base: button.id,
             element: button,
             progress: { type: 'none' },

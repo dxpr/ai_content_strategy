@@ -19,8 +19,8 @@
    * @param {Object} settings - drupalSettings object.
    */
   function attachGenerateIdeasBehavior(link, index, settings) {
-    const { section, title } = DOMUtils.getItemData(link);
-    if (!section || !title) {
+    const { section, uuid } = DOMUtils.getItemData(link);
+    if (!section || !uuid) {
       return;
     }
 
@@ -36,7 +36,7 @@
         link,
         createAjaxHandler({
           element: link,
-          url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
+          url: `admin/reports/ai/content-strategy/generate-more/${section}/${uuid}`,
           loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
           successText: buttonText || link.textContent,
           errorText: buttonText || link.textContent,
@@ -51,7 +51,7 @@
                 moreLink.href = '#';
                 moreLink.className = 'generate-more-link';
                 moreLink.dataset.section = section;
-                moreLink.dataset.title = title;
+                moreLink.dataset.uuid = uuid;
                 moreLink.textContent = DOMUtils.getButtonText(settings, 'generate_more', section);
                 actionsDiv.appendChild(moreLink);
 
@@ -80,8 +80,18 @@
    * @param {Object} settings - drupalSettings object.
    */
   function attachGenerateMoreBehavior(link, index, settings) {
-    const { section, title } = DOMUtils.getItemData(link);
-    if (!section || !title) {
+    // Get uuid from link's data attribute or from parent item.
+    let section = link.dataset.section;
+    let uuid = link.dataset.uuid;
+
+    // Fallback to parent item data if not on link.
+    if (!uuid) {
+      const itemData = DOMUtils.getItemData(link);
+      section = section || itemData.section;
+      uuid = itemData.uuid;
+    }
+
+    if (!section || !uuid) {
       return;
     }
 
@@ -97,7 +107,7 @@
         link,
         createAjaxHandler({
           element: link,
-          url: `admin/reports/ai/content-strategy/generate-more/${section}/${encodeURIComponent(title)}`,
+          url: `admin/reports/ai/content-strategy/generate-more/${section}/${uuid}`,
           loadingText: settings?.aiContentStrategy?.buttonText?.main?.loading,
           successText: buttonText || link.textContent,
           errorText: buttonText || link.textContent

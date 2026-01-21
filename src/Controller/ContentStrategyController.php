@@ -268,6 +268,19 @@ class ContentStrategyController extends ControllerBase {
         $recommendations = $stored_data;
         $last_run = $this->time->getRequestTime();
       }
+
+      // Migrate existing data by adding UUIDs if missing.
+      $original_recommendations = $recommendations;
+      $recommendations = $this->recommendationStorage->ensureUuids($recommendations);
+      $recommendations = $this->recommendationStorage->ensureIdeaUuids($recommendations);
+      if ($recommendations !== $original_recommendations) {
+        // UUIDs were added, save the updated data.
+        $this->keyValue->set(self::KV_KEY, [
+          'data' => $recommendations,
+          'timestamp' => $last_run,
+          'pages_analyzed' => $pages_analyzed,
+        ]);
+      }
     }
 
     // Load enabled categories and build category metadata.
@@ -322,6 +335,10 @@ class ContentStrategyController extends ControllerBase {
 
       // Get recommendations.
       $recommendations = $this->strategyGenerator->generateRecommendations();
+
+      // Ensure all items and ideas have UUIDs for consistent referencing.
+      $recommendations = $this->recommendationStorage->ensureUuids($recommendations);
+      $recommendations = $this->recommendationStorage->ensureIdeaUuids($recommendations);
 
       // Store the results with timestamp and metadata in key-value store.
       $timestamp = (int) $this->time->getCurrentTime();
@@ -597,13 +614,13 @@ class ContentStrategyController extends ControllerBase {
    *
    * @param string $section
    *   The section to generate ideas for (content_gaps, authority_topics, etc.).
-   * @param string $title
-   *   The title of the specific item to generate more ideas for.
+   * @param string $uuid
+   *   The UUID of the specific item to generate more ideas for.
    *
    * @return \Drupal\Core\Ajax\AjaxResponse
    *   AJAX response containing the new content ideas.
    */
-  public function generateMore(string $section, string $title) {
+  public function generateMore(string $section, string $uuid) {
     try {
       // Get current stored data first.
       $stored_data = $this->keyValue->get(self::KV_KEY);
@@ -686,48 +703,47 @@ EOT;
         );
       }
 
+      // Normalize ideas to include UUIDs.
+      $normalized_ideas = $this->recommendationStorage->normalizeIdeasWithUuids($ideas);
+
       // After successfully generating and parsing new ideas, update the stored
       // data.
-      $updated = FALSE;
+      $card_index = NULL;
+      $card_title = NULL;
 
-      // Find the correct section and item to update.
+      // Find the correct section and item to update by UUID.
       if (isset($recommendations[$section])) {
         foreach ($recommendations[$section] as $key => $item) {
-          // Try common title fields to match the item.
-          $item_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? NULL;
-
-          if ($item_title === $title) {
+          if (isset($item['uuid']) && $item['uuid'] === $uuid) {
             // Append new ideas to existing ones (or initialize if empty).
             $existing_ideas = $recommendations[$section][$key]['content_ideas'] ?? [];
             $recommendations[$section][$key]['content_ideas'] = array_merge(
               $existing_ideas,
-              $ideas
+              $normalized_ideas
             );
-            $updated = TRUE;
+            $card_index = $key;
+            $card_title = $item['title'] ?? $item['topic'] ?? $item['content_type'] ?? $item['signal'] ?? '';
             break;
           }
         }
       }
 
-      if ($updated) {
-        // Update the stored data with timestamp.
-        $timestamp = (int) $this->time->getCurrentTime();
-        $this->keyValue->set(self::KV_KEY, [
-          'data' => $recommendations,
-          'timestamp' => $timestamp,
-        ]);
-      }
-      else {
+      if ($card_index === NULL) {
         throw new \RuntimeException('Failed to find matching item to update');
       }
 
+      // Update the stored data with timestamp.
+      $timestamp = (int) $this->time->getCurrentTime();
+      $this->keyValue->set(self::KV_KEY, [
+        'data' => $recommendations,
+        'timestamp' => $timestamp,
+      ]);
+
       // Build HTML for new ideas using the idea row builder service.
-      $existing_count = count($existing_ideas);
       $rows_html = $this->ideaRowBuilder->renderRows(
         $section,
-        $title,
-        $ideas,
-        $existing_count
+        $uuid,
+        $normalized_ideas
       );
 
       // Create AJAX response and update timestamp.
@@ -738,10 +754,10 @@ EOT;
       $response->addCommand(
         new AppendCommand(
           sprintf(
-            '.recommendation-item[data-section="%s"][data-title="%s"]' .
+            '.recommendation-item[data-section="%s"][data-uuid="%s"]' .
             ' .content-ideas-table tbody',
             $section,
-            str_replace('"', '\"', $title)
+            $uuid
           ),
           $rows_html
         )
@@ -1164,13 +1180,13 @@ EOT;
    *
    * @param string $section
    *   The category section (e.g., 'content_gaps').
-   * @param string $title
-   *   The title of the card to delete.
+   * @param string $uuid
+   *   The UUID of the card to delete.
    *
    * @return \Drupal\Core\Ajax\AjaxResponse
    *   AJAX response with removal commands.
    */
-  public function deleteCard(string $section, string $title) {
+  public function deleteCard(string $section, string $uuid) {
     $response = new AjaxResponse();
 
     try {
@@ -1183,11 +1199,10 @@ EOT;
 
       $recommendations = $stored_data['data'];
 
-      // Find and remove the card.
+      // Find and remove the card by UUID.
       $found = FALSE;
       foreach ($recommendations[$section] as $key => $card) {
-        $card_title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
-        if ($card_title === $title) {
+        if (isset($card['uuid']) && $card['uuid'] === $uuid) {
           unset($recommendations[$section][$key]);
           $found = TRUE;
           break;
@@ -1207,7 +1222,7 @@ EOT;
 
       // Remove card from DOM.
       $response->addCommand(
-        new RemoveCommand(".recommendation-item[data-section='$section'][data-title='" . addslashes($title) . "']")
+        new RemoveCommand(".recommendation-item[data-section='$section'][data-uuid='$uuid']")
       );
 
       // If category is now empty, show empty state.
@@ -1297,63 +1312,24 @@ EOT;
    *
    * @param string $section
    *   The category section.
-   * @param string $title
-   *   The title of the recommendation card.
-   * @param int $idea_index
-   *   The index of the content idea to delete.
+   * @param string $uuid
+   *   The UUID of the recommendation card.
+   * @param string $idea_uuid
+   *   The UUID of the content idea to delete.
    *
    * @return \Drupal\Core\Ajax\AjaxResponse
    *   The AJAX response.
    */
-  public function deleteIdea(string $section, string $title, int $idea_index) {
+  public function deleteIdea(string $section, string $uuid, string $idea_uuid) {
     $response = new AjaxResponse();
 
     try {
-      // Load stored data.
-      $stored_data = $this->keyValue->get(self::KV_KEY);
+      // Use the storage service to delete the idea by UUID.
+      $this->recommendationStorage->deleteIdeaByUuid($section, $uuid, $idea_uuid);
 
-      if (!$stored_data || !isset($stored_data['data'][$section])) {
-        throw new \RuntimeException('No data found for this section');
-      }
-
-      $recommendations = $stored_data['data'];
-
-      // Find the card.
-      $found = FALSE;
-      $card_key = NULL;
-      foreach ($recommendations[$section] as $key => $card) {
-        $card_title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
-        if ($card_title === $title) {
-          $found = TRUE;
-          $card_key = $key;
-          break;
-        }
-      }
-
-      if (!$found) {
-        throw new \RuntimeException('Card not found');
-      }
-
-      // Check if the idea exists.
-      if (!isset($recommendations[$section][$card_key]['content_ideas'])) {
-        throw new \RuntimeException('No content ideas found for this card');
-      }
-
-      // Remove the specific idea.
-      unset($recommendations[$section][$card_key]['content_ideas'][$idea_index]);
-
-      // Re-index the content_ideas array.
-      $recommendations[$section][$card_key]['content_ideas'] = array_values(
-        $recommendations[$section][$card_key]['content_ideas']
-      );
-
-      // Save updated data.
-      $stored_data['data'] = $recommendations;
-      $this->keyValue->set(self::KV_KEY, $stored_data);
-
-      // Remove the row from DOM.
+      // Remove the row from DOM using idea UUID selector.
       $response->addCommand(
-        new RemoveCommand(".recommendation-item[data-section='$section'][data-title='" . addslashes($title) . "'] tr[data-idea-index='$idea_index']")
+        new RemoveCommand(".recommendation-item[data-section='$section'][data-uuid='$uuid'] tr[data-idea-uuid='$idea_uuid']")
       );
 
       // Show success message.
@@ -1389,13 +1365,13 @@ EOT;
    *
    * @param string $section
    *   The category section.
-   * @param string $title
-   *   The original title of the card (used to find it).
+   * @param string $uuid
+   *   The UUID of the card.
    *
    * @return \Drupal\Core\Ajax\AjaxResponse
    *   AJAX response confirming save.
    */
-  public function saveCard(string $section, string $title) {
+  public function saveCard(string $section, string $uuid) {
     $response = new AjaxResponse();
 
     try {
@@ -1403,117 +1379,54 @@ EOT;
       $request = $this->requestStack->getCurrentRequest();
       $field = $request->request->get('field');
       $value = $request->request->get('value');
-      $idea_index = $request->request->get('idea_index');
+      $idea_uuid = $request->request->get('idea_uuid');
 
       if (empty($field) || $value === NULL) {
         throw new \InvalidArgumentException('Missing field or value');
       }
 
-      // Load stored data.
-      $stored_data = $this->keyValue->get(self::KV_KEY);
-
-      if (!$stored_data || !isset($stored_data['data'][$section])) {
-        throw new \RuntimeException('No data found for this section');
-      }
-
-      $recommendations = $stored_data['data'];
-
-      // Find the card.
-      $found = FALSE;
-      $card_index = NULL;
-      foreach ($recommendations[$section] as $key => $card) {
-        $card_title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
-        if ($card_title === $title) {
-          $card_index = $key;
-          $found = TRUE;
-          break;
-        }
-      }
-
-      if (!$found) {
-        throw new \RuntimeException('Card not found');
-      }
-
-      // Update the field.
+      // Update the field based on type.
       switch ($field) {
         case 'title':
-          $recommendations[$section][$card_index]['title'] = strip_tags($value);
+          $this->recommendationStorage->updateCardFieldByUuid($section, $uuid, 'title', strip_tags($value));
           break;
 
         case 'description':
-          $recommendations[$section][$card_index]['description'] = strip_tags($value);
+          $this->recommendationStorage->updateCardFieldByUuid($section, $uuid, 'description', strip_tags($value));
           break;
 
         case 'content_ideas':
-          if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
-            $idea = $recommendations[$section][$card_index]['content_ideas'][$idea_index];
-            // Handle both legacy string format and new object format.
-            if (is_array($idea)) {
-              $recommendations[$section][$card_index]['content_ideas'][$idea_index]['text'] = strip_tags($value);
-            }
-            else {
-              // Convert from string to object format.
-              $recommendations[$section][$card_index]['content_ideas'][$idea_index] = [
-                'text' => strip_tags($value),
-                'implemented' => FALSE,
-              ];
-            }
+          if ($idea_uuid !== NULL) {
+            $this->recommendationStorage->updateIdeaFieldByUuid($section, $uuid, $idea_uuid, 'text', strip_tags($value));
           }
           break;
 
         case 'implemented':
-          if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
-            $idea = $recommendations[$section][$card_index]['content_ideas'][$idea_index];
+          if ($idea_uuid !== NULL) {
             $is_implemented = $value === '1' || $value === 'true';
-            // Handle both legacy string format and new object format.
-            if (is_array($idea)) {
-              $recommendations[$section][$card_index]['content_ideas'][$idea_index]['implemented'] = $is_implemented;
-            }
-            else {
-              // Convert from string to object format.
-              $recommendations[$section][$card_index]['content_ideas'][$idea_index] = [
-                'text' => $idea,
-                'implemented' => $is_implemented,
-              ];
-            }
+            $this->recommendationStorage->updateIdeaFieldByUuid($section, $uuid, $idea_uuid, 'implemented', $is_implemented);
           }
           break;
 
         case 'link':
-          if ($idea_index !== NULL && isset($recommendations[$section][$card_index]['content_ideas'][$idea_index])) {
-            $idea = $recommendations[$section][$card_index]['content_ideas'][$idea_index];
+          if ($idea_uuid !== NULL) {
             $link_value = strip_tags(trim($value));
-            // Handle both legacy string format and new object format.
-            if (is_array($idea)) {
-              $recommendations[$section][$card_index]['content_ideas'][$idea_index]['link'] = $link_value;
-            }
-            else {
-              // Convert from string to object format.
-              $recommendations[$section][$card_index]['content_ideas'][$idea_index] = [
-                'text' => $idea,
-                'implemented' => FALSE,
-                'link' => $link_value,
-              ];
-            }
-
-            // Save updated data now so we can return HTML.
-            $stored_data['data'] = $recommendations;
-            $this->keyValue->set(self::KV_KEY, $stored_data);
+            $this->recommendationStorage->updateIdeaFieldByUuid($section, $uuid, $idea_uuid, 'link', $link_value);
 
             // Render the updated link area using the IdeaRowBuilder service.
             $link_html = $this->ideaRowBuilder->renderLinkArea(
               $section,
-              $title,
-              (int) $idea_index,
+              $uuid,
+              $idea_uuid,
               $link_value
             );
 
             // Build selector for the link area within this specific idea row.
             $card_selector = sprintf(
-              '.recommendation-item[data-section="%s"][data-title="%s"] tr[data-idea-index="%s"] .idea-link-area',
+              '.recommendation-item[data-section="%s"][data-uuid="%s"] tr[data-idea-uuid="%s"] .idea-link-area',
               $section,
-              $title,
-              $idea_index
+              $uuid,
+              $idea_uuid
             );
 
             // Return HTML replacement command.
@@ -1526,10 +1439,6 @@ EOT;
         default:
           throw new \InvalidArgumentException('Invalid field');
       }
-
-      // Save updated data.
-      $stored_data['data'] = $recommendations;
-      $this->keyValue->set(self::KV_KEY, $stored_data);
 
       // Return success (no visual command needed, JS will handle feedback).
       $response->addCommand(

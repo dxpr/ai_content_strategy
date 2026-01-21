@@ -29,10 +29,10 @@
     },
 
     /**
-     * Gets section and title data from a recommendation item.
+     * Gets section and uuid data from a recommendation item.
      *
      * @param {HTMLElement} element - Element within a recommendation item.
-     * @returns {Object} Object with section and title properties.
+     * @returns {Object} Object with section and uuid properties.
      */
     getItemData(element) {
       const item = element.closest('.recommendation-item');
@@ -41,7 +41,7 @@
       }
       return {
         section: item.dataset.section,
-        title: item.dataset.title
+        uuid: item.dataset.uuid
       };
     },
 

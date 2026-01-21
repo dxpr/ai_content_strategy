@@ -14,12 +14,12 @@
    *
    * @param {HTMLElement} linkArea - The link area element.
    * @param {string} section - Section identifier.
-   * @param {string} title - Card title.
-   * @param {string} ideaIndex - Idea index.
+   * @param {string} uuid - Card UUID.
+   * @param {string} ideaUuid - Idea UUID.
    * @param {string} currentLink - Current link value.
    * @param {Object} settings - drupalSettings object.
    */
-  function showLinkInput(linkArea, section, title, ideaIndex, currentLink, settings) {
+  function showLinkInput(linkArea, section, uuid, ideaUuid, currentLink, settings) {
     const originalContent = linkArea.innerHTML;
     const translations = settings.aiContentStrategy?.translations || {};
 
@@ -53,21 +53,15 @@
         saveBtn.id = 'save-link-' + Date.now();
       }
 
-      // Build form data.
-      const formData = new FormData();
-      formData.append('field', 'link');
-      formData.append('value', link);
-      formData.append('idea_index', ideaIndex);
-
       // Use Drupal's AJAX framework.
       const ajaxObject = Drupal.ajax({
-        url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + encodeURIComponent(title)),
+        url: Drupal.url('admin/reports/ai/content-strategy/save-card/' + section + '/' + uuid),
         base: saveBtn.id,
         element: saveBtn,
         submit: {
           field: 'link',
           value: link,
-          idea_index: ideaIndex
+          idea_uuid: ideaUuid
         },
         progress: { type: 'none' },
         error: function(xhr, status, error) {
@@ -109,11 +103,11 @@
         button.addEventListener('click', function(event) {
           event.preventDefault();
           const section = button.dataset.section;
-          const title = button.dataset.title;
-          const ideaIndex = button.dataset.ideaIndex;
+          const uuid = button.dataset.uuid;
+          const ideaUuid = button.dataset.ideaUuid;
           const linkArea = button.closest('.idea-link-area');
 
-          showLinkInput(linkArea, section, title, ideaIndex, '', settings);
+          showLinkInput(linkArea, section, uuid, ideaUuid, '', settings);
         });
       });
     }
@@ -128,12 +122,12 @@
         button.addEventListener('click', function(event) {
           event.preventDefault();
           const section = button.dataset.section;
-          const title = button.dataset.title;
-          const ideaIndex = button.dataset.ideaIndex;
+          const uuid = button.dataset.uuid;
+          const ideaUuid = button.dataset.ideaUuid;
           const linkArea = button.closest('.idea-link-area');
           const currentLink = linkArea.querySelector('.idea-link')?.href || '';
 
-          showLinkInput(linkArea, section, title, ideaIndex, currentLink, settings);
+          showLinkInput(linkArea, section, uuid, ideaUuid, currentLink, settings);
         });
       });
     }
