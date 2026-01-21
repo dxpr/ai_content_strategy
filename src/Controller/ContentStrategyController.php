@@ -629,6 +629,13 @@ class ContentStrategyController extends ControllerBase {
       }
       $recommendations = $stored_data['data'];
 
+      // Find the card by UUID to get its title for the prompt.
+      $card = $this->recommendationStorage->getCardByUuid($section, $uuid);
+      if (!$card) {
+        throw new \RuntimeException('Card not found');
+      }
+      $title = $card['title'] ?? $card['topic'] ?? $card['content_type'] ?? $card['signal'] ?? '';
+
       // Get site data for context.
       $site_structure = $this->contentAnalyzer->getSiteStructure();
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();

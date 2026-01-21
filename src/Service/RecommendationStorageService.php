@@ -177,7 +177,8 @@ class RecommendationStorageService {
    * @return int|null
    *   The card index, or NULL if not found.
    *
-   * @deprecated Use findCardIndexByUuid() instead.
+   * @internal This method is kept for backwards compatibility.
+   *   New code should use findCardIndexByUuid() instead.
    */
   public function findCardIndex(string $section, string $title): ?int {
     $recommendations = $this->getRecommendations();
