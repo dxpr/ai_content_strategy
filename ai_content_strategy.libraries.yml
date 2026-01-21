@@ -2,12 +2,25 @@ content_strategy:
   version: VERSION
   css:
     theme:
-      css/content-strategy.css: {}
+      css/components/base.css: {}
+      css/components/cards.css: {}
+      css/components/table.css: {}
+      css/components/checkbox.css: {}
+      css/components/links.css: {}
+      css/components/delete.css: {}
+      css/components/editable.css: {}
+      css/components/icons.css: {}
   js:
-    js/content-ideas.js: {}
+    js/content-strategy-utils.js: {}
+    js/content-strategy-generate.js: {}
+    js/content-strategy-editable.js: {}
+    js/content-strategy-delete.js: {}
+    js/content-strategy-checkbox.js: {}
+    js/content-strategy-links.js: {}
+    js/content-strategy-export.js: {}
   dependencies:
     - core/drupal
     - core/jquery
     - core/once
     - core/drupal.ajax
-    - core/drupal.message 
+    - core/drupal.message

@@ -1,0 +1,116 @@
+/**
+ * @file
+ * Editable field styles for AI Content Strategy.
+ */
+
+/* Editable Fields */
+.editable-field {
+  cursor: text;
+  position: relative;
+  transition: background-color 0.2s ease, outline-color 0.2s ease;
+}
+
+.editable-field:hover {
+  outline: 1px dashed #ccc;
+  outline-offset: 2px;
+}
+
+.editable-field:focus {
+  outline: 2px solid #0073aa;
+  outline-offset: 2px;
+  background-color: #f9f9f9;
+}
+
+/* Editable Field States */
+.editable-field--saving {
+  outline: 2px solid #0073aa;
+  outline-offset: 2px;
+  background-color: #f0f7ff;
+}
+
+.editable-field--saved {
+  animation: field-saved-flash 0.6s ease-out;
+}
+
+@keyframes field-saved-flash {
+  0% {
+    background-color: #d4edda;
+    outline: 2px solid #28a745;
+    outline-offset: 2px;
+  }
+  100% {
+    background-color: transparent;
+    outline: none;
+  }
+}
+
+/* Inline Save Indicator (per field) */
+.field-save-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Adjust Drupal core/Claro throbber when used inline */
+.field-save-indicator .ajax-progress,
+.field-save-indicator .ajax-progress-throbber,
+.field-save-indicator .ajax-progress--throbber {
+  margin: 0;
+  padding: 0;
+}
+
+/* Checkmark Icon */
+.field-save-indicator__checkmark {
+  display: inline-flex;
+  color: #28a745;
+  animation: checkmark-appear 0.3s ease-out;
+}
+
+.field-save-indicator__checkmark svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Error Icon */
+.field-save-indicator__error {
+  display: inline-flex;
+  color: #dc2626;
+}
+
+.field-save-indicator__error svg {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes checkmark-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Table cell editable fields need special handling for indicator */
+td.editable-field {
+  position: relative;
+}
+
+td.editable-field .field-save-indicator {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Card-level save indicator (legacy, hidden by default) */
+.save-indicator {
+  display: none !important;
+}

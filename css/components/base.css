@@ -1,0 +1,62 @@
+/**
+ * @file
+ * Base layout styles for AI Content Strategy.
+ */
+
+/* Main Container */
+.content-strategy-recommendations {
+  max-width: 1200px;
+  margin: 2em auto;
+  padding: 0 1em;
+}
+
+.content-strategy-description {
+  margin-bottom: 2em;
+  font-size: 1.1em;
+  color: #666;
+}
+
+/* Status Area */
+.content-strategy-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.status-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95em;
+}
+
+.status-item strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+.status-item:not(strong) {
+  color: #6b7280;
+}
+
+/* Actions */
+.content-strategy-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+/* Empty State */
+.empty-recommendations {
+  text-align: center;
+  padding: 3rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  color: #6b7280;
+}

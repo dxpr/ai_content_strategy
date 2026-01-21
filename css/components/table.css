@@ -1,0 +1,73 @@
+/**
+ * @file
+ * Content ideas table styles for AI Content Strategy.
+ */
+
+/* Content Ideas Table */
+.content-ideas-table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+}
+
+.content-ideas-table thead th {
+  text-align: left;
+  padding: 0.5rem;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.content-ideas-table thead .idea-actions-header {
+  width: 40px;
+  padding: 0;
+}
+
+.content-ideas-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+}
+
+.content-ideas-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.content-ideas-table tbody td {
+  padding: 0.75rem 0.5rem;
+}
+
+.content-ideas-table tbody td.idea-actions {
+  width: 40px;
+  padding: 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.content-ideas-table tbody td.idea-actions > * {
+  display: block;
+  margin: 0 auto 4px auto;
+}
+
+.content-ideas-table tbody td.idea-actions > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Implemented Row Styling */
+.content-ideas-table tbody tr.idea-implemented {
+  background-color: #f0fdf4;
+}
+
+.content-ideas-table tbody tr.idea-implemented .editable-field {
+  text-decoration: line-through;
+  color: #6b7280;
+}
+
+.content-ideas-table tbody tr.idea-implemented:hover {
+  background-color: #dcfce7;
+}
+
+/* Idea Content Cell */
+.idea-content-cell {
+  vertical-align: top;
+}

@@ -1,0 +1,82 @@
+/**
+ * @file
+ * Recommendation card styles for AI Content Strategy.
+ */
+
+/* Recommendations Grid */
+.recommendation-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media screen and (max-width: 768px) {
+  .recommendation-items {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Recommendation Cards */
+.recommendation-item {
+  background: white;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.recommendation-header h4 {
+  flex: 1;
+  margin: 0;
+}
+
+.recommendation-item p {
+  margin-bottom: 1rem;
+  color: #4a4a4a;
+}
+
+/* Recommendation Actions */
+.recommendation-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Priority Badges */
+.priority-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.priority-badge.high {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.priority-badge.medium {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+}
+
+.priority-badge.low {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #dcfce7;
+}

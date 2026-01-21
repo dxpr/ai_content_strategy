@@ -1,0 +1,82 @@
+/**
+ * @file
+ * Delete button styles for AI Content Strategy.
+ */
+
+/* Delete Idea Button */
+.delete-idea-link {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 25px;
+  height: 25px;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0;
+}
+
+.content-ideas-table tbody tr:hover .delete-idea-link {
+  opacity: 0.6;
+}
+
+.delete-idea-link:hover {
+  opacity: 1 !important;
+  background-color: #fee2e2;
+}
+
+.delete-idea-link svg {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  flex-shrink: 0;
+}
+
+.delete-idea-link:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+/* Delete Card Button (in card header) */
+.delete-card-link {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.delete-card-link:hover {
+  opacity: 1;
+  color: #991b1b;
+  background-color: #fee2e2;
+}
+
+.delete-card-link svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.delete-card-link:hover svg {
+  transform: scale(1.1);
+}
+
+.delete-card-link:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+  color: #dc2626;
+}

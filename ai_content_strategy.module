@@ -70,6 +70,7 @@ function ai_content_strategy_theme() {
       'variables' => [
         'name' => NULL,
         'class' => NULL,
+        'size' => NULL,
       ],
       'template' => 'components/icon',
     ],
@@ -132,33 +133,9 @@ function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$va
     }
   }
 
-  // Render templates for JavaScript use.
-  $renderer = \Drupal::service('renderer');
-
-  // Render icon templates.
-  $icons = [];
-  foreach (['trash', 'edit', 'checkmark', 'error'] as $icon_name) {
-    $icon_render = [
-      '#theme' => 'ai_content_strategy_icon',
-      '#name' => $icon_name,
-    ];
-    $icons[$icon_name] = $renderer->renderPlain($icon_render);
-  }
-
-  // Render link input template.
-  $link_input_render = [
-    '#theme' => 'ai_content_strategy_link_input',
-    '#current_link' => '',
-  ];
-  $link_input_template = $renderer->renderPlain($link_input_render);
-
-  // Add to JavaScript settings.
+  // Add JavaScript settings (icons now use CSS mask-image).
   $variables['#attached']['drupalSettings']['aiContentStrategy'] = [
     'buttonText' => $variables['button_text'],
-    'templates' => [
-      'icons' => $icons,
-      'linkInput' => (string) $link_input_template,
-    ],
     'translations' => [
       'addLink' => t('+ Add link'),
       'editLink' => t('Edit link'),
