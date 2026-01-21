@@ -57,8 +57,13 @@
   height: 25px;
 }
 
-/* Delete button icon using mask-image */
-.delete-idea-link .cs-icon,
+/* Delete idea button icon - fills the 25x25 button */
+.delete-idea-link .cs-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Delete card button icon */
 .delete-card-link .cs-icon {
   width: 18px;
   height: 18px;

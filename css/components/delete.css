@@ -29,11 +29,12 @@
   background-color: #fee2e2;
 }
 
+/* Legacy SVG support - can be removed when all icons use CSS mask-image */
 .delete-idea-link svg {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  min-height: 18px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   flex-shrink: 0;
 }
 
