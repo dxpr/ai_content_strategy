@@ -11,6 +11,5 @@ services:
     arguments:
       - '@ai_content_strategy.recommendation_storage'
       - '@entity_type.manager'
-      - '@date.formatter'
     tags:
       - { name: drush.command }
