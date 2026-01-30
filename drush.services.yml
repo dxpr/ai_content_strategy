@@ -3,6 +3,7 @@ services:
     class: Drupal\ai_content_strategy\Drush\Commands\SitemapCommands
     arguments:
       - '@ai_content_strategy.content_analyzer'
+      - '@entity_type.manager'
     tags:
       - { name: drush.command }
 
