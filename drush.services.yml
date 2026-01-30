@@ -1,0 +1,16 @@
+services:
+  ai_content_strategy.commands.sitemap:
+    class: Drupal\ai_content_strategy\Drush\Commands\SitemapCommands
+    arguments:
+      - '@ai_content_strategy.content_analyzer'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.strategy:
+    class: Drupal\ai_content_strategy\Drush\Commands\StrategyCommands
+    arguments:
+      - '@ai_content_strategy.recommendation_storage'
+      - '@entity_type.manager'
+      - '@date.formatter'
+    tags:
+      - { name: drush.command }
