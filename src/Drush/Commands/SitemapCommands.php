@@ -39,8 +39,27 @@ class SitemapCommands extends DrushCommands {
    * Gets sitemap URLs with content statistics as JSON.
    */
   #[CLI\Command(name: 'acs:sitemap', aliases: ['acs-s'])]
-  #[CLI\Help(description: 'Gets sitemap URLs and content statistics as JSON.')]
-  #[CLI\Usage(name: 'drush acs:sitemap', description: 'Get sitemap with stats')]
+  #[CLI\Help(
+    description: 'Gets sitemap URLs and content statistics as JSON.',
+    synopsis: <<<'END'
+
+## Important: Base URL
+
+When running via Drush CLI, you must specify the site URL with -l:
+
+```bash
+drush acs:sitemap -l https://your-site.com
+```
+
+Without -l, Drupal may use the wrong base URL for fetching the sitemap.
+
+## Output
+
+Returns JSON with sitemap URLs and content statistics by type.
+
+END
+  )]
+  #[CLI\Usage(name: 'drush acs:sitemap -l https://example.com', description: 'Get sitemap (specify site URL)')]
   public function getSitemap(): void {
     // Get sitemap URLs.
     $sitemapResult = $this->contentAnalyzer->getSitemapUrls();
@@ -71,6 +90,7 @@ class SitemapCommands extends DrushCommands {
       $this->output()->writeln(json_encode([
         'success' => FALSE,
         'error' => $sitemapResult['error'],
+        'warning' => 'Sitemap unavailable. Content strategy recommendations may be inaccurate. Ensure sitemap is configured and use -l option to specify site URL.',
         'stats' => [
           'total_nodes' => $totalNodes,
           'content_types' => $contentTypes,
@@ -80,15 +100,27 @@ class SitemapCommands extends DrushCommands {
       return;
     }
 
-    $this->output()->writeln(json_encode([
+    $urlCount = count($sitemapResult['urls']);
+    $warning = NULL;
+    if ($urlCount < 5) {
+      $warning = "Sitemap contains only $urlCount URLs. Content strategy recommendations may be incomplete. Ensure your sitemap is properly configured.";
+    }
+
+    $output = [
       'success' => TRUE,
       'stats' => [
-        'total_urls' => count($sitemapResult['urls']),
+        'total_urls' => $urlCount,
         'total_nodes' => $totalNodes,
         'content_types' => $contentTypes,
       ],
       'urls' => $sitemapResult['urls'],
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    ];
+
+    if ($warning) {
+      $output['warning'] = $warning;
+    }
+
+    $this->output()->writeln(json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
   }
 
 }

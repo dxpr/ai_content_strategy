@@ -208,12 +208,21 @@ END
       ];
     }
 
-    $this->output()->writeln(json_encode([
+    $pagesAnalyzed = $storedData['pages_analyzed'] ?? NULL;
+
+    $output = [
       'success' => TRUE,
       'generated_at' => $timestamp ? date('c', $timestamp) : NULL,
-      'pages_analyzed' => $storedData['pages_analyzed'] ?? NULL,
+      'pages_analyzed' => $pagesAnalyzed,
       'categories' => $categories,
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    ];
+
+    // Add warning if sitemap had insufficient URLs.
+    if ($pagesAnalyzed !== NULL && $pagesAnalyzed < 5) {
+      $output['warning'] = "Report based on only $pagesAnalyzed pages. Recommendations may be incomplete. Ensure your sitemap is properly configured.";
+    }
+
+    $this->output()->writeln(json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
   }
 
 }
