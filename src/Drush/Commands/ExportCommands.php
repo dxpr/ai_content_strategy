@@ -131,7 +131,7 @@ class ExportCommands extends AcsCommandsBase {
       }
     }
 
-    return implode("\n", $rows) . "\n";
+    return implode("\n", $rows);
   }
 
   /**
