@@ -55,6 +55,18 @@ $DRUSH en ai_content_strategy --yes --quiet
 # Rebuild cache after enabling module.
 $DRUSH cr --quiet
 
+# Create a static sitemap.xml for acs:sitemap happy-path test.
+cat > "$SITE_DIR/web/sitemap.xml" << 'SITEMAP'
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>http://localhost:8888/</loc></url>
+  <url><loc>http://localhost:8888/node/1</loc></url>
+  <url><loc>http://localhost:8888/about</loc></url>
+  <url><loc>http://localhost:8888/contact</loc></url>
+  <url><loc>http://localhost:8888/blog</loc></url>
+</urlset>
+SITEMAP
+
 # Start PHP built-in web server for acs:sitemap tests.
 echo "Starting PHP web server on localhost:8888..."
 php -S localhost:8888 -t "$SITE_DIR/web" > /dev/null 2>&1 &

@@ -55,12 +55,11 @@ assert_has "card not found returns error" "not found" "$output"
 
 section "acs:sitemap"
 
-# Sitemap requires a sitemap module (e.g., simple_sitemap) to generate
-# /sitemap.xml. Without one, acs:sitemap reports a fetch error. This test
-# verifies the command reaches the HTTP server and handles the response.
-output=$($DRUSH acs:sitemap -l http://localhost:8888 2>&1 || true)
-assert_has "sitemap reaches server and returns structured response" "success:" "$output"
-# Verify the error message confirms HTTP connectivity (not a cURL 7 failure).
-assert_has "sitemap fetched from server" "sitemap.xml" "$output"
+# The E2E runner creates a static sitemap.xml with 5 URLs.
+output=$($DRUSH acs:sitemap -l http://localhost:8888 2>&1)
+assert_has "sitemap returns success" "success: true" "$output"
+assert_has "sitemap has total_urls" "total_urls: 5" "$output"
+assert_has "sitemap has content_types" "content_types" "$output"
+assert_has "sitemap contains URL" "localhost:8888" "$output"
 
 print_summary

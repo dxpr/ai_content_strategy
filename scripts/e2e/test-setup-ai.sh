@@ -27,7 +27,7 @@ output=$($DRUSH acs:setup-ai --check 2>&1)
 assert_has "check shows up to date" "up to date" "$output"
 
 # Invalid host.
-output=$($DRUSH acs:setup-ai --host=invalid 2>&1)
+output=$($DRUSH acs:setup-ai --host=invalid 2>&1 || true)
 assert_has "invalid host returns error" "Invalid --host" "$output"
 
 # Host filtering.

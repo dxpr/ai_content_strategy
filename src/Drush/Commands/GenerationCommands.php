@@ -15,6 +15,7 @@ use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Uuid\UuidInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
 
@@ -32,6 +33,7 @@ class GenerationCommands extends AcsCommandsBase {
     protected readonly PromptJsonDecoderInterface $promptJsonDecoder,
     protected readonly CategoryPromptBuilder $categoryPromptBuilder,
     protected readonly UuidInterface $uuid,
+    protected readonly ConfigFactoryInterface $configFactory,
   ) {
     parent::__construct();
   }
@@ -289,84 +291,13 @@ class GenerationCommands extends AcsCommandsBase {
   }
 
   /**
-   * Regenerates a single category using category-specific AI prompt.
-   *
-   * Makes one AI call for the requested category only, instead of
-   * generating all categories and discarding the rest.
-   *
-   * @param \Drupal\ai_content_strategy\Entity\RecommendationCategory $category
-   *   The category entity.
-   * @param string $section
-   *   The category machine name.
-   *
-   * @return string
-   *   YAML response.
+   * Generates cards for a single category via AI and replaces existing.
    */
   protected function regenerateCategoryViaPrompt(
     RecommendationCategory $category,
     string $section,
   ): string {
-    $site_structure = $this->contentAnalyzer->getSiteStructure();
-    $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
-
-    $prompts = $this->categoryPromptBuilder->buildAddMorePrompts(
-      $category,
-      '',
-    );
-
-    $front_content = $site_structure['homepage']['content'] ?? '';
-    $menu_items = $site_structure['primary_menu'] ?? [];
-    $menu_formatted = [];
-    foreach ($menu_items as $item) {
-      $menu_formatted[] = '- ' . $item['title'] . (!empty($item['url']) ? ' (' . $item['url'] . ')' : '');
-    }
-
-    $url_formatted = [];
-    foreach (array_slice($sitemap_urls['urls'] ?? [], 0, 50) as $url) {
-      $url_formatted[] = '- ' . $url;
-    }
-
-    $user_prompt = strtr($prompts['user'], [
-      '{homepage_title}' => $site_structure['homepage']['title'] ?? '',
-      '{homepage_content}' => $front_content,
-      '{primary_menu}' => implode("\n", $menu_formatted),
-      '{urls}' => implode("\n", $url_formatted),
-      '{existing_recommendations}' => '',
-      '{{ homepage.title }}' => $site_structure['homepage']['title'] ?? '',
-      '{{ homepage.content }}' => $front_content,
-      '{{ navigation }}' => implode("\n", $menu_formatted),
-      '{{ content_urls }}' => implode("\n", $url_formatted),
-      '{{ existing_recommendations }}' => '',
-    ]);
-
-    $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
-    $provider = $this->aiProvider->createInstance($defaults['provider_id']);
-
-    $messages = new ChatInput([
-      new ChatMessage('system', $prompts['system']),
-      new ChatMessage('user', $user_prompt),
-    ]);
-
-    $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
-    $data = $this->promptJsonDecoder->decode($chat_response->getNormalized());
-
-    if (!isset($data[$section])) {
-      return $this->error('AI returned invalid response format.', ['Expected key: ' . $section]);
-    }
-
-    $new_cards = $data[$section];
-
-    // Ensure UUIDs.
-    $new_cards = array_map(function ($card) {
-      if (!isset($card['uuid'])) {
-        $card['uuid'] = $this->uuid->generate();
-      }
-      if (isset($card['content_ideas'])) {
-        $card['content_ideas'] = $this->storage
-          ->normalizeIdeasWithUuids($card['content_ideas']);
-      }
-      return $card;
-    }, $new_cards);
+    $new_cards = $this->callCategoryAi($category, $section, '');
 
     // Replace (not append) this category.
     $this->storage->replaceSection($section, $new_cards);
@@ -384,7 +315,6 @@ class GenerationCommands extends AcsCommandsBase {
    * Generates additional recommendations for a category (appends).
    */
   protected function generateForCategory(string $section, bool $dryRun = FALSE): string {
-    // Load the category entity.
     $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
     $category = $category_storage->load($section);
 
@@ -410,17 +340,12 @@ class GenerationCommands extends AcsCommandsBase {
     }
 
     try {
-      // Get site data for context.
-      $site_structure = $this->contentAnalyzer->getSiteStructure();
-      $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
-
-      // Get existing recommendations for context.
+      // Build existing recommendations context.
       $existing_recommendations = '';
       $stored = $this->storage->getStoredData();
       if ($stored && isset($stored['data'][$section])) {
-        $existing = $stored['data'][$section];
         $formatted = [];
-        foreach ($existing as $item) {
+        foreach ($stored['data'][$section] as $item) {
           $title = $item['title'] ?? '';
           $desc = $item['description'] ?? '';
           if ($title) {
@@ -430,67 +355,11 @@ class GenerationCommands extends AcsCommandsBase {
         $existing_recommendations = implode("\n", $formatted);
       }
 
-      // Build prompts.
-      $prompts = $this->categoryPromptBuilder->buildAddMorePrompts(
+      $new_cards = $this->callCategoryAi(
         $category,
-        $existing_recommendations
+        $section,
+        $existing_recommendations,
       );
-
-      // Prepare context for token replacement.
-      $front_content = $site_structure['homepage']['content'] ?? '';
-      $menu_items = $site_structure['primary_menu'] ?? [];
-      $menu_formatted = [];
-      foreach ($menu_items as $item) {
-        $menu_formatted[] = '- ' . $item['title'] . (!empty($item['url']) ? ' (' . $item['url'] . ')' : '');
-      }
-
-      $url_formatted = [];
-      foreach (array_slice($sitemap_urls['urls'] ?? [], 0, 50) as $url) {
-        $url_formatted[] = '- ' . $url;
-      }
-
-      $user_prompt = strtr($prompts['user'], [
-        '{homepage_title}' => $site_structure['homepage']['title'] ?? '',
-        '{homepage_content}' => $front_content,
-        '{primary_menu}' => implode("\n", $menu_formatted),
-        '{urls}' => implode("\n", $url_formatted),
-        '{existing_recommendations}' => $existing_recommendations,
-        '{{ homepage.title }}' => $site_structure['homepage']['title'] ?? '',
-        '{{ homepage.content }}' => $front_content,
-        '{{ navigation }}' => implode("\n", $menu_formatted),
-        '{{ content_urls }}' => implode("\n", $url_formatted),
-        '{{ existing_recommendations }}' => $existing_recommendations,
-      ]);
-
-      // Get default provider and model.
-      $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
-      $provider = $this->aiProvider->createInstance($defaults['provider_id']);
-
-      $messages = new ChatInput([
-        new ChatMessage('system', $prompts['system']),
-        new ChatMessage('user', $user_prompt),
-      ]);
-
-      $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
-      $data = $this->promptJsonDecoder->decode($chat_response->getNormalized());
-
-      if (!isset($data[$section])) {
-        return $this->error('AI returned invalid response format.', ['Expected key: ' . $section]);
-      }
-
-      $new_cards = $data[$section];
-
-      // Ensure UUIDs.
-      $new_cards = array_map(function ($card) {
-        if (!isset($card['uuid'])) {
-          $card['uuid'] = $this->uuid->generate();
-        }
-        if (isset($card['content_ideas'])) {
-          $card['content_ideas'] = $this->storage
-            ->normalizeIdeasWithUuids($card['content_ideas']);
-        }
-        return $card;
-      }, $new_cards);
 
       // Add to storage.
       $this->storage->addToSection($section, $new_cards);
@@ -507,6 +376,126 @@ class GenerationCommands extends AcsCommandsBase {
     catch (\Exception $e) {
       return $this->error('Failed to generate recommendations.', [$e->getMessage()]);
     }
+  }
+
+  /**
+   * Calls the AI API for a single category and returns processed cards.
+   *
+   * Shared by both regenerateCategoryViaPrompt() and generateForCategory()
+   * to eliminate code duplication.
+   *
+   * @param \Drupal\ai_content_strategy\Entity\RecommendationCategory $category
+   *   The category entity.
+   * @param string $section
+   *   The category machine name.
+   * @param string $existing_recommendations
+   *   Formatted string of existing recommendations for context.
+   *
+   * @return array
+   *   Processed cards with UUIDs.
+   */
+  protected function callCategoryAi(
+    RecommendationCategory $category,
+    string $section,
+    string $existing_recommendations,
+  ): array {
+    $site_structure = $this->contentAnalyzer->getSiteStructure();
+    $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
+
+    $prompts = $this->categoryPromptBuilder->buildAddMorePrompts(
+      $category,
+      $existing_recommendations,
+    );
+
+    // Apply global system prompt (same as StrategyGenerator).
+    $global_prompt = $this->configFactory
+      ->get('ai_content_strategy.settings')
+      ->get('system_prompt') ?? '';
+    $system_message = $prompts['system'];
+    if (!empty($global_prompt)) {
+      $system_message = $global_prompt . "\n\n" . $system_message;
+    }
+
+    $user_prompt = $this->buildUserPrompt(
+      $prompts['user'],
+      $site_structure,
+      $sitemap_urls,
+      $existing_recommendations,
+    );
+
+    $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
+    $provider = $this->aiProvider->createInstance($defaults['provider_id']);
+
+    $messages = new ChatInput([
+      new ChatMessage('system', $system_message),
+      new ChatMessage('user', $user_prompt),
+    ]);
+
+    $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
+    $data = $this->promptJsonDecoder->decode($chat_response->getNormalized());
+
+    if (!isset($data[$section])) {
+      throw new \RuntimeException('AI returned invalid response format. Expected key: ' . $section);
+    }
+
+    // Ensure UUIDs on all cards and ideas.
+    return array_map(function ($card) {
+      if (!isset($card['uuid'])) {
+        $card['uuid'] = $this->uuid->generate();
+      }
+      if (isset($card['content_ideas'])) {
+        $card['content_ideas'] = $this->storage
+          ->normalizeIdeasWithUuids($card['content_ideas']);
+      }
+      return $card;
+    }, $data[$section]);
+  }
+
+  /**
+   * Builds the user prompt with site context token replacement.
+   *
+   * @param string $template
+   *   The prompt template from CategoryPromptBuilder.
+   * @param array $site_structure
+   *   Site structure data.
+   * @param array $sitemap_urls
+   *   Sitemap URL data.
+   * @param string $existing_recommendations
+   *   Formatted existing recommendations.
+   *
+   * @return string
+   *   The final user prompt.
+   */
+  protected function buildUserPrompt(
+    string $template,
+    array $site_structure,
+    array $sitemap_urls,
+    string $existing_recommendations,
+  ): string {
+    $front_content = $site_structure['homepage']['content'] ?? '';
+    $menu_items = $site_structure['primary_menu'] ?? [];
+    $menu_formatted = [];
+    foreach ($menu_items as $item) {
+      $menu_formatted[] = '- ' . $item['title'] . (!empty($item['url']) ? ' (' . $item['url'] . ')' : '');
+    }
+
+    $url_formatted = [];
+    foreach (array_slice($sitemap_urls['urls'] ?? [], 0, 50) as $url) {
+      $url_formatted[] = '- ' . $url;
+    }
+
+    return strtr($template, [
+      '{homepage_title}' => $site_structure['homepage']['title'] ?? '',
+      '{homepage_content}' => $front_content,
+      '{primary_menu}' => implode("\n", $menu_formatted),
+      '{urls}' => implode("\n", $url_formatted),
+      '{existing_recommendations}' => $existing_recommendations,
+      '{{ homepage.title }}' => $site_structure['homepage']['title'] ?? '',
+      '{{ homepage.content }}' => $front_content,
+      '{{ navigation }}' => implode("\n", $menu_formatted),
+      '{{ content_urls }}' => implode("\n", $url_formatted),
+      '{{ existing_recommendations }}' => $existing_recommendations,
+    ]);
   }
 
 }

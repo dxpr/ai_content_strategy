@@ -42,5 +42,5 @@ jobs:
       run: |
         echo "## Drush E2E Test Results" >> "$GITHUB_STEP_SUMMARY"
         echo '```' >> "$GITHUB_STEP_SUMMARY"
-        grep -E "(PASS|FAIL|Results|Running:|Completed|FAILED)" /tmp/e2e-output.txt >> "$GITHUB_STEP_SUMMARY" || true
+        grep -E "(Results:|Running:|Completed|FAILED:)" /tmp/e2e-output.txt >> "$GITHUB_STEP_SUMMARY" || true
         echo '```' >> "$GITHUB_STEP_SUMMARY"

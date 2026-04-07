@@ -55,6 +55,7 @@ services:
       - '@ai.prompt_json_decode'
       - '@ai_content_strategy.category_prompt_builder'
       - '@uuid'
+      - '@config.factory'
     tags:
       - { name: drush.command }
 
