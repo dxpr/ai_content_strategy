@@ -9,7 +9,6 @@ use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drush commands for reading AI Content Strategy reports.
@@ -24,14 +23,6 @@ class ReportCommands extends AcsCommandsBase {
     parent::__construct();
   }
 
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('ai_content_strategy.recommendation_storage'),
-      $container->get('ai_content_strategy.content_analyzer'),
-      $container->get('entity_type.manager'),
-    );
-  }
-
   /**
    * Gets the full AI content strategy report.
    */
@@ -43,6 +34,8 @@ class ReportCommands extends AcsCommandsBase {
   #[CLI\Usage(name: 'drush acs:report --category=content_gaps', description: 'Show only content gaps')]
   #[CLI\Usage(name: 'drush acs:report --priority=high', description: 'Show only high priority recommendations')]
   public function report(array $options = ['category' => '', 'priority' => '']): string {
+    $this->switchToAdmin();
+
     $stored = $this->storage->getStoredData();
     if (!$stored || empty($stored['data'])) {
       return $this->error('No report generated yet.', ['Use acs:generate to create recommendations.']);
@@ -106,6 +99,8 @@ class ReportCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] View a single recommendation card with all its ideas.')]
   #[CLI\Usage(name: 'drush acs:report:card content_gaps UUID', description: 'View a specific card')]
   public function reportCard(string $section, string $uuid): string {
+    $this->switchToAdmin();
+
     $card = $this->storage->getCardByUuid($section, $uuid);
     if (!$card) {
       return $this->notFound('Card', $uuid, 'acs:report');
@@ -121,6 +116,8 @@ class ReportCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Last-run timestamp, pages analyzed, active category count.')]
   #[CLI\Usage(name: 'drush acs:report:status', description: 'Show report status')]
   public function reportStatus(): string {
+    $this->switchToAdmin();
+
     $stored = $this->storage->getStoredData();
 
     $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
@@ -155,6 +152,8 @@ class ReportCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Site structure: sitemap URLs with content type statistics.')]
   #[CLI\Usage(name: 'drush acs:sitemap -l https://example.com', description: 'Get sitemap data (requires -l for base URL)')]
   public function sitemap(): string {
+    $this->switchToAdmin();
+
     $sitemap_data = $this->contentAnalyzer->getSitemapUrls();
 
     if (!empty($sitemap_data['error'])) {

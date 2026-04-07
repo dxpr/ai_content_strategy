@@ -6,7 +6,6 @@ namespace Drupal\ai_content_strategy\Drush\Commands;
 
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drush commands for managing content ideas within recommendation cards.
@@ -19,12 +18,6 @@ class IdeaCommands extends AcsCommandsBase {
     parent::__construct();
   }
 
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('ai_content_strategy.recommendation_storage'),
-    );
-  }
-
   /**
    * Edits an idea's text.
    */
@@ -33,9 +26,17 @@ class IdeaCommands extends AcsCommandsBase {
   #[CLI\Argument(name: 'uuid', description: 'Card UUID')]
   #[CLI\Argument(name: 'idea_uuid', description: 'Idea UUID')]
   #[CLI\Option(name: 'text', description: 'New idea text')]
+  #[CLI\Option(name: 'dry-run', description: 'Validate without saving')]
   #[CLI\Help(description: '[YAML] Edit a content idea text.')]
   #[CLI\Usage(name: 'drush acs:idea:edit content_gaps CARD-UUID IDEA-UUID --text="New idea"', description: 'Update idea text')]
-  public function editIdea(string $section, string $uuid, string $idea_uuid, array $options = ['text' => '']): string {
+  public function editIdea(
+    string $section,
+    string $uuid,
+    string $idea_uuid,
+    array $options = ['text' => '', 'dry-run' => FALSE],
+  ): string {
+    $this->switchToAdmin();
+
     if (empty($options['text'])) {
       return $this->noChanges();
     }
@@ -49,6 +50,13 @@ class IdeaCommands extends AcsCommandsBase {
     $idea_index = $this->storage->findIdeaIndexByUuid($section, $uuid, $idea_uuid);
     if ($idea_index === NULL) {
       return $this->notFound('Idea', $idea_uuid, 'acs:report:card');
+    }
+
+    if ((bool) $options['dry-run']) {
+      return $this->success('Dry run: idea would be updated.', [
+        'dry_run' => TRUE,
+        'idea' => ['uuid' => $idea_uuid, 'text' => $options['text']],
+      ]);
     }
 
     try {
@@ -74,10 +82,22 @@ class IdeaCommands extends AcsCommandsBase {
   #[CLI\Argument(name: 'idea_uuid', description: 'Idea UUID')]
   #[CLI\Option(name: 'link', description: 'URL for the implemented content')]
   #[CLI\Option(name: 'undo', description: 'Mark idea as not implemented')]
+  #[CLI\Option(name: 'dry-run', description: 'Validate without saving')]
   #[CLI\Help(description: '[YAML] Mark idea as implemented, optionally with a URL.')]
   #[CLI\Usage(name: 'drush acs:idea:implement section CARD IDEA --link=https://example.com/page', description: 'Mark as implemented with link')]
   #[CLI\Usage(name: 'drush acs:idea:implement section CARD IDEA --undo', description: 'Undo implementation')]
-  public function implementIdea(string $section, string $uuid, string $idea_uuid, array $options = ['link' => '', 'undo' => FALSE]): string {
+  public function implementIdea(
+    string $section,
+    string $uuid,
+    string $idea_uuid,
+    array $options = [
+      'link' => '',
+      'undo' => FALSE,
+      'dry-run' => FALSE,
+    ],
+  ): string {
+    $this->switchToAdmin();
+
     $card = $this->storage->getCardByUuid($section, $uuid);
     if (!$card) {
       return $this->notFound('Card', $uuid, 'acs:report');
@@ -86,6 +106,14 @@ class IdeaCommands extends AcsCommandsBase {
     $idea_index = $this->storage->findIdeaIndexByUuid($section, $uuid, $idea_uuid);
     if ($idea_index === NULL) {
       return $this->notFound('Idea', $idea_uuid, 'acs:report:card');
+    }
+
+    if ((bool) $options['dry-run']) {
+      $action = (bool) $options['undo'] ? 'marked as not implemented' : 'marked as implemented';
+      return $this->success(sprintf('Dry run: idea would be %s.', $action), [
+        'dry_run' => TRUE,
+        'uuid' => $idea_uuid,
+      ]);
     }
 
     try {
@@ -121,6 +149,8 @@ class IdeaCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Delete a single content idea.')]
   #[CLI\Usage(name: 'drush acs:idea:delete section CARD IDEA', description: 'Delete an idea')]
   public function deleteIdea(string $section, string $uuid, string $idea_uuid, array $options = ['dry-run' => FALSE]): string {
+    $this->switchToAdmin();
+
     $card = $this->storage->getCardByUuid($section, $uuid);
     if (!$card) {
       return $this->notFound('Card', $uuid, 'acs:report');

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\ai_content_strategy\Drush\Commands;
 
-use Drush\Attributes as CLI;
 use Drush\Commands\DrushCommands;
 use Symfony\Component\Yaml\Yaml;
 
@@ -18,21 +17,12 @@ use Symfony\Component\Yaml\Yaml;
 abstract class AcsCommandsBase extends DrushCommands {
 
   /**
-   * Whether we've already switched to admin.
-   */
-  protected static bool $switchedToAdmin = FALSE;
-
-  /**
-   * Pre-command hook to switch to admin user.
+   * Switches to admin user for the duration of the Drush process.
    *
-   * Runs before any acs:* command to ensure full permissions.
+   * Does not call switchBack() — relies on process termination after
+   * command execution.
    */
-  #[CLI\Hook(type: 'pre-command', target: '*')]
-  public function preCommandSwitchToAdmin(): void {
-    if (static::$switchedToAdmin) {
-      return;
-    }
-
+  protected function switchToAdmin(): void {
     // @phpstan-ignore-next-line
     if (!\Drupal::hasContainer()) {
       return;
@@ -49,12 +39,43 @@ abstract class AcsCommandsBase extends DrushCommands {
 
       if ($admin) {
         $account_switcher->switchTo($admin);
-        static::$switchedToAdmin = TRUE;
       }
     }
     catch (\Exception $e) {
       // Silently fail if services aren't available yet.
     }
+  }
+
+  /**
+   * Gets the module path.
+   */
+  protected function getModulePath(): ?string {
+    try {
+      // @phpstan-ignore-next-line
+      $path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy');
+      return $path ? DRUPAL_ROOT . '/' . $path : NULL;
+    }
+    catch (\Exception $e) {
+      return NULL;
+    }
+  }
+
+  /**
+   * Gets the Composer project root.
+   */
+  protected function getProjectRoot(): ?string {
+    $dir = defined('DRUPAL_ROOT') ? DRUPAL_ROOT : getcwd();
+    for ($i = 0; $i < 5; $i++) {
+      if (file_exists($dir . '/composer.json')) {
+        return $dir;
+      }
+      $parent = dirname($dir);
+      if ($parent === $dir) {
+        break;
+      }
+      $dir = $parent;
+    }
+    return NULL;
   }
 
   /**

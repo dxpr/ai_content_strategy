@@ -58,3 +58,8 @@ services:
       - '@ai_content_strategy.category_prompt_builder'
     tags:
       - { name: drush.command }
+
+  ai_content_strategy.commands.setup:
+    class: Drupal\ai_content_strategy\Drush\Commands\SetupCommands
+    tags:
+      - { name: drush.command }

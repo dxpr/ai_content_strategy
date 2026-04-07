@@ -18,7 +18,6 @@ use Drupal\Component\Serialization\Json;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drush commands for generating AI content strategy recommendations.
@@ -39,20 +38,6 @@ class GenerationCommands extends AcsCommandsBase {
     parent::__construct();
   }
 
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('ai_content_strategy.strategy_generator'),
-      $container->get('ai_content_strategy.recommendation_storage'),
-      $container->get('ai_content_strategy.category_schema_builder'),
-      $container->get('ai_content_strategy.content_analyzer'),
-      $container->get('entity_type.manager'),
-      $container->get('ai.provider'),
-      $container->get('ai.prompt_json_decode'),
-      $container->get('config.factory'),
-      $container->get('ai_content_strategy.category_prompt_builder'),
-    );
-  }
-
   /**
    * Checks AI provider health and configuration.
    */
@@ -60,6 +45,8 @@ class GenerationCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Check AI provider configuration. Returns success/error with provider details.')]
   #[CLI\Usage(name: 'drush acs:health', description: 'Check if AI is configured')]
   public function health(): string {
+    $this->switchToAdmin();
+
     $error = $this->strategyGenerator->checkHealth();
     if ($error) {
       return $this->error('AI provider not ready.', [(string) $error]);
@@ -82,6 +69,8 @@ class GenerationCommands extends AcsCommandsBase {
   #[CLI\Usage(name: 'drush acs:generate -l https://example.com', description: 'Generate all recommendations')]
   #[CLI\Usage(name: 'drush acs:generate --category=content_gaps -l https://example.com', description: 'Generate for one category')]
   public function generate(array $options = ['category' => '']): string {
+    $this->switchToAdmin();
+
     // If a specific category is requested, delegate to addMore logic.
     if (!empty($options['category'])) {
       return $this->generateForCategory($options['category']);
@@ -131,6 +120,8 @@ class GenerationCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Generate 5 more content ideas for a specific card.')]
   #[CLI\Usage(name: 'drush acs:generate:more content_gaps UUID -l https://example.com', description: 'Generate more ideas for a card')]
   public function generateMore(string $section, string $uuid): string {
+    $this->switchToAdmin();
+
     $card = $this->storage->getCardByUuid($section, $uuid);
     if (!$card) {
       return $this->notFound('Card', $uuid, 'acs:report');
@@ -197,6 +188,8 @@ class GenerationCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Add more recommendation cards to a category.')]
   #[CLI\Usage(name: 'drush acs:generate:add authority_topics -l https://example.com', description: 'Add more cards to a category')]
   public function generateAdd(string $section): string {
+    $this->switchToAdmin();
+
     return $this->generateForCategory($section);
   }
 

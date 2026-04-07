@@ -7,7 +7,6 @@ namespace Drupal\ai_content_strategy\Drush\Commands;
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drush commands for managing recommendation categories.
@@ -20,12 +19,6 @@ class CategoryCommands extends AcsCommandsBase {
     parent::__construct();
   }
 
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('entity_type.manager'),
-    );
-  }
-
   /**
    * Lists all recommendation categories.
    */
@@ -33,6 +26,8 @@ class CategoryCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] List all categories with status, weight, and instruction preview.')]
   #[CLI\Usage(name: 'drush acs:category:list', description: 'List all categories')]
   public function listCategories(): string {
+    $this->switchToAdmin();
+
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
     $categories = $storage->loadMultiple();
 
@@ -66,6 +61,8 @@ class CategoryCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Full detail for a single category.')]
   #[CLI\Usage(name: 'drush acs:category:get content_gaps', description: 'Get category details')]
   public function getCategory(string $id): string {
+    $this->switchToAdmin();
+
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
     $category = $storage->load($id);
 
@@ -109,6 +106,8 @@ class CategoryCommands extends AcsCommandsBase {
       'dry-run' => FALSE,
     ],
   ): string {
+    $this->switchToAdmin();
+
     // Validate ID format.
     if (!preg_match('/^[a-z][a-z0-9_]*$/', $id)) {
       return $this->error('Invalid ID format.', ['ID must contain only lowercase letters, numbers, and underscores, and start with a letter.']);
@@ -179,6 +178,8 @@ class CategoryCommands extends AcsCommandsBase {
       'dry-run' => FALSE,
     ],
   ): string {
+    $this->switchToAdmin();
+
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
     $category = $storage->load($id);
 
@@ -242,6 +243,8 @@ class CategoryCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] Delete a category.')]
   #[CLI\Usage(name: 'drush acs:category:delete seasonal', description: 'Delete a category')]
   public function deleteCategory(string $id, array $options = ['dry-run' => FALSE]): string {
+    $this->switchToAdmin();
+
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
     $category = $storage->load($id);
 

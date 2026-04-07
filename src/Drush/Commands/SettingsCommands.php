@@ -6,7 +6,6 @@ namespace Drupal\ai_content_strategy\Drush\Commands;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drush commands for managing AI Content Strategy settings.
@@ -19,12 +18,6 @@ class SettingsCommands extends AcsCommandsBase {
     parent::__construct();
   }
 
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('config.factory'),
-    );
-  }
-
   /**
    * Gets current global settings.
    */
@@ -32,6 +25,8 @@ class SettingsCommands extends AcsCommandsBase {
   #[CLI\Help(description: '[YAML] View current global settings (system prompt).')]
   #[CLI\Usage(name: 'drush acs:settings:get', description: 'View settings')]
   public function getSettings(): string {
+    $this->switchToAdmin();
+
     $config = $this->configFactory->get('ai_content_strategy.settings');
 
     return $this->success('Settings retrieved.', [
@@ -51,6 +46,8 @@ class SettingsCommands extends AcsCommandsBase {
   #[CLI\Usage(name: 'drush acs:settings:set --system-prompt="You are an expert content strategist..."', description: 'Update system prompt')]
   #[CLI\Usage(name: 'drush acs:settings:set --system-prompt="$(cat prompt.txt)"', description: 'Load prompt from file')]
   public function setSettings(array $options = ['system-prompt' => '', 'dry-run' => FALSE]): string {
+    $this->switchToAdmin();
+
     if (empty($options['system-prompt'])) {
       return $this->noChanges();
     }

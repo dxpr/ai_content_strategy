@@ -1,0 +1,4 @@
+display_name: "AI Content Strategy"
+description: "Generate and manage AI content strategy recommendations via Drush CLI — analyze content gaps, curate ideas, export reports."
+default_prompt: "Show the current content strategy report and list configured categories."
+allow_implicit_invocation: true

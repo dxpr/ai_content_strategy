@@ -8,7 +8,6 @@ use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -21,13 +20,6 @@ class ExportCommands extends AcsCommandsBase {
     protected readonly EntityTypeManagerInterface $entityTypeManager,
   ) {
     parent::__construct();
-  }
-
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('ai_content_strategy.recommendation_storage'),
-      $container->get('entity_type.manager'),
-    );
   }
 
   /**
@@ -43,6 +35,8 @@ class ExportCommands extends AcsCommandsBase {
   #[CLI\Usage(name: 'drush acs:export --format=csv --file=export.csv', description: 'Export as CSV to file')]
   #[CLI\Usage(name: 'drush acs:export --format=json | jq .', description: 'Pipe JSON to jq')]
   public function export(array $options = ['format' => 'yaml', 'category' => '', 'file' => '']): string {
+    $this->switchToAdmin();
+
     $stored = $this->storage->getStoredData();
     if (!$stored || empty($stored['data'])) {
       return $this->error('No recommendations to export.', ['Use acs:generate to create recommendations first.']);

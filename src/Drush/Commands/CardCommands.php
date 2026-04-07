@@ -6,7 +6,6 @@ namespace Drupal\ai_content_strategy\Drush\Commands;
 
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drush\Attributes as CLI;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drush commands for managing recommendation cards.
@@ -19,12 +18,6 @@ class CardCommands extends AcsCommandsBase {
     parent::__construct();
   }
 
-  public static function create(ContainerInterface $container): self {
-    return new self(
-      $container->get('ai_content_strategy.recommendation_storage'),
-    );
-  }
-
   /**
    * Edits a recommendation card's title and/or description.
    */
@@ -33,9 +26,21 @@ class CardCommands extends AcsCommandsBase {
   #[CLI\Argument(name: 'uuid', description: 'Card UUID')]
   #[CLI\Option(name: 'title', description: 'New card title')]
   #[CLI\Option(name: 'description', description: 'New card description')]
+  #[CLI\Option(name: 'dry-run', description: 'Validate without saving')]
   #[CLI\Help(description: '[YAML] Edit a recommendation card title and/or description.')]
   #[CLI\Usage(name: 'drush acs:card:edit content_gaps UUID --title="New Title"', description: 'Update card title')]
-  public function editCard(string $section, string $uuid, array $options = ['title' => '', 'description' => '']): string {
+  #[CLI\Usage(name: 'drush acs:card:edit content_gaps UUID --title="New Title" --dry-run', description: 'Preview edit')]
+  public function editCard(
+    string $section,
+    string $uuid,
+    array $options = [
+      'title' => '',
+      'description' => '',
+      'dry-run' => FALSE,
+    ],
+  ): string {
+    $this->switchToAdmin();
+
     if (empty($options['title']) && empty($options['description'])) {
       return $this->noChanges();
     }
@@ -43,6 +48,17 @@ class CardCommands extends AcsCommandsBase {
     $card = $this->storage->getCardByUuid($section, $uuid);
     if (!$card) {
       return $this->notFound('Card', $uuid, 'acs:report');
+    }
+
+    if ((bool) $options['dry-run']) {
+      return $this->success('Dry run: card would be updated.', [
+        'dry_run' => TRUE,
+        'card' => [
+          'uuid' => $uuid,
+          'title' => !empty($options['title']) ? $options['title'] : ($card['title'] ?? ''),
+          'description' => !empty($options['description']) ? $options['description'] : ($card['description'] ?? ''),
+        ],
+      ]);
     }
 
     try {
@@ -79,6 +95,8 @@ class CardCommands extends AcsCommandsBase {
   #[CLI\Usage(name: 'drush acs:card:delete content_gaps UUID', description: 'Delete a card')]
   #[CLI\Usage(name: 'drush acs:card:delete content_gaps UUID --dry-run', description: 'Preview deletion')]
   public function deleteCard(string $section, string $uuid, array $options = ['dry-run' => FALSE]): string {
+    $this->switchToAdmin();
+
     $card = $this->storage->getCardByUuid($section, $uuid);
     if (!$card) {
       return $this->notFound('Card', $uuid, 'acs:report');

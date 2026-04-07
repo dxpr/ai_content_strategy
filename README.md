@@ -63,6 +63,78 @@ The category configs are stored in:
 - `ai_content_strategy.recommendation_category.*`
 - `ai_content_strategy.settings`
 
+## Drush CLI Commands
+
+AI Content Strategy ships Drush commands for CLI and AI-agent
+content strategy workflows. All commands use structured YAML
+output for machine parseability.
+
+### Quick Start
+
+```bash
+# Set up AI coding assistant integration
+drush acs:setup-ai
+
+# Check AI provider health
+drush acs:health
+
+# Generate recommendations for all categories
+drush acs:generate -l https://example.com
+
+# View recommendations report
+drush acs:report
+
+# Filter by category and priority
+drush acs:report --category=content_gaps --priority=high
+
+# Export as JSON
+drush acs:export --format=json
+```
+
+### All Commands
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `acs:generate` | `acs-g` | Generate recommendations (all or `--category`) |
+| `acs:generate:more` | `acs-gm` | Generate more ideas for a card |
+| `acs:generate:add` | `acs-ga` | Add more cards to a category |
+| `acs:health` | `acs-h` | Check AI provider configuration |
+| `acs:report` | `acs-r` | Full report (`--category`, `--priority`) |
+| `acs:report:card` | `acs-rc` | View single card with ideas |
+| `acs:report:status` | `acs-rs` | Last-run timestamp, pages analyzed |
+| `acs:sitemap` | `acs-s` | Site structure and content types |
+| `acs:card:edit` | `acs-ce` | Edit card title/description |
+| `acs:card:delete` | `acs-cd` | Delete recommendation card |
+| `acs:idea:edit` | `acs-ie` | Edit idea text |
+| `acs:idea:implement` | `acs-ii` | Mark idea implemented (`--link`, `--undo`) |
+| `acs:idea:delete` | `acs-id` | Delete content idea |
+| `acs:category:list` | `acs-catl` | List categories with status/weight |
+| `acs:category:get` | `acs-catg` | Full category detail |
+| `acs:category:create` | `acs-catc` | Create category |
+| `acs:category:update` | `acs-catu` | Update category |
+| `acs:category:delete` | `acs-catd` | Delete category |
+| `acs:settings:get` | `acs-sg` | View global settings |
+| `acs:settings:set` | `acs-ss` | Update system prompt |
+| `acs:export` | `acs-e` | Export (`--format=yaml/json/csv`, `--file`) |
+| `acs:setup-ai` | `acs-sa` | Install AI skill files |
+
+Run `drush <command> --help` for full options on any command.
+All state-changing commands support `--dry-run`.
+
+### AI Coding Assistant Integration
+
+AI Content Strategy supports the [Agent Skills](https://agentskills.io)
+standard. Run `drush acs:setup-ai` to install skill files,
+then use `/acs` in your AI tool to manage content strategy:
+
+```
+/acs generate content recommendations for my site
+/acs show high-priority content gaps
+/acs export recommendations as JSON
+```
+
+Supports Claude Code, Codex, Gemini CLI, Copilot, and Cursor.
+
 ## Usage
 
 The module analyzes your site structure, navigation, and existing content to
@@ -93,4 +165,17 @@ docker compose --profile lint run drupal-check
 
 # Run tests
 docker compose --profile test run drupal-test
+```
+
+### E2E Tests
+
+```bash
+# Run all Drush command e2e tests
+docker compose --profile test run --rm e2e-test
+
+# Run specific test file
+docker compose --profile test run --rm e2e-test report
+
+# Run setup-ai tests only
+docker compose --profile test run --rm e2e-test setup-ai
 ```
