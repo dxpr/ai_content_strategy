@@ -22,7 +22,7 @@ assert_has "get contains label" "label:" "$output"
 assert_has "get contains instructions" "instructions:" "$output"
 
 # Nonexistent category.
-output=$($DRUSH acs:category:get nonexistent 2>&1)
+output=$($DRUSH acs:category:get nonexistent 2>&1 || true)
 assert_has "get nonexistent returns error" "not found" "$output"
 
 section "acs:category:create"
@@ -38,11 +38,11 @@ assert_has "create returns success" "success: true" "$output"
 assert_has "create returns id" "test_e2e" "$output"
 
 # Duplicate.
-output=$($DRUSH acs:category:create test_e2e "E2E Test" 2>&1)
+output=$($DRUSH acs:category:create test_e2e "E2E Test" 2>&1 || true)
 assert_has "create duplicate returns error" "already exists" "$output"
 
 # Invalid ID.
-output=$($DRUSH acs:category:create 123invalid "Bad ID" 2>&1)
+output=$($DRUSH acs:category:create 123invalid "Bad ID" 2>&1 || true)
 assert_has "create invalid ID returns error" "Invalid ID" "$output"
 
 section "acs:category:update"
@@ -54,11 +54,11 @@ output=$($DRUSH acs:category:update test_e2e --label="Updated E2E" 2>&1)
 assert_has "update returns success" "success: true" "$output"
 
 # No changes.
-output=$($DRUSH acs:category:update test_e2e 2>&1)
+output=$($DRUSH acs:category:update test_e2e 2>&1 || true)
 assert_has "update no changes returns error" "No changes" "$output"
 
 # Nonexistent.
-output=$($DRUSH acs:category:update nonexistent --label="X" 2>&1)
+output=$($DRUSH acs:category:update nonexistent --label="X" 2>&1 || true)
 assert_has "update nonexistent returns error" "not found" "$output"
 
 section "acs:category:delete"
@@ -70,7 +70,7 @@ output=$($DRUSH acs:category:delete test_e2e 2>&1)
 assert_has "delete returns success" "success: true" "$output"
 
 # Already deleted.
-output=$($DRUSH acs:category:delete test_e2e 2>&1)
+output=$($DRUSH acs:category:delete test_e2e 2>&1 || true)
 assert_has "delete nonexistent returns error" "not found" "$output"
 
 print_summary

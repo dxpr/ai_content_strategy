@@ -26,6 +26,8 @@ fi
 
 # Create a fresh Drupal install.
 SITE_DIR=$(mktemp -d)
+trap 'rm -rf "$SITE_DIR"' EXIT
+
 echo "Setting up Drupal in $SITE_DIR..."
 
 cd "$SITE_DIR"
@@ -58,7 +60,6 @@ echo "Creating test fixtures..."
 # Create test fixtures: pre-populate recommendations via php:eval.
 $DRUSH php:eval '
 $storage = \Drupal::service("ai_content_strategy.recommendation_storage");
-$uuid = \Drupal::service("uuid");
 
 $test_card_uuid = "e2e-test-card-0001";
 $test_idea_uuid = "e2e-test-idea-0001";
@@ -117,8 +118,13 @@ export TEST_CARD_UUID="e2e-test-card-0001"
 export TEST_IDEA_UUID="e2e-test-idea-0001"
 export TEST_IDEA2_UUID="e2e-test-idea-0002"
 
-# Run test files.
+# Track aggregate results across all test files.
+TOTAL_PASS=0
+TOTAL_FAIL=0
+TOTAL_TESTS=0
 TESTS_RUN=0
+FAILED_FILES=""
+
 for test_file in "$SCRIPT_DIR"/test-*.sh; do
   test_name=$(basename "$test_file" .sh)
 
@@ -128,12 +134,23 @@ for test_file in "$SCRIPT_DIR"/test-*.sh; do
   fi
 
   echo "--- Running: $test_name ---"
-  DRUSH="$DRUSH" bash "$test_file"
+  # Run test file in subshell; capture exit code without aborting.
+  if DRUSH="$DRUSH" bash "$test_file"; then
+    : # Test file passed.
+  else
+    FAILED_FILES="$FAILED_FILES $test_name"
+  fi
   TESTS_RUN=$((TESTS_RUN + 1))
 done
 
 echo ""
-echo "Completed $TESTS_RUN test files."
-
-# Cleanup.
-rm -rf "$SITE_DIR"
+echo "=============================="
+echo "  Completed $TESTS_RUN test files."
+if [ -n "$FAILED_FILES" ]; then
+  echo "  FAILED:$FAILED_FILES"
+  echo "=============================="
+  exit 1
+else
+  echo "  All test files passed."
+  echo "=============================="
+fi

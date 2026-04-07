@@ -30,7 +30,7 @@ section "acs:export --category filter"
 output=$($DRUSH acs:export --category=content_gaps 2>&1)
 assert_has "export filtered contains content_gaps" "content_gaps" "$output"
 
-output=$($DRUSH acs:export --category=nonexistent 2>&1)
+output=$($DRUSH acs:export --category=nonexistent 2>&1 || true)
 assert_has "export nonexistent category returns error" "No recommendations" "$output"
 
 section "acs:export --file"
@@ -44,7 +44,7 @@ rm -f "$TMPFILE"
 
 section "acs:export --file (bad path)"
 
-output=$($DRUSH acs:export --file="/nonexistent/dir/file.yml" 2>&1)
+output=$($DRUSH acs:export --file="/nonexistent/dir/file.yml" 2>&1 || true)
 assert_has "export bad path returns error" "Cannot write" "$output"
 
 print_summary

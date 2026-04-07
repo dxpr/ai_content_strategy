@@ -63,16 +63,30 @@ class GenerationCommands extends AcsCommandsBase {
    */
   #[CLI\Command(name: 'acs:generate', aliases: ['acs-g'])]
   #[CLI\Option(name: 'category', description: 'Generate only for this category ID')]
-  #[CLI\Help(description: '[YAML] Generate AI content strategy recommendations. Requires -l for base URL.')]
+  #[CLI\Option(name: 'dry-run', description: 'Preview what would be generated without saving')]
+  #[CLI\Help(description: '[YAML] Generate AI content strategy recommendations. Requires -l for base URL. WARNING: without --category, this replaces ALL existing recommendations.')]
   #[CLI\Usage(name: 'drush acs:generate -l https://example.com', description: 'Generate all recommendations')]
-  #[CLI\Usage(name: 'drush acs:generate --category=content_gaps -l https://example.com', description: 'Generate for one category')]
-  public function generate(array $options = ['category' => '']): string {
+  #[CLI\Usage(name: 'drush acs:generate --category=content_gaps -l https://example.com', description: 'Regenerate one category')]
+  #[CLI\Usage(name: 'drush acs:generate --dry-run -l https://example.com', description: 'Preview without saving')]
+  public function generate(
+    array $options = [
+      'category' => '',
+      'dry-run' => FALSE,
+    ],
+  ): string {
     $this->switchToAdmin();
 
     // If a specific category is requested, regenerate that category.
     if (!empty($options['category'])) {
-      return $this->regenerateCategory($options['category']);
+      return $this->regenerateCategory(
+        $options['category'],
+        (bool) $options['dry-run'],
+      );
     }
+
+    // Warn if existing curated data would be overwritten.
+    $stored = $this->storage->getStoredData();
+    $has_existing = $stored && !empty($stored['data']);
 
     try {
       // Get sitemap data for metadata.
@@ -86,9 +100,6 @@ class GenerationCommands extends AcsCommandsBase {
       $recommendations = $this->storage->ensureUuids($recommendations);
       $recommendations = $this->storage->ensureIdeaUuids($recommendations);
 
-      // Store results.
-      $timestamp = $this->storage->saveRecommendations($recommendations, $pages_count);
-
       // Count results.
       $total_cards = 0;
       foreach ($recommendations as $cards) {
@@ -96,6 +107,25 @@ class GenerationCommands extends AcsCommandsBase {
           $total_cards += count($cards);
         }
       }
+
+      if ((bool) $options['dry-run']) {
+        $data = [
+          'dry_run' => TRUE,
+          'pages_analyzed' => $pages_count,
+          'total_cards' => $total_cards,
+          'categories' => array_keys($recommendations),
+        ];
+        if ($has_existing) {
+          $data['warning'] = 'Existing recommendations will be replaced.';
+        }
+        return $this->success('Dry run: recommendations would be generated.', $data);
+      }
+
+      // Store results.
+      $timestamp = $this->storage->saveRecommendations(
+        $recommendations,
+        $pages_count,
+      );
 
       return $this->success('Recommendations generated.', [
         'generated_at' => date('c', $timestamp),
@@ -115,9 +145,14 @@ class GenerationCommands extends AcsCommandsBase {
   #[CLI\Command(name: 'acs:generate:more', aliases: ['acs-gm', 'acs:g:more'])]
   #[CLI\Argument(name: 'section', description: 'Category machine name')]
   #[CLI\Argument(name: 'uuid', description: 'Card UUID')]
+  #[CLI\Option(name: 'dry-run', description: 'Preview without saving')]
   #[CLI\Help(description: '[YAML] Generate 5 more content ideas for a specific card.')]
   #[CLI\Usage(name: 'drush acs:generate:more content_gaps UUID -l https://example.com', description: 'Generate more ideas for a card')]
-  public function generateMore(string $section, string $uuid): string {
+  public function generateMore(
+    string $section,
+    string $uuid,
+    array $options = ['dry-run' => FALSE],
+  ): string {
     $this->switchToAdmin();
 
     $card = $this->storage->getCardByUuid($section, $uuid);
@@ -165,8 +200,23 @@ class GenerationCommands extends AcsCommandsBase {
         return $this->error('AI returned invalid JSON.');
       }
 
-      // Normalize and append ideas.
+      // Normalize ideas.
       $normalized_ideas = $this->storage->normalizeIdeasWithUuids($ideas);
+
+      if ((bool) $options['dry-run']) {
+        return $this->success(
+          sprintf('Dry run: %d ideas would be added to "%s".', count($normalized_ideas), $title),
+          [
+            'dry_run' => TRUE,
+            'card_uuid' => $uuid,
+            'new_ideas' => array_map(
+              fn($idea) => ['text' => $idea['text']],
+              $normalized_ideas,
+            ),
+          ],
+        );
+      }
+
       $this->storage->appendIdeasByUuid($section, $uuid, $normalized_ideas);
 
       return $this->success(sprintf('Generated %d new ideas for "%s".', count($normalized_ideas), $title), [
@@ -184,12 +234,16 @@ class GenerationCommands extends AcsCommandsBase {
    */
   #[CLI\Command(name: 'acs:generate:add', aliases: ['acs-ga', 'acs:g:add'])]
   #[CLI\Argument(name: 'section', description: 'Category machine name')]
+  #[CLI\Option(name: 'dry-run', description: 'Preview without saving')]
   #[CLI\Help(description: '[YAML] Add more recommendation cards to a category.')]
   #[CLI\Usage(name: 'drush acs:generate:add authority_topics -l https://example.com', description: 'Add more cards to a category')]
-  public function generateAdd(string $section): string {
+  public function generateAdd(
+    string $section,
+    array $options = ['dry-run' => FALSE],
+  ): string {
     $this->switchToAdmin();
 
-    return $this->generateForCategory($section);
+    return $this->generateForCategory($section, (bool) $options['dry-run']);
   }
 
   /**
@@ -198,7 +252,7 @@ class GenerationCommands extends AcsCommandsBase {
    * Unlike generateForCategory() (used by acs:generate:add), this replaces
    * the category's cards instead of appending.
    */
-  protected function regenerateCategory(string $section): string {
+  protected function regenerateCategory(string $section, bool $dryRun = FALSE): string {
     $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
     $category = $category_storage->load($section);
 
@@ -220,16 +274,28 @@ class GenerationCommands extends AcsCommandsBase {
       $category_cards = $this->storage->ensureUuids($category_cards);
       $category_cards = $this->storage->ensureIdeaUuids($category_cards);
 
+      $count = count($category_cards[$section]);
+
+      if ($dryRun) {
+        return $this->success(
+          sprintf('Dry run: %d cards would replace "%s".', $count, $category->label()),
+          [
+            'dry_run' => TRUE,
+            'category' => $section,
+            'total_cards' => $count,
+          ],
+        );
+      }
+
       // Replace this category in stored data.
       $this->storage->replaceSection($section, $category_cards[$section]);
 
-      $count = count($category_cards[$section]);
       return $this->success(
         sprintf('Regenerated %d cards for "%s".', $count, $category->label()),
         [
           'category' => $section,
           'total_cards' => $count,
-        ]
+        ],
       );
     }
     catch (\Exception $e) {
@@ -240,7 +306,7 @@ class GenerationCommands extends AcsCommandsBase {
   /**
    * Generates additional recommendations for a category (appends).
    */
-  protected function generateForCategory(string $section): string {
+  protected function generateForCategory(string $section, bool $dryRun = FALSE): string {
     // Load the category entity.
     $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
     $category = $category_storage->load($section);
@@ -331,6 +397,20 @@ class GenerationCommands extends AcsCommandsBase {
         }
         return $card;
       }, $new_cards);
+
+      if ($dryRun) {
+        return $this->success(
+          sprintf('Dry run: %d cards would be added to "%s".', count($new_cards), $category->label()),
+          [
+            'dry_run' => TRUE,
+            'category' => $section,
+            'new_cards' => array_map(fn($card) => [
+              'title' => $card['title'] ?? '',
+              'priority' => $card['priority'] ?? 'medium',
+            ], $new_cards),
+          ],
+        );
+      }
 
       // Add to storage.
       $this->storage->addToSection($section, $new_cards);

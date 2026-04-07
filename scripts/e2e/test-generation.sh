@@ -11,14 +11,13 @@ DRUSH="${DRUSH:-drush}"
 
 section "acs:health"
 
-# Without AI provider configured, health should return an error.
-output=$($DRUSH acs:health 2>&1)
-assert_has "health returns provider status" "success:" "$output"
+# Without AI provider configured, health should report not ready.
+output=$($DRUSH acs:health 2>&1 || true)
+assert_has "health reports provider not ready" "success: false" "$output"
 
 section "acs:generate (no provider)"
 
 output=$($DRUSH acs:generate -l http://localhost 2>&1 || true)
-# Should fail gracefully without AI provider.
 assert_has "generate without provider returns error" "Generation failed" "$output"
 
 section "acs:generate:add (nonexistent category)"

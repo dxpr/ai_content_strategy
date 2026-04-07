@@ -34,4 +34,12 @@ jobs:
 
     - name: Run Drush E2E tests
       run: |
-        docker compose --profile test run --rm e2e-test
+        docker compose --profile test run --rm e2e-test 2>&1 | tee /tmp/e2e-output.txt
+
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## Drush E2E Test Results" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        grep -E "(PASS|FAIL|Results|Running:|Completed|FAILED)" /tmp/e2e-output.txt >> "$GITHUB_STEP_SUMMARY" || true
+        echo '```' >> "$GITHUB_STEP_SUMMARY"

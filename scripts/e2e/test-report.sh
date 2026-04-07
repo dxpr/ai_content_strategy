@@ -31,7 +31,7 @@ output=$($DRUSH acs:report --category=content_gaps 2>&1)
 assert_has "report filtered by category returns success" "success: true" "$output"
 assert_has "filtered report contains content_gaps" "content_gaps" "$output"
 
-output=$($DRUSH acs:report --category=nonexistent 2>&1)
+output=$($DRUSH acs:report --category=nonexistent 2>&1 || true)
 assert_has "report with nonexistent category returns error" "No recommendations" "$output"
 
 section "acs:report --priority filter"
@@ -40,7 +40,7 @@ output=$($DRUSH acs:report --priority=high 2>&1)
 assert_has "report filtered by high priority returns success" "success: true" "$output"
 assert_has "high priority report contains card" "$CARD_UUID" "$output"
 
-output=$($DRUSH acs:report --priority=low 2>&1)
+output=$($DRUSH acs:report --priority=low 2>&1 || true)
 assert_has "report with no low priority returns error" "No recommendations" "$output"
 
 section "acs:report:card (with fixture data)"
@@ -50,7 +50,7 @@ assert_has "card returns success" "success: true" "$output"
 assert_has "card contains uuid" "$CARD_UUID" "$output"
 assert_has "card contains priority" "priority: high" "$output"
 
-output=$($DRUSH acs:report:card content_gaps nonexistent-uuid 2>&1)
+output=$($DRUSH acs:report:card content_gaps nonexistent-uuid 2>&1 || true)
 assert_has "card not found returns error" "not found" "$output"
 
 section "acs:sitemap (no HTTP server — tests error handling)"

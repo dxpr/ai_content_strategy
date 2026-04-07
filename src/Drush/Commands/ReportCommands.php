@@ -77,18 +77,17 @@ class ReportCommands extends AcsCommandsBase {
       return $this->error('No recommendations match the specified filters.');
     }
 
-    $output = [
-      'success' => TRUE,
+    $extra = [
       'generated_at' => $stored['timestamp'] ? date('c', $stored['timestamp']) : NULL,
       'pages_analyzed' => $stored['pages_analyzed'] ?? NULL,
       'categories' => $result,
     ];
 
     if (($stored['pages_analyzed'] ?? 0) < 5) {
-      $output['warning'] = 'Analysis based on fewer than 5 pages — results may be limited.';
+      $extra['warning'] = 'Analysis based on fewer than 5 pages — results may be limited.';
     }
 
-    return $this->yaml($output, 6);
+    return $this->success('Report retrieved.', $extra);
   }
 
   /**

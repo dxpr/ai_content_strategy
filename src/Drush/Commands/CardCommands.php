@@ -41,7 +41,9 @@ class CardCommands extends AcsCommandsBase {
   ): string {
     $this->switchToAdmin();
 
-    if (empty($options['title']) && empty($options['description'])) {
+    $has_title = $options['title'] !== NULL && $options['title'] !== '';
+    $has_desc = $options['description'] !== NULL && $options['description'] !== '';
+    if (!$has_title && !$has_desc) {
       return $this->noChanges();
     }
 
@@ -55,17 +57,17 @@ class CardCommands extends AcsCommandsBase {
         'dry_run' => TRUE,
         'card' => [
           'uuid' => $uuid,
-          'title' => !empty($options['title']) ? $options['title'] : ($card['title'] ?? ''),
-          'description' => !empty($options['description']) ? $options['description'] : ($card['description'] ?? ''),
+          'title' => $has_title ? $options['title'] : ($card['title'] ?? ''),
+          'description' => $has_desc ? $options['description'] : ($card['description'] ?? ''),
         ],
       ]);
     }
 
     try {
-      if (!empty($options['title'])) {
+      if ($has_title) {
         $this->storage->updateCardFieldByUuid($section, $uuid, 'title', $options['title']);
       }
-      if (!empty($options['description'])) {
+      if ($has_desc) {
         $this->storage->updateCardFieldByUuid($section, $uuid, 'description', $options['description']);
       }
 

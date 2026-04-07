@@ -191,13 +191,13 @@ class CategoryCommands extends AcsCommandsBase {
     }
 
     $changes = [];
-    if (!empty($options['label'])) {
+    if ($options['label'] !== NULL && $options['label'] !== '') {
       $changes['label'] = $options['label'];
     }
-    if (!empty($options['instructions'])) {
+    if ($options['instructions'] !== NULL) {
       $changes['instructions'] = $options['instructions'];
     }
-    if (!empty($options['description'])) {
+    if ($options['description'] !== NULL) {
       $changes['description'] = $options['description'];
     }
     if ($options['weight'] !== NULL) {

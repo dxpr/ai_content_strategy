@@ -28,7 +28,7 @@ class ExportCommands extends AcsCommandsBase {
   #[CLI\Option(name: 'format', description: 'Output format: yaml (default), json, csv')]
   #[CLI\Option(name: 'category', description: 'Filter by category ID')]
   #[CLI\Option(name: 'file', description: 'Write output to file instead of stdout')]
-  #[CLI\Help(description: 'Export recommendations in yaml, json, or csv format.')]
+  #[CLI\Help(description: 'Export recommendations in yaml, json, or csv format. Without --file, outputs raw content (no YAML envelope) for piping. With --file, returns YAML success envelope.')]
   #[CLI\Usage(name: 'drush acs:export', description: 'Export as YAML to stdout')]
   #[CLI\Usage(name: 'drush acs:export --format=json', description: 'Export as JSON')]
   #[CLI\Usage(name: 'drush acs:export --format=csv --file=export.csv', description: 'Export as CSV to file')]
@@ -166,7 +166,10 @@ class ExportCommands extends AcsCommandsBase {
    */
   protected function csvRow(array $fields): string {
     return implode(',', array_map(function ($field) {
-      $field = str_replace('"', '""', (string) $field);
+      $field = (string) $field;
+      // Replace embedded newlines to prevent CSV row breaks (RFC 4180).
+      $field = str_replace(["\r\n", "\r", "\n"], ' ', $field);
+      $field = str_replace('"', '""', $field);
       return '"' . $field . '"';
     }, $fields));
   }

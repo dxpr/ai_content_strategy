@@ -10,7 +10,7 @@ CARD_UUID="${TEST_CARD_UUID:-e2e-test-card-0001}"
 
 section "acs:card:edit (no changes)"
 
-output=$($DRUSH acs:card:edit content_gaps "$CARD_UUID" 2>&1)
+output=$($DRUSH acs:card:edit content_gaps "$CARD_UUID" 2>&1 || true)
 assert_has "edit no changes returns error" "No changes" "$output"
 
 section "acs:card:edit --dry-run"
@@ -37,7 +37,7 @@ assert_has "edit description returns success" "success: true" "$output"
 
 section "acs:card:edit (not found)"
 
-output=$($DRUSH acs:card:edit content_gaps nonexistent --title="Test" 2>&1)
+output=$($DRUSH acs:card:edit content_gaps nonexistent --title="Test" 2>&1 || true)
 assert_has "edit nonexistent card returns error" "not found" "$output"
 
 section "acs:card:delete --dry-run"
@@ -52,7 +52,7 @@ assert_has "card still exists after dry-run" "success: true" "$output"
 
 section "acs:card:delete (not found)"
 
-output=$($DRUSH acs:card:delete content_gaps nonexistent 2>&1)
+output=$($DRUSH acs:card:delete content_gaps nonexistent 2>&1 || true)
 assert_has "delete nonexistent card returns error" "not found" "$output"
 
 print_summary

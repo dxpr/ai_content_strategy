@@ -24,7 +24,7 @@ assert_has "edit shows updated text" "Updated test idea" "$output"
 
 section "acs:idea:edit (no changes)"
 
-output=$($DRUSH acs:idea:edit content_gaps "$CARD_UUID" "$IDEA_UUID" 2>&1)
+output=$($DRUSH acs:idea:edit content_gaps "$CARD_UUID" "$IDEA_UUID" 2>&1 || true)
 assert_has "edit no text returns error" "No changes" "$output"
 
 section "acs:idea:implement"
@@ -58,12 +58,12 @@ assert_has "delete returns success" "success: true" "$output"
 assert_has "delete shows deleted" "Idea deleted" "$output"
 
 # Verify deletion.
-output=$($DRUSH acs:idea:delete content_gaps "$CARD_UUID" "$IDEA2_UUID" 2>&1)
+output=$($DRUSH acs:idea:delete content_gaps "$CARD_UUID" "$IDEA2_UUID" 2>&1 || true)
 assert_has "delete again returns not found" "not found" "$output"
 
 section "acs:idea:edit (not found)"
 
-output=$($DRUSH acs:idea:edit content_gaps nonexistent nonexistent --text="Test" 2>&1)
+output=$($DRUSH acs:idea:edit content_gaps nonexistent nonexistent --text="Test" 2>&1 || true)
 assert_has "edit nonexistent card returns error" "not found" "$output"
 
 print_summary

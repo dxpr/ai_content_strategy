@@ -28,31 +28,37 @@ assert_eq() {
   fi
 }
 
+# Runs a command and checks that its YAML output contains success: true.
 assert_success() {
   local desc="$1"
   shift
   TOTAL=$((TOTAL + 1))
-  if output=$("$@" 2>&1); then
+  local output
+  output=$("$@" 2>&1) || true
+  if echo "$output" | grep -qF "success: true"; then
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
   else
-    echo "  FAIL: $desc (exit code $?)"
-    echo "    output: $output"
+    echo "  FAIL: $desc (YAML success: true not found)"
+    echo "    output: $(echo "$output" | head -5)"
     FAIL=$((FAIL + 1))
   fi
 }
 
+# Runs a command and checks that its YAML output contains success: false.
 assert_fail() {
   local desc="$1"
   shift
   TOTAL=$((TOTAL + 1))
-  if output=$("$@" 2>&1); then
-    echo "  FAIL: $desc (expected failure, got success)"
-    echo "    output: $output"
-    FAIL=$((FAIL + 1))
-  else
-    echo "  PASS: $desc (correctly failed)"
+  local output
+  output=$("$@" 2>&1) || true
+  if echo "$output" | grep -qF "success: false"; then
+    echo "  PASS: $desc"
     PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $desc (YAML success: false not found)"
+    echo "    output: $(echo "$output" | head -5)"
+    FAIL=$((FAIL + 1))
   fi
 }
 
