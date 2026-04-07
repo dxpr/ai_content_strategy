@@ -21,3 +21,9 @@ out
 
 .npm.installed
 .env
+
+# AI skill files — allow only the skills directory.
+.claude/*
+!.claude/skills/
+.agents/*
+!.agents/skills/

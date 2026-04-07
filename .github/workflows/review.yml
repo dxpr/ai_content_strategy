@@ -25,3 +25,22 @@ jobs:
     - name: Check Drupal compatibility
       run: |
         docker compose --profile lint run drupal-check
+
+  drush-e2e:
+    runs-on: ubicloud-standard-4
+    timeout-minutes: 60
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Run Drush E2E tests
+      run: |
+        set -o pipefail
+        docker compose --profile test run --rm e2e-test 2>&1 | tee /tmp/e2e-output.txt
+
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## Drush E2E Test Results" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        grep -E "(Results:|Running:|Completed|FAILED:)" /tmp/e2e-output.txt >> "$GITHUB_STEP_SUMMARY" || true
+        echo '```' >> "$GITHUB_STEP_SUMMARY"

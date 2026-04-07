@@ -2,8 +2,10 @@
 
 namespace Drupal\ai_content_strategy\Service;
 
+use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Uuid\UuidInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 
 /**
@@ -46,6 +48,13 @@ class RecommendationStorageService {
   protected $uuid;
 
   /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a RecommendationStorageService.
    *
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $key_value_factory
@@ -54,15 +63,34 @@ class RecommendationStorageService {
    *   The time service.
    * @param \Drupal\Component\Uuid\UuidInterface $uuid
    *   The UUID service.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    */
   public function __construct(
     KeyValueFactoryInterface $key_value_factory,
     TimeInterface $time,
     UuidInterface $uuid,
+    EntityTypeManagerInterface $entity_type_manager,
   ) {
     $this->keyValue = $key_value_factory->get(self::KV_COLLECTION);
     $this->time = $time;
     $this->uuid = $uuid;
+    $this->entityTypeManager = $entity_type_manager;
+  }
+
+  /**
+   * Loads all enabled recommendation categories sorted by weight.
+   *
+   * @return \Drupal\ai_content_strategy\Entity\RecommendationCategory[]
+   *   Enabled categories sorted by weight.
+   */
+  public function loadEnabledCategories(): array {
+    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
+    $categories = $this->entityTypeManager
+      ->getStorage('recommendation_category')
+      ->loadByProperties(['status' => TRUE]);
+    uasort($categories, static fn(RecommendationCategory $a, RecommendationCategory $b): int => $a->getWeight() <=> $b->getWeight());
+    return $categories;
   }
 
   /**
@@ -461,6 +489,23 @@ class RecommendationStorageService {
 
     $existing = $recommendations[$section] ?? [];
     $recommendations[$section] = array_merge($existing, $new_recommendations);
+
+    $this->saveRecommendationsPreservingMetadata($recommendations, $stored);
+  }
+
+  /**
+   * Replaces all cards in a section (regenerate, not append).
+   *
+   * @param string $section
+   *   The category machine name.
+   * @param array $cards
+   *   The new cards replacing existing ones.
+   */
+  public function replaceSection(string $section, array $cards): void {
+    $stored = $this->getStoredData();
+    $recommendations = $stored['data'] ?? [];
+
+    $recommendations[$section] = $cards;
 
     $this->saveRecommendationsPreservingMetadata($recommendations, $stored);
   }

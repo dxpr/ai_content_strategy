@@ -1,0 +1,64 @@
+services:
+  ai_content_strategy.commands.report:
+    class: Drupal\ai_content_strategy\Drush\Commands\ReportCommands
+    arguments:
+      - '@ai_content_strategy.recommendation_storage'
+      - '@ai_content_strategy.content_analyzer'
+      - '@entity_type.manager'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.card:
+    class: Drupal\ai_content_strategy\Drush\Commands\CardCommands
+    arguments:
+      - '@ai_content_strategy.recommendation_storage'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.idea:
+    class: Drupal\ai_content_strategy\Drush\Commands\IdeaCommands
+    arguments:
+      - '@ai_content_strategy.recommendation_storage'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.category:
+    class: Drupal\ai_content_strategy\Drush\Commands\CategoryCommands
+    arguments:
+      - '@entity_type.manager'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.settings:
+    class: Drupal\ai_content_strategy\Drush\Commands\SettingsCommands
+    arguments:
+      - '@config.factory'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.export:
+    class: Drupal\ai_content_strategy\Drush\Commands\ExportCommands
+    arguments:
+      - '@ai_content_strategy.recommendation_storage'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.generation:
+    class: Drupal\ai_content_strategy\Drush\Commands\GenerationCommands
+    arguments:
+      - '@ai_content_strategy.strategy_generator'
+      - '@ai_content_strategy.recommendation_storage'
+      - '@ai_content_strategy.content_analyzer'
+      - '@entity_type.manager'
+      - '@ai.provider'
+      - '@ai.prompt_json_decode'
+      - '@ai_content_strategy.category_prompt_builder'
+      - '@uuid'
+      - '@config.factory'
+    tags:
+      - { name: drush.command }
+
+  ai_content_strategy.commands.setup:
+    class: Drupal\ai_content_strategy\Drush\Commands\SetupCommands
+    tags:
+      - { name: drush.command }

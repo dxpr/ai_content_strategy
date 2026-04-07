@@ -312,7 +312,7 @@ class ContentStrategyController extends ControllerBase {
       '#theme' => 'ai_content_strategy_recommendations',
       '#categories' => $categories,
       '#last_run' => $last_run ?
-      $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
+        $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
       '#pages_analyzed' => $pages_analyzed,
       '#categories_count' => count($category_ids),
       '#attached' => [
