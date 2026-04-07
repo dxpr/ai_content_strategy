@@ -170,6 +170,7 @@ class IdeaCommands extends AcsCommandsBase {
 
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: idea would be deleted.', [
+        'dry_run' => TRUE,
         'idea' => ['uuid' => $idea_uuid, 'text' => $idea_text],
       ]);
     }

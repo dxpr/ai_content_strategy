@@ -104,6 +104,7 @@ class CardCommands extends AcsCommandsBase {
 
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: card would be deleted.', [
+        'dry_run' => TRUE,
         'card' => [
           'uuid' => $uuid,
           'title' => $card['title'] ?? '',

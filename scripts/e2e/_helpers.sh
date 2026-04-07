@@ -59,7 +59,7 @@ assert_fail() {
 assert_has() {
   local desc="$1" needle="$2" haystack="$3"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -q "$needle"; then
+  if echo "$haystack" | grep -qF "$needle"; then
     echo "  PASS: $desc"
     PASS=$((PASS + 1))
   else

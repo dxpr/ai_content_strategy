@@ -121,6 +121,7 @@ class CategoryCommands extends AcsCommandsBase {
 
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: category would be created.', [
+        'dry_run' => TRUE,
         'category' => [
           'id' => $id,
           'label' => $label,
@@ -210,6 +211,7 @@ class CategoryCommands extends AcsCommandsBase {
 
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: category would be updated.', [
+        'dry_run' => TRUE,
         'changes' => $changes,
       ]);
     }
@@ -254,6 +256,7 @@ class CategoryCommands extends AcsCommandsBase {
 
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: category would be deleted.', [
+        'dry_run' => TRUE,
         'category' => ['id' => $id, 'label' => $category->label()],
       ]);
     }

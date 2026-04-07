@@ -46,8 +46,20 @@ function ai_content_strategy_requirements($phase) {
         if (!file_exists($source)) {
           continue;
         }
-        if (!file_exists($dest) || md5_file($source) !== md5_file($dest)) {
+        // Only flag installed files that are outdated, not missing files.
+        // Users may intentionally use --host=claude or --host=agents
+        // for a partial install.
+        if (file_exists($dest) && md5_file($source) !== md5_file($dest)) {
           $outdated[] = $file;
+        }
+      }
+
+      // Check if any skill files are installed at all.
+      $any_installed = FALSE;
+      foreach ($files as $file) {
+        if (file_exists($project_root . '/' . $file)) {
+          $any_installed = TRUE;
+          break;
         }
       }
 
@@ -55,10 +67,18 @@ function ai_content_strategy_requirements($phase) {
         $requirements['ai_content_strategy_skill_files'] = [
           'title' => t('AI Content Strategy skill files'),
           'value' => t('Outdated'),
-          'description' => t('AI skill files are outdated or not installed. Run <code>drush acs:setup-ai</code> to update. Files: @files', [
+          'description' => t('AI skill files are outdated. Run <code>drush acs:setup-ai</code> to update. Files: @files', [
             '@files' => implode(', ', $outdated),
           ]),
           'severity' => REQUIREMENT_WARNING,
+        ];
+      }
+      elseif (!$any_installed) {
+        $requirements['ai_content_strategy_skill_files'] = [
+          'title' => t('AI Content Strategy skill files'),
+          'value' => t('Not installed'),
+          'description' => t('Run <code>drush acs:setup-ai</code> to install AI skill files for coding assistants.'),
+          'severity' => REQUIREMENT_INFO,
         ];
       }
       else {

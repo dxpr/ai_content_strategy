@@ -54,6 +54,7 @@ class SettingsCommands extends AcsCommandsBase {
 
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: settings would be updated.', [
+        'dry_run' => TRUE,
         'system_prompt_length' => strlen($options['system-prompt']),
       ]);
     }

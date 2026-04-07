@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # E2E tests for generation commands.
-# Note: acs:generate requires a configured AI provider, so we test
-# error handling and health check only.
+# Note: acs:generate requires a configured AI provider.
+# Tests verify error handling and health check without a provider.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -17,18 +17,18 @@ assert_has "health returns provider status" "success:" "$output"
 
 section "acs:generate (no provider)"
 
-output=$($DRUSH acs:generate -l http://localhost 2>&1)
+output=$($DRUSH acs:generate -l http://localhost 2>&1 || true)
 # Should fail gracefully without AI provider.
-assert_has "generate without provider returns message" ":" "$output"
+assert_has "generate without provider returns error" "failed\|error\|not ready\|Generation" "$output"
 
 section "acs:generate:add (nonexistent category)"
 
-output=$($DRUSH acs:generate:add nonexistent_cat -l http://localhost 2>&1)
+output=$($DRUSH acs:generate:add nonexistent_cat -l http://localhost 2>&1 || true)
 assert_has "generate:add nonexistent category returns error" "not found" "$output"
 
 section "acs:generate:more (nonexistent card)"
 
-output=$($DRUSH acs:generate:more content_gaps nonexistent-uuid -l http://localhost 2>&1)
+output=$($DRUSH acs:generate:more content_gaps nonexistent-uuid -l http://localhost 2>&1 || true)
 assert_has "generate:more nonexistent card returns error" "not found" "$output"
 
 print_summary

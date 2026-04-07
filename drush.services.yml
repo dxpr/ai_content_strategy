@@ -49,13 +49,12 @@ services:
     arguments:
       - '@ai_content_strategy.strategy_generator'
       - '@ai_content_strategy.recommendation_storage'
-      - '@ai_content_strategy.category_schema_builder'
       - '@ai_content_strategy.content_analyzer'
       - '@entity_type.manager'
       - '@ai.provider'
       - '@ai.prompt_json_decode'
-      - '@config.factory'
       - '@ai_content_strategy.category_prompt_builder'
+      - '@uuid'
     tags:
       - { name: drush.command }
 

@@ -155,7 +155,9 @@ final class SetupCommands extends AcsCommandsBase {
     }
 
     $action = file_exists($dest) ? 'updated' : 'installed';
-    copy($source, $dest);
+    if (!copy($source, $dest)) {
+      return [sprintf('Failed to copy %s', $relativePath)];
+    }
     $results[] = sprintf('%s %s at %s', basename($relativePath), $action, $relativePath);
 
     return $results;

@@ -40,9 +40,12 @@ abstract class AcsCommandsBase extends DrushCommands {
       if ($admin) {
         $account_switcher->switchTo($admin);
       }
+      else {
+        $this->logger()->warning('Admin user (UID 1) not found. Running as current user.');
+      }
     }
     catch (\Exception $e) {
-      // Silently fail if services aren't available yet.
+      $this->logger()->warning('Could not switch to admin: ' . $e->getMessage());
     }
   }
 
@@ -183,13 +186,16 @@ abstract class AcsCommandsBase extends DrushCommands {
    *   The items array.
    * @param array $extra
    *   Extra data to include.
+   * @param string $message
+   *   Optional message (defaults to item count).
    *
    * @return string
    *   YAML success response.
    */
-  protected function successList(array $items, array $extra = []): string {
+  protected function successList(array $items, array $extra = [], string $message = ''): string {
     return $this->yaml(array_merge([
       'success' => TRUE,
+      'message' => $message ?: sprintf('Found %d items.', count($items)),
       'count' => count($items),
       'items' => $items,
     ], $extra));

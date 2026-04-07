@@ -136,8 +136,10 @@ class ReportCommands extends AcsCommandsBase {
       }
     }
 
+    $timestamp = $stored['timestamp'] ?? NULL;
+
     return $this->success('Status retrieved.', [
-      'generated_at' => $stored['timestamp'] ?? NULL ? date('c', $stored['timestamp']) : NULL,
+      'generated_at' => $timestamp ? date('c', (int) $timestamp) : NULL,
       'pages_analyzed' => $stored['pages_analyzed'] ?? NULL,
       'active_categories' => (int) $active_count,
       'total_cards' => $total_cards,
@@ -228,7 +230,7 @@ class ReportCommands extends AcsCommandsBase {
         }
         return [
           'uuid' => $idea['uuid'] ?? NULL,
-          'text' => $idea['text'] ?? $idea,
+          'text' => $idea['text'] ?? '',
           'implemented' => $idea['implemented'] ?? FALSE,
           'link' => $idea['link'] ?? '',
         ];

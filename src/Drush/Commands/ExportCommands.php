@@ -8,7 +8,6 @@ use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Drush commands for exporting AI Content Strategy data.
@@ -70,7 +69,19 @@ class ExportCommands extends AcsCommandsBase {
     };
 
     if (!empty($options['file'])) {
-      file_put_contents($options['file'], $output);
+      $dir = dirname($options['file']);
+      if (!is_dir($dir) || !is_writable($dir)) {
+        return $this->error(
+          sprintf('Cannot write to "%s".', $options['file']),
+          ['Directory does not exist or is not writable.']
+        );
+      }
+      $result = file_put_contents($options['file'], $output);
+      if ($result === FALSE) {
+        return $this->error(
+          sprintf('Failed to write to "%s".', $options['file'])
+        );
+      }
       return $this->success(sprintf('Exported to %s.', $options['file']), [
         'format' => $format,
         'file' => $options['file'],
@@ -85,7 +96,7 @@ class ExportCommands extends AcsCommandsBase {
    */
   protected function exportYaml(array $recommendations, array $categories, array $stored): string {
     $data = $this->buildExportData($recommendations, $categories, $stored);
-    return Yaml::dump($data, 6, 2);
+    return $this->yaml($data, 6);
   }
 
   /**

@@ -466,6 +466,23 @@ class RecommendationStorageService {
   }
 
   /**
+   * Replaces all cards in a section (regenerate, not append).
+   *
+   * @param string $section
+   *   The category machine name.
+   * @param array $cards
+   *   The new cards replacing existing ones.
+   */
+  public function replaceSection(string $section, array $cards): void {
+    $stored = $this->getStoredData();
+    $recommendations = $stored['data'] ?? [];
+
+    $recommendations[$section] = $cards;
+
+    $this->saveRecommendationsPreservingMetadata($recommendations, $stored);
+  }
+
+  /**
    * Saves recommendations while preserving existing metadata.
    *
    * @param array $recommendations

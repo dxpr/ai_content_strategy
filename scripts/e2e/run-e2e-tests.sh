@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # E2E test runner for AI Content Strategy module.
-# Sets up a fresh Drupal install and runs all test scripts.
+# Sets up a fresh Drupal install with fixtures and runs all test scripts.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -29,7 +29,7 @@ SITE_DIR=$(mktemp -d)
 echo "Setting up Drupal in $SITE_DIR..."
 
 cd "$SITE_DIR"
-composer create-project drupal/recommended-project:11.x-dev . --no-interaction --quiet
+composer create-project drupal/recommended-project:11.1.x-dev . --no-interaction --quiet
 
 # Symlink our module.
 mkdir -p web/modules/contrib
@@ -53,8 +53,69 @@ $DRUSH en ai_content_strategy --yes --quiet
 # Rebuild cache after enabling module.
 $DRUSH cr --quiet
 
-echo "Drupal installed. Running tests..."
+echo "Creating test fixtures..."
+
+# Create test fixtures: pre-populate recommendations via php:eval.
+$DRUSH php:eval '
+$storage = \Drupal::service("ai_content_strategy.recommendation_storage");
+$uuid = \Drupal::service("uuid");
+
+$test_card_uuid = "e2e-test-card-0001";
+$test_idea_uuid = "e2e-test-idea-0001";
+$test_idea2_uuid = "e2e-test-idea-0002";
+
+$recommendations = [
+  "content_gaps" => [
+    [
+      "uuid" => $test_card_uuid,
+      "title" => "E2E Test Card",
+      "description" => "A card created for E2E testing",
+      "priority" => "high",
+      "content_ideas" => [
+        [
+          "uuid" => $test_idea_uuid,
+          "text" => "First test idea",
+          "implemented" => false,
+          "link" => "",
+        ],
+        [
+          "uuid" => $test_idea2_uuid,
+          "text" => "Second test idea",
+          "implemented" => false,
+          "link" => "",
+        ],
+      ],
+    ],
+  ],
+  "authority_topics" => [
+    [
+      "uuid" => "e2e-test-card-0002",
+      "title" => "Authority Test Card",
+      "description" => "Testing authority topics",
+      "priority" => "medium",
+      "content_ideas" => [
+        [
+          "uuid" => "e2e-test-idea-0003",
+          "text" => "Authority idea",
+          "implemented" => false,
+          "link" => "",
+        ],
+      ],
+    ],
+  ],
+];
+
+$storage->saveRecommendations($recommendations, 10);
+echo "Fixtures created.\n";
+'
+
+echo "Drupal installed with fixtures. Running tests..."
 echo ""
+
+# Export fixture UUIDs for tests.
+export TEST_CARD_UUID="e2e-test-card-0001"
+export TEST_IDEA_UUID="e2e-test-idea-0001"
+export TEST_IDEA2_UUID="e2e-test-idea-0002"
 
 # Run test files.
 TESTS_RUN=0

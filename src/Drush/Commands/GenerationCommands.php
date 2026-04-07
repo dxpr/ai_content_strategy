@@ -10,12 +10,11 @@ use Drupal\ai\OperationType\Chat\ChatMessage;
 use Drupal\ai\Service\PromptJsonDecoder\PromptJsonDecoderInterface;
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\ai_content_strategy\Service\CategoryPromptBuilder;
-use Drupal\ai_content_strategy\Service\CategorySchemaBuilder;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drupal\ai_content_strategy\Service\StrategyGenerator;
 use Drupal\Component\Serialization\Json;
-use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
 
@@ -27,13 +26,12 @@ class GenerationCommands extends AcsCommandsBase {
   public function __construct(
     protected readonly StrategyGenerator $strategyGenerator,
     protected readonly RecommendationStorageService $storage,
-    protected readonly CategorySchemaBuilder $schemaBuilder,
     protected readonly ContentAnalyzer $contentAnalyzer,
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly AiProviderPluginManager $aiProvider,
     protected readonly PromptJsonDecoderInterface $promptJsonDecoder,
-    protected readonly ConfigFactoryInterface $configFactory,
     protected readonly CategoryPromptBuilder $categoryPromptBuilder,
+    protected readonly UuidInterface $uuid,
   ) {
     parent::__construct();
   }
@@ -71,9 +69,9 @@ class GenerationCommands extends AcsCommandsBase {
   public function generate(array $options = ['category' => '']): string {
     $this->switchToAdmin();
 
-    // If a specific category is requested, delegate to addMore logic.
+    // If a specific category is requested, regenerate that category.
     if (!empty($options['category'])) {
-      return $this->generateForCategory($options['category']);
+      return $this->regenerateCategory($options['category']);
     }
 
     try {
@@ -157,11 +155,12 @@ class GenerationCommands extends AcsCommandsBase {
       $text = $response->getNormalized()->getText();
 
       // Extract JSON array from response.
-      if (!preg_match('/\[(?:[^\[\]]|(?R))*\]/', $text, $matches)) {
+      $start = strpos($text, '[');
+      if ($start === FALSE) {
         return $this->error('AI returned invalid response format.');
       }
-
-      $ideas = Json::decode($matches[0]);
+      $json_candidate = substr($text, $start);
+      $ideas = Json::decode($json_candidate);
       if (!is_array($ideas)) {
         return $this->error('AI returned invalid JSON.');
       }
@@ -194,7 +193,52 @@ class GenerationCommands extends AcsCommandsBase {
   }
 
   /**
-   * Generates recommendations for a specific category.
+   * Regenerates recommendations for a single category, replacing existing.
+   *
+   * Unlike generateForCategory() (used by acs:generate:add), this replaces
+   * the category's cards instead of appending.
+   */
+  protected function regenerateCategory(string $section): string {
+    $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
+    $category = $category_storage->load($section);
+
+    if (!$category instanceof RecommendationCategory) {
+      return $this->notFound('Category', $section, 'acs:category:list');
+    }
+
+    try {
+      $recommendations = $this->strategyGenerator->generateRecommendations();
+
+      if (!isset($recommendations[$section])) {
+        return $this->error(
+          sprintf('No recommendations generated for "%s".', $section)
+        );
+      }
+
+      // Extract only the requested category and ensure UUIDs.
+      $category_cards = [$section => $recommendations[$section]];
+      $category_cards = $this->storage->ensureUuids($category_cards);
+      $category_cards = $this->storage->ensureIdeaUuids($category_cards);
+
+      // Replace this category in stored data.
+      $this->storage->replaceSection($section, $category_cards[$section]);
+
+      $count = count($category_cards[$section]);
+      return $this->success(
+        sprintf('Regenerated %d cards for "%s".', $count, $category->label()),
+        [
+          'category' => $section,
+          'total_cards' => $count,
+        ]
+      );
+    }
+    catch (\Exception $e) {
+      return $this->error('Generation failed.', [$e->getMessage()]);
+    }
+  }
+
+  /**
+   * Generates additional recommendations for a category (appends).
    */
   protected function generateForCategory(string $section): string {
     // Load the category entity.
@@ -279,10 +323,10 @@ class GenerationCommands extends AcsCommandsBase {
       // Ensure UUIDs.
       $new_cards = array_map(function ($card) {
         if (!isset($card['uuid'])) {
-          $card['uuid'] = \Drupal::service('uuid')->generate();
+          $card['uuid'] = $this->uuid->generate();
         }
         if (isset($card['content_ideas'])) {
-          $card['content_ideas'] = \Drupal::service('ai_content_strategy.recommendation_storage')
+          $card['content_ideas'] = $this->storage
             ->normalizeIdeasWithUuids($card['content_ideas']);
         }
         return $card;

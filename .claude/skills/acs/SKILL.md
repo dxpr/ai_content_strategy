@@ -1,17 +1,9 @@
 ---
-name: acs
-version: 1.0.0
 description: >
   Manage AI Content Strategy recommendations via Drush CLI.
   Generate, curate, and export content strategy recommendations
   powered by AI analysis of your existing site content.
-triggers:
-  - /acs
-  - content strategy
-  - content recommendations
-  - content gaps
-  - content ideas
-  - recommendation categories
+trigger: when user asks to generate content strategy, manage recommendations, work with content ideas, or export content plans
 ---
 
 # AI Content Strategy
