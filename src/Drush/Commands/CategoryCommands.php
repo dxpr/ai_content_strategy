@@ -29,6 +29,7 @@ class CategoryCommands extends AcsCommandsBase {
     $this->switchToAdmin();
 
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
+    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
     $categories = $storage->loadMultiple();
 
     if (empty($categories)) {
@@ -36,7 +37,7 @@ class CategoryCommands extends AcsCommandsBase {
     }
 
     // Sort by weight.
-    uasort($categories, fn(RecommendationCategory $a, RecommendationCategory $b) => $a->getWeight() <=> $b->getWeight());
+    uasort($categories, static fn(RecommendationCategory $a, RecommendationCategory $b): int => $a->getWeight() <=> $b->getWeight());
 
     $items = [];
     foreach ($categories as $category) {
@@ -131,6 +132,7 @@ class CategoryCommands extends AcsCommandsBase {
     }
 
     try {
+      /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $category */
       $category = $storage->create([
         'id' => $id,
         'label' => $label,

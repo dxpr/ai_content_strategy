@@ -45,8 +45,9 @@ class ReportCommands extends AcsCommandsBase {
 
     // Load enabled categories sorted by weight.
     $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
+    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
     $categories = $category_storage->loadByProperties(['status' => TRUE]);
-    uasort($categories, fn(RecommendationCategory $a, RecommendationCategory $b) => $a->getWeight() <=> $b->getWeight());
+    uasort($categories, static fn(RecommendationCategory $a, RecommendationCategory $b): int => $a->getWeight() <=> $b->getWeight());
 
     $result = [];
     foreach ($categories as $category) {

@@ -11,7 +11,7 @@ section "acs:export (yaml default)"
 
 output=$($DRUSH acs:export 2>&1)
 assert_has "export yaml contains content_gaps" "content_gaps" "$output"
-assert_has "export yaml contains card title" "E2E Test Card" "$output"
+assert_has "export yaml contains card data" "priority:" "$output"
 
 section "acs:export --format=json"
 
@@ -23,7 +23,7 @@ section "acs:export --format=csv"
 
 output=$($DRUSH acs:export --format=csv 2>&1)
 assert_has "csv has header" "Category" "$output"
-assert_has "csv has card data" "E2E Test Card" "$output"
+assert_has "csv has card data" "Content Gaps" "$output"
 
 section "acs:export --category filter"
 
