@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # E2E tests for report commands.
+# NOTE: This file runs after test-cards and test-ideas which mutate
+# fixture data. Assertions must not depend on original fixture values.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -21,7 +23,7 @@ section "acs:report (with fixture data)"
 output=$($DRUSH acs:report 2>&1)
 assert_has "report returns success" "success: true" "$output"
 assert_has "report contains content_gaps" "content_gaps" "$output"
-assert_has "report contains E2E Test Card" "E2E Test Card" "$output"
+assert_has "report contains card uuid" "$CARD_UUID" "$output"
 
 section "acs:report --category filter"
 
@@ -36,7 +38,7 @@ section "acs:report --priority filter"
 
 output=$($DRUSH acs:report --priority=high 2>&1)
 assert_has "report filtered by high priority returns success" "success: true" "$output"
-assert_has "high priority report contains E2E card" "E2E Test Card" "$output"
+assert_has "high priority report contains card" "$CARD_UUID" "$output"
 
 output=$($DRUSH acs:report --priority=low 2>&1)
 assert_has "report with no low priority returns error" "No recommendations" "$output"
@@ -45,8 +47,8 @@ section "acs:report:card (with fixture data)"
 
 output=$($DRUSH acs:report:card content_gaps "$CARD_UUID" 2>&1)
 assert_has "card returns success" "success: true" "$output"
-assert_has "card contains title" "E2E Test Card" "$output"
-assert_has "card contains idea" "First test idea" "$output"
+assert_has "card contains uuid" "$CARD_UUID" "$output"
+assert_has "card contains priority" "priority: high" "$output"
 
 output=$($DRUSH acs:report:card content_gaps nonexistent-uuid 2>&1)
 assert_has "card not found returns error" "not found" "$output"
