@@ -19,7 +19,7 @@ section "acs:generate (no provider)"
 
 output=$($DRUSH acs:generate -l http://localhost 2>&1 || true)
 # Should fail gracefully without AI provider.
-assert_has "generate without provider returns error" "failed\|error\|not ready\|Generation" "$output"
+assert_has "generate without provider returns error" "Generation failed" "$output"
 
 section "acs:generate:add (nonexistent category)"
 
