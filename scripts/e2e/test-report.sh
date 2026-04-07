@@ -53,10 +53,10 @@ assert_has "card contains priority" "priority: high" "$output"
 output=$($DRUSH acs:report:card content_gaps nonexistent-uuid 2>&1 || true)
 assert_has "card not found returns error" "not found" "$output"
 
-section "acs:sitemap (no HTTP server — tests error handling)"
+section "acs:sitemap"
 
-output=$($DRUSH acs:sitemap -l http://localhost 2>&1 || true)
-# Sitemap requires an HTTP listener; verify graceful handling.
-assert_not_empty "sitemap returns output" "$output"
+output=$($DRUSH acs:sitemap -l http://localhost:8888 2>&1 || true)
+assert_has "sitemap returns success or error gracefully" "success:" "$output"
+assert_has "sitemap has content_types" "content_types" "$output"
 
 print_summary

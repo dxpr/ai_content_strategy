@@ -84,21 +84,43 @@ class GenerationCommands extends AcsCommandsBase {
       );
     }
 
-    // Warn if existing curated data would be overwritten.
-    $stored = $this->storage->getStoredData();
-    $has_existing = $stored && !empty($stored['data']);
+    // Dry-run: preview what would happen without calling the AI API.
+    if ((bool) $options['dry-run']) {
+      $stored = $this->storage->getStoredData();
+      $has_existing = $stored && !empty($stored['data']);
+
+      $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
+      /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
+      $categories = $category_storage->loadByProperties(['status' => TRUE]);
+
+      $data = [
+        'dry_run' => TRUE,
+        'enabled_categories' => array_keys($categories),
+        'category_count' => count($categories),
+      ];
+      if ($has_existing) {
+        $data['warning'] = 'Existing recommendations will be replaced.';
+      }
+      return $this->success('Dry run: would generate recommendations for all enabled categories.', $data);
+    }
 
     try {
       // Get sitemap data for metadata.
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
       $pages_count = count($sitemap_urls['urls'] ?? []);
 
-      // Generate recommendations.
+      // Generate recommendations (calls AI API).
       $recommendations = $this->strategyGenerator->generateRecommendations();
 
       // Ensure all items and ideas have UUIDs.
       $recommendations = $this->storage->ensureUuids($recommendations);
       $recommendations = $this->storage->ensureIdeaUuids($recommendations);
+
+      // Store results.
+      $timestamp = $this->storage->saveRecommendations(
+        $recommendations,
+        $pages_count,
+      );
 
       // Count results.
       $total_cards = 0;
@@ -107,25 +129,6 @@ class GenerationCommands extends AcsCommandsBase {
           $total_cards += count($cards);
         }
       }
-
-      if ((bool) $options['dry-run']) {
-        $data = [
-          'dry_run' => TRUE,
-          'pages_analyzed' => $pages_count,
-          'total_cards' => $total_cards,
-          'categories' => array_keys($recommendations),
-        ];
-        if ($has_existing) {
-          $data['warning'] = 'Existing recommendations will be replaced.';
-        }
-        return $this->success('Dry run: recommendations would be generated.', $data);
-      }
-
-      // Store results.
-      $timestamp = $this->storage->saveRecommendations(
-        $recommendations,
-        $pages_count,
-      );
 
       return $this->success('Recommendations generated.', [
         'generated_at' => date('c', $timestamp),
@@ -161,6 +164,20 @@ class GenerationCommands extends AcsCommandsBase {
     }
 
     $title = $card['title'] ?? '';
+    $existing_count = count($card['content_ideas'] ?? []);
+
+    // Dry-run: preview without calling the AI API.
+    if ((bool) $options['dry-run']) {
+      return $this->success(
+        sprintf('Dry run: would generate 5 new ideas for "%s".', $title),
+        [
+          'dry_run' => TRUE,
+          'card_uuid' => $uuid,
+          'card_title' => $title,
+          'existing_ideas' => $existing_count,
+        ],
+      );
+    }
 
     try {
       // Get site context.
@@ -200,23 +217,8 @@ class GenerationCommands extends AcsCommandsBase {
         return $this->error('AI returned invalid JSON.');
       }
 
-      // Normalize ideas.
+      // Normalize and append ideas.
       $normalized_ideas = $this->storage->normalizeIdeasWithUuids($ideas);
-
-      if ((bool) $options['dry-run']) {
-        return $this->success(
-          sprintf('Dry run: %d ideas would be added to "%s".', count($normalized_ideas), $title),
-          [
-            'dry_run' => TRUE,
-            'card_uuid' => $uuid,
-            'new_ideas' => array_map(
-              fn($idea) => ['text' => $idea['text']],
-              $normalized_ideas,
-            ),
-          ],
-        );
-      }
-
       $this->storage->appendIdeasByUuid($section, $uuid, $normalized_ideas);
 
       return $this->success(sprintf('Generated %d new ideas for "%s".', count($normalized_ideas), $title), [
@@ -260,47 +262,122 @@ class GenerationCommands extends AcsCommandsBase {
       return $this->notFound('Category', $section, 'acs:category:list');
     }
 
-    try {
-      $recommendations = $this->strategyGenerator->generateRecommendations();
-
-      if (!isset($recommendations[$section])) {
-        return $this->error(
-          sprintf('No recommendations generated for "%s".', $section)
-        );
+    // Dry-run: preview without calling the AI API.
+    if ($dryRun) {
+      $stored = $this->storage->getStoredData();
+      $existing_count = 0;
+      if ($stored && isset($stored['data'][$section])) {
+        $existing_count = count($stored['data'][$section]);
       }
-
-      // Extract only the requested category and ensure UUIDs.
-      $category_cards = [$section => $recommendations[$section]];
-      $category_cards = $this->storage->ensureUuids($category_cards);
-      $category_cards = $this->storage->ensureIdeaUuids($category_cards);
-
-      $count = count($category_cards[$section]);
-
-      if ($dryRun) {
-        return $this->success(
-          sprintf('Dry run: %d cards would replace "%s".', $count, $category->label()),
-          [
-            'dry_run' => TRUE,
-            'category' => $section,
-            'total_cards' => $count,
-          ],
-        );
-      }
-
-      // Replace this category in stored data.
-      $this->storage->replaceSection($section, $category_cards[$section]);
-
       return $this->success(
-        sprintf('Regenerated %d cards for "%s".', $count, $category->label()),
+        sprintf('Dry run: would regenerate "%s" (replacing %d existing cards).', $category->label(), $existing_count),
         [
+          'dry_run' => TRUE,
           'category' => $section,
-          'total_cards' => $count,
+          'existing_cards' => $existing_count,
         ],
       );
+    }
+
+    try {
+      // Use category-specific generation (single AI call for this category).
+      return $this->regenerateCategoryViaPrompt($category, $section);
     }
     catch (\Exception $e) {
       return $this->error('Generation failed.', [$e->getMessage()]);
     }
+  }
+
+  /**
+   * Regenerates a single category using category-specific AI prompt.
+   *
+   * Makes one AI call for the requested category only, instead of
+   * generating all categories and discarding the rest.
+   *
+   * @param \Drupal\ai_content_strategy\Entity\RecommendationCategory $category
+   *   The category entity.
+   * @param string $section
+   *   The category machine name.
+   *
+   * @return string
+   *   YAML response.
+   */
+  protected function regenerateCategoryViaPrompt(
+    RecommendationCategory $category,
+    string $section,
+  ): string {
+    $site_structure = $this->contentAnalyzer->getSiteStructure();
+    $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
+
+    $prompts = $this->categoryPromptBuilder->buildAddMorePrompts(
+      $category,
+      '',
+    );
+
+    $front_content = $site_structure['homepage']['content'] ?? '';
+    $menu_items = $site_structure['primary_menu'] ?? [];
+    $menu_formatted = [];
+    foreach ($menu_items as $item) {
+      $menu_formatted[] = '- ' . $item['title'] . (!empty($item['url']) ? ' (' . $item['url'] . ')' : '');
+    }
+
+    $url_formatted = [];
+    foreach (array_slice($sitemap_urls['urls'] ?? [], 0, 50) as $url) {
+      $url_formatted[] = '- ' . $url;
+    }
+
+    $user_prompt = strtr($prompts['user'], [
+      '{homepage_title}' => $site_structure['homepage']['title'] ?? '',
+      '{homepage_content}' => $front_content,
+      '{primary_menu}' => implode("\n", $menu_formatted),
+      '{urls}' => implode("\n", $url_formatted),
+      '{existing_recommendations}' => '',
+      '{{ homepage.title }}' => $site_structure['homepage']['title'] ?? '',
+      '{{ homepage.content }}' => $front_content,
+      '{{ navigation }}' => implode("\n", $menu_formatted),
+      '{{ content_urls }}' => implode("\n", $url_formatted),
+      '{{ existing_recommendations }}' => '',
+    ]);
+
+    $defaults = $this->aiProvider->getDefaultProviderForOperationType('chat');
+    $provider = $this->aiProvider->createInstance($defaults['provider_id']);
+
+    $messages = new ChatInput([
+      new ChatMessage('system', $prompts['system']),
+      new ChatMessage('user', $user_prompt),
+    ]);
+
+    $chat_response = $provider->chat($messages, $defaults['model_id'], ['content_strategy']);
+    $data = $this->promptJsonDecoder->decode($chat_response->getNormalized());
+
+    if (!isset($data[$section])) {
+      return $this->error('AI returned invalid response format.', ['Expected key: ' . $section]);
+    }
+
+    $new_cards = $data[$section];
+
+    // Ensure UUIDs.
+    $new_cards = array_map(function ($card) {
+      if (!isset($card['uuid'])) {
+        $card['uuid'] = $this->uuid->generate();
+      }
+      if (isset($card['content_ideas'])) {
+        $card['content_ideas'] = $this->storage
+          ->normalizeIdeasWithUuids($card['content_ideas']);
+      }
+      return $card;
+    }, $new_cards);
+
+    // Replace (not append) this category.
+    $this->storage->replaceSection($section, $new_cards);
+
+    return $this->success(
+      sprintf('Regenerated %d cards for "%s".', count($new_cards), $category->label()),
+      [
+        'category' => $section,
+        'total_cards' => count($new_cards),
+      ],
+    );
   }
 
   /**
@@ -313,6 +390,23 @@ class GenerationCommands extends AcsCommandsBase {
 
     if (!$category instanceof RecommendationCategory) {
       return $this->notFound('Category', $section, 'acs:category:list');
+    }
+
+    // Dry-run: preview without calling the AI API.
+    if ($dryRun) {
+      $stored = $this->storage->getStoredData();
+      $existing_count = 0;
+      if ($stored && isset($stored['data'][$section])) {
+        $existing_count = count($stored['data'][$section]);
+      }
+      return $this->success(
+        sprintf('Dry run: would add more cards to "%s".', $category->label()),
+        [
+          'dry_run' => TRUE,
+          'category' => $section,
+          'existing_cards' => $existing_count,
+        ],
+      );
     }
 
     try {
@@ -397,20 +491,6 @@ class GenerationCommands extends AcsCommandsBase {
         }
         return $card;
       }, $new_cards);
-
-      if ($dryRun) {
-        return $this->success(
-          sprintf('Dry run: %d cards would be added to "%s".', count($new_cards), $category->label()),
-          [
-            'dry_run' => TRUE,
-            'category' => $section,
-            'new_cards' => array_map(fn($card) => [
-              'title' => $card['title'] ?? '',
-              'priority' => $card['priority'] ?? 'medium',
-            ], $new_cards),
-          ],
-        );
-      }
 
       // Add to storage.
       $this->storage->addToSection($section, $new_cards);

@@ -55,6 +55,20 @@ $DRUSH en ai_content_strategy --yes --quiet
 # Rebuild cache after enabling module.
 $DRUSH cr --quiet
 
+# Start PHP built-in web server for acs:sitemap tests.
+echo "Starting PHP web server on localhost:8888..."
+php -S localhost:8888 -t "$SITE_DIR/web" > /dev/null 2>&1 &
+PHP_SERVER_PID=$!
+# Add to trap for cleanup.
+trap 'kill $PHP_SERVER_PID 2>/dev/null; rm -rf "$SITE_DIR"' EXIT
+# Wait for server to be ready.
+for i in $(seq 1 10); do
+  if curl -s -o /dev/null http://localhost:8888/ 2>/dev/null; then
+    break
+  fi
+  sleep 0.5
+done
+
 echo "Creating test fixtures..."
 
 # Create test fixtures: pre-populate recommendations via php:eval.
@@ -118,10 +132,7 @@ export TEST_CARD_UUID="e2e-test-card-0001"
 export TEST_IDEA_UUID="e2e-test-idea-0001"
 export TEST_IDEA2_UUID="e2e-test-idea-0002"
 
-# Track aggregate results across all test files.
-TOTAL_PASS=0
-TOTAL_FAIL=0
-TOTAL_TESTS=0
+# Track test file results.
 TESTS_RUN=0
 FAILED_FILES=""
 

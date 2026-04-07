@@ -173,9 +173,9 @@ class CategoryCommands extends AcsCommandsBase {
   public function updateCategory(
     string $id,
     array $options = [
-      'label' => '',
-      'instructions' => '',
-      'description' => '',
+      'label' => NULL,
+      'instructions' => NULL,
+      'description' => NULL,
       'weight' => NULL,
       'status' => NULL,
       'dry-run' => FALSE,
@@ -193,6 +193,9 @@ class CategoryCommands extends AcsCommandsBase {
     $changes = [];
     if ($options['label'] !== NULL && $options['label'] !== '') {
       $changes['label'] = $options['label'];
+    }
+    if ($options['label'] !== NULL && $options['label'] === '') {
+      return $this->error('Label cannot be empty.');
     }
     if ($options['instructions'] !== NULL) {
       $changes['instructions'] = $options['instructions'];

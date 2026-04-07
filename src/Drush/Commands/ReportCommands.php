@@ -190,8 +190,7 @@ class ReportCommands extends AcsCommandsBase {
       // Stats are best-effort.
     }
 
-    $output = [
-      'success' => TRUE,
+    $extra = [
       'total_urls' => count($urls),
       'total_nodes' => array_sum(array_column($stats, 'count')),
       'content_types' => $stats,
@@ -199,10 +198,10 @@ class ReportCommands extends AcsCommandsBase {
     ];
 
     if (count($urls) < 5) {
-      $output['warning'] = 'Sitemap has fewer than 5 URLs — analysis may be limited.';
+      $extra['warning'] = 'Sitemap has fewer than 5 URLs — analysis may be limited.';
     }
 
-    return $this->yaml($output, 3);
+    return $this->success('Sitemap retrieved.', $extra);
   }
 
   /**

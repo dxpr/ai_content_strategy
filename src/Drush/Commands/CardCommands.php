@@ -34,15 +34,15 @@ class CardCommands extends AcsCommandsBase {
     string $section,
     string $uuid,
     array $options = [
-      'title' => '',
-      'description' => '',
+      'title' => NULL,
+      'description' => NULL,
       'dry-run' => FALSE,
     ],
   ): string {
     $this->switchToAdmin();
 
-    $has_title = $options['title'] !== NULL && $options['title'] !== '';
-    $has_desc = $options['description'] !== NULL && $options['description'] !== '';
+    $has_title = $options['title'] !== NULL;
+    $has_desc = $options['description'] !== NULL;
     if (!$has_title && !$has_desc) {
       return $this->noChanges();
     }
