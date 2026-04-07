@@ -40,7 +40,6 @@ services:
     class: Drupal\ai_content_strategy\Drush\Commands\ExportCommands
     arguments:
       - '@ai_content_strategy.recommendation_storage'
-      - '@entity_type.manager'
     tags:
       - { name: drush.command }
 

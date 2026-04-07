@@ -91,9 +91,7 @@ class GenerationCommands extends AcsCommandsBase {
       $stored = $this->storage->getStoredData();
       $has_existing = $stored && !empty($stored['data']);
 
-      $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
-      /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
-      $categories = $category_storage->loadByProperties(['status' => TRUE]);
+      $categories = $this->storage->loadEnabledCategories();
 
       $data = [
         'dry_run' => TRUE,

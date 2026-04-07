@@ -5,7 +5,7 @@ services:
 
   ai_content_strategy.recommendation_storage:
     class: Drupal\ai_content_strategy\Service\RecommendationStorageService
-    arguments: ['@keyvalue', '@datetime.time', '@uuid']
+    arguments: ['@keyvalue', '@datetime.time', '@uuid', '@entity_type.manager']
 
   ai_content_strategy.idea_row_builder:
     class: Drupal\ai_content_strategy\Service\IdeaRowBuilder

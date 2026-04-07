@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\ai_content_strategy\Drush\Commands;
 
-use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\ai_content_strategy\Service\ContentAnalyzer;
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -43,11 +42,7 @@ class ReportCommands extends AcsCommandsBase {
 
     $recommendations = $stored['data'];
 
-    // Load enabled categories sorted by weight.
-    $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
-    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
-    $categories = $category_storage->loadByProperties(['status' => TRUE]);
-    uasort($categories, static fn(RecommendationCategory $a, RecommendationCategory $b): int => $a->getWeight() <=> $b->getWeight());
+    $categories = $this->storage->loadEnabledCategories();
 
     $result = [];
     foreach ($categories as $category) {

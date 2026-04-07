@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\ai_content_strategy\Drush\Commands;
 
-use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\ai_content_strategy\Service\RecommendationStorageService;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
 
 /**
@@ -16,7 +14,6 @@ class ExportCommands extends AcsCommandsBase {
 
   public function __construct(
     protected readonly RecommendationStorageService $storage,
-    protected readonly EntityTypeManagerInterface $entityTypeManager,
   ) {
     parent::__construct();
   }
@@ -43,11 +40,7 @@ class ExportCommands extends AcsCommandsBase {
 
     $recommendations = $stored['data'];
 
-    // Load categories for labels.
-    $category_storage = $this->entityTypeManager->getStorage('recommendation_category');
-    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory[] $categories */
-    $categories = $category_storage->loadByProperties(['status' => TRUE]);
-    uasort($categories, static fn(RecommendationCategory $a, RecommendationCategory $b): int => $a->getWeight() <=> $b->getWeight());
+    $categories = $this->storage->loadEnabledCategories();
 
     // Filter by category if specified.
     if (!empty($options['category'])) {

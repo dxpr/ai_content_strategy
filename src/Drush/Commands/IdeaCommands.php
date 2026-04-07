@@ -19,6 +19,33 @@ class IdeaCommands extends AcsCommandsBase {
   }
 
   /**
+   * Resolves a card and idea by UUID, returning data or a YAML error.
+   *
+   * @param string $section
+   *   Category machine name.
+   * @param string $uuid
+   *   Card UUID.
+   * @param string $idea_uuid
+   *   Idea UUID.
+   *
+   * @return array|string
+   *   Array with 'card' and 'idea_index' keys on success, or YAML error string.
+   */
+  protected function resolveIdea(string $section, string $uuid, string $idea_uuid): array|string {
+    $card = $this->storage->getCardByUuid($section, $uuid);
+    if (!$card) {
+      return $this->notFound('Card', $uuid, 'acs:report');
+    }
+
+    $idea_index = $this->storage->findIdeaIndexByUuid($section, $uuid, $idea_uuid);
+    if ($idea_index === NULL) {
+      return $this->notFound('Idea', $idea_uuid, 'acs:report:card');
+    }
+
+    return ['card' => $card, 'idea_index' => $idea_index];
+  }
+
+  /**
    * Edits an idea's text.
    */
   #[CLI\Command(name: 'acs:idea:edit', aliases: ['acs-ie', 'acs:i:edit'])]
@@ -41,15 +68,9 @@ class IdeaCommands extends AcsCommandsBase {
       return $this->noChanges();
     }
 
-    // Verify card and idea exist.
-    $card = $this->storage->getCardByUuid($section, $uuid);
-    if (!$card) {
-      return $this->notFound('Card', $uuid, 'acs:report');
-    }
-
-    $idea_index = $this->storage->findIdeaIndexByUuid($section, $uuid, $idea_uuid);
-    if ($idea_index === NULL) {
-      return $this->notFound('Idea', $idea_uuid, 'acs:report:card');
+    $resolved = $this->resolveIdea($section, $uuid, $idea_uuid);
+    if (is_string($resolved)) {
+      return $resolved;
     }
 
     if ((bool) $options['dry-run']) {
@@ -98,14 +119,9 @@ class IdeaCommands extends AcsCommandsBase {
   ): string {
     $this->switchToAdmin();
 
-    $card = $this->storage->getCardByUuid($section, $uuid);
-    if (!$card) {
-      return $this->notFound('Card', $uuid, 'acs:report');
-    }
-
-    $idea_index = $this->storage->findIdeaIndexByUuid($section, $uuid, $idea_uuid);
-    if ($idea_index === NULL) {
-      return $this->notFound('Idea', $idea_uuid, 'acs:report:card');
+    $resolved = $this->resolveIdea($section, $uuid, $idea_uuid);
+    if (is_string($resolved)) {
+      return $resolved;
     }
 
     if ((bool) $options['dry-run']) {
@@ -151,20 +167,16 @@ class IdeaCommands extends AcsCommandsBase {
   public function deleteIdea(string $section, string $uuid, string $idea_uuid, array $options = ['dry-run' => FALSE]): string {
     $this->switchToAdmin();
 
-    $card = $this->storage->getCardByUuid($section, $uuid);
-    if (!$card) {
-      return $this->notFound('Card', $uuid, 'acs:report');
-    }
-
-    $idea_index = $this->storage->findIdeaIndexByUuid($section, $uuid, $idea_uuid);
-    if ($idea_index === NULL) {
-      return $this->notFound('Idea', $idea_uuid, 'acs:report:card');
+    $resolved = $this->resolveIdea($section, $uuid, $idea_uuid);
+    if (is_string($resolved)) {
+      return $resolved;
     }
 
     // Get idea text for confirmation.
     $idea_text = '';
-    if (isset($card['content_ideas'][$idea_index])) {
-      $idea = $card['content_ideas'][$idea_index];
+    $card = $resolved['card'];
+    if (isset($card['content_ideas'][$resolved['idea_index']])) {
+      $idea = $card['content_ideas'][$resolved['idea_index']];
       $idea_text = is_string($idea) ? $idea : ($idea['text'] ?? '');
     }
 
