@@ -15,7 +15,7 @@
 }
 
 .idea-link {
-  color: #0073aa;
+  color: var(--gin-color-primary, var(--color-link, #003ecc));
   text-decoration: none;
   word-break: break-all;
   margin-right: 6px;
@@ -29,7 +29,7 @@
   background: none;
   border: none;
   padding: 2px;
-  color: #6b7280;
+  color: var(--gin-color-text-light, var(--color-text-light, #545560));
   cursor: pointer;
   vertical-align: middle;
   display: inline-flex;
@@ -42,10 +42,10 @@
 }
 
 .idea-link-edit:hover {
-  color: #0073aa;
+  color: var(--gin-color-primary, var(--color-link, #003ecc));
 }
 
-/* Idea Link Input */
+/* Idea Link Input - uses form-element class for base styling */
 .idea-link-input-wrapper {
   display: flex;
   align-items: center;
@@ -55,14 +55,5 @@
 
 .idea-link-input {
   flex: 1;
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
   font-size: 0.9em;
-}
-
-.idea-link-input:focus {
-  outline: none;
-  border-color: #0073aa;
-  box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
 }

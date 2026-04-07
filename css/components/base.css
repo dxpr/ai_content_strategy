@@ -1,6 +1,9 @@
 /**
  * @file
  * Base layout styles for AI Content Strategy.
+ *
+ * Uses Gin CSS variables (dark mode aware) with Claro fallbacks
+ * and hardcoded last-resort values.
  */
 
 /* Main Container */
@@ -13,7 +16,7 @@
 .content-strategy-description {
   margin-bottom: 2em;
   font-size: 1.1em;
-  color: #666;
+  color: var(--gin-color-text-light, var(--color-text-light, #545560));
 }
 
 /* Status Area */
@@ -22,9 +25,9 @@
   flex-wrap: wrap;
   gap: 2rem;
   padding: 1rem;
-  background: #f8f9fa;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  background: var(--gin-bg-layer2, var(--color-gray-050, #f3f4f9));
+  border: 1px solid var(--gin-border-color-layer, var(--color-gray-200, #d3d4d9));
+  border-radius: var(--base-border-radius, 2px);
   margin-bottom: 1.5rem;
 }
 
@@ -36,12 +39,12 @@
 }
 
 .status-item strong {
-  color: #374151;
+  color: var(--gin-color-text, var(--color-text, #232429));
   font-weight: 600;
 }
 
 .status-item:not(strong) {
-  color: #6b7280;
+  color: var(--gin-color-text-light, var(--color-text-light, #545560));
 }
 
 /* Actions */
@@ -56,7 +59,7 @@
 .empty-recommendations {
   text-align: center;
   padding: 3rem;
-  background: #f9fafb;
-  border-radius: 8px;
-  color: #6b7280;
+  background: var(--gin-bg-layer2, var(--color-gray-050, #f3f4f9));
+  border-radius: var(--base-border-radius, 2px);
+  color: var(--gin-color-text-light, var(--color-text-light, #545560));
 }
