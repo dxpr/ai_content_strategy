@@ -308,6 +308,16 @@ class ContentStrategyController extends ControllerBase {
       }
     }
 
+    // Pre-flight check: is the AI provider configured?
+    $health_error = $this->strategyGenerator->checkHealth();
+    $ai_configured = $health_error === NULL;
+
+    if (!$ai_configured) {
+      $this->messenger()->addWarning($this->t('To generate content recommendations, first connect an AI service. <a href="@url">Open AI settings</a>', [
+        '@url' => '/admin/config/ai/settings',
+      ]));
+    }
+
     return [
       '#theme' => 'ai_content_strategy_recommendations',
       '#categories' => $categories,
@@ -315,6 +325,7 @@ class ContentStrategyController extends ControllerBase {
         $this->dateFormatter->formatTimeDiffSince($last_run) : NULL,
       '#pages_analyzed' => $pages_analyzed,
       '#categories_count' => count($category_ids),
+      '#ai_configured' => $ai_configured,
       '#attached' => [
         'library' => ['ai_content_strategy/content_strategy'],
       ],
@@ -1059,20 +1070,15 @@ EOT;
     catch (\Exception $e) {
       Error::logException($this->getLogger('ai_content_strategy'), $e);
 
+      $error_message = $this->buildUserFriendlyErrorMessage($e);
       $response->addCommand(
         new MessageCommand(
-          $this->t(
-            'An error occurred while generating additional recommendations: @error',
-            [
-              '@error' => $e->getMessage(),
-            ]),
+          $error_message,
           NULL,
           ['type' => 'error']
         )
       );
 
-      // Set HTTP status code - use the exception's code if it's a valid HTTP
-      // status, otherwise default to 500.
       $status_code = $this->getHttpStatusFromException($e);
       $response->setStatusCode($status_code);
     }
@@ -1118,58 +1124,69 @@ EOT;
    */
   protected function buildUserFriendlyErrorMessage(\Exception $exception): TranslatableMarkup {
     $message = $exception->getMessage();
+    $lower = strtolower($message);
 
-    // Check for common error patterns and provide specific guidance.
-    // Pattern 1: No chat provider available.
-    if (stripos($message, 'no chat provider') !== FALSE || stripos($message, 'provider') !== FALSE) {
-      return $this->t('<strong>AI provider not configured.</strong><br>Please configure an AI chat provider at <a href="@url">AI settings</a> before generating recommendations.', [
-        '@url' => '/admin/config/ai/providers',
+    // AI provider not available or not configured.
+    if (str_contains($lower, 'no chat provider') || str_contains($lower, 'chat provider is not') || str_contains($lower, 'not properly configured') || str_contains($lower, 'no default chat model')) {
+      return $this->t('<strong>No AI service connected.</strong> To generate recommendations, first connect an AI chat provider. <a href="@url">Open AI settings</a>', [
+        '@url' => '/admin/config/ai/settings',
       ]);
     }
 
-    // Pattern 2: No URLs found in sitemap.
-    if (stripos($message, 'no urls') !== FALSE || stripos($message, 'sitemap') !== FALSE) {
-      return $this->t('<strong>No content found to analyze.</strong><br>Please ensure your site has published content and a properly configured sitemap. Check your sitemap at <a href="@url">@url</a>.', [
-        '@url' => '/sitemap.xml',
+    // Provider or model not usable.
+    if (str_contains($lower, 'not usable') || str_contains($lower, 'not available for provider')) {
+      return $this->t('<strong>The selected AI model is not available.</strong> Your AI provider or model may have changed. Please check your configuration. <a href="@url">Open AI settings</a>', [
+        '@url' => '/admin/config/ai/settings',
       ]);
     }
 
-    // Pattern 3: No enabled categories.
-    if (stripos($message, 'no enabled') !== FALSE || stripos($message, 'categor') !== FALSE) {
-      return $this->t('<strong>No recommendation categories enabled.</strong><br>Please enable at least one category at <a href="@url">category settings</a>.', [
+    // No sitemap / no content to analyze.
+    if (str_contains($lower, 'no urls found in sitemap') || str_contains($lower, 'could not analyze sitemap')) {
+      return $this->t('<strong>No content found to analyze.</strong> Make sure your site has published content and a working <a href="@sitemap">sitemap</a>. If you use the Simple Sitemap module, rebuild the sitemap first.', [
+        '@sitemap' => '/sitemap.xml',
+      ]);
+    }
+
+    // No enabled recommendation categories.
+    if (str_contains($lower, 'no enabled recommendation categories')) {
+      return $this->t('<strong>No recommendation categories are turned on.</strong> Enable at least one category to generate recommendations. <a href="@url">Manage categories</a>', [
         '@url' => '/admin/config/ai/content-strategy/categories',
       ]);
     }
 
-    // Pattern 4: JSON parsing errors.
-    if (stripos($message, 'json') !== FALSE || stripos($message, 'parse') !== FALSE) {
-      return $this->t('<strong>AI returned an invalid response.</strong><br>The AI model may be overloaded or misconfigured. Please try again in a moment. If the problem persists, try a different AI model in <a href="@url">AI settings</a>.', [
-        '@url' => '/admin/config/ai/providers',
+    // AI returned unparseable response.
+    if (str_contains($lower, 'failed to parse') || str_contains($lower, 'invalid json') || str_contains($lower, 'invalid response format')) {
+      return $this->t('<strong>The AI returned an unusable response.</strong> This is usually temporary. Please try again. If it keeps happening, try a different AI model in <a href="@url">AI settings</a>.', [
+        '@url' => '/admin/config/ai/settings',
       ]);
     }
 
-    // Pattern 5: API/Network errors.
-    if (stripos($message, 'timeout') !== FALSE || stripos($message, 'connection') !== FALSE || stripos($message, 'network') !== FALSE) {
-      return $this->t('<strong>Connection to AI provider failed.</strong><br>This may be a temporary network issue. Please check your internet connection and try again. If using a third-party API, verify your API credentials are correct.');
+    // Network / timeout errors.
+    if (str_contains($lower, 'timeout') || str_contains($lower, 'connection refused') || str_contains($lower, 'could not resolve host') || str_contains($lower, 'network is unreachable')) {
+      return $this->t('<strong>Could not reach the AI service.</strong> Check your internet connection and try again. If the problem persists, the AI service may be temporarily unavailable.');
     }
 
-    // Pattern 6: Rate limiting.
-    if (stripos($message, 'rate limit') !== FALSE || stripos($message, 'quota') !== FALSE || stripos($message, 'too many') !== FALSE) {
-      return $this->t('<strong>AI service rate limit reached.</strong><br>You have exceeded the API usage limits. Please wait a few minutes before trying again, or check your API plan limits with your provider.');
+    // Rate limiting / quota.
+    if (str_contains($lower, 'rate limit') || str_contains($lower, 'quota exceeded') || str_contains($lower, 'too many requests') || str_contains($lower, '429')) {
+      return $this->t('<strong>AI request limit reached.</strong> Wait a few minutes and try again. If this happens frequently, check your API plan limits with your AI provider.');
     }
 
-    // Pattern 7: Authentication errors.
-    if (stripos($message, 'auth') !== FALSE || stripos($message, 'api key') !== FALSE || stripos($message, 'credential') !== FALSE) {
-      return $this->t('<strong>AI provider authentication failed.</strong><br>Please verify your API credentials are correct at <a href="@url">AI settings</a>.', [
-        '@url' => '/admin/config/ai/providers',
+    // Authentication / API key errors.
+    if (str_contains($lower, 'authentication') || str_contains($lower, 'unauthorized') || str_contains($lower, 'invalid api key') || str_contains($lower, 'access denied') || str_contains($lower, '401') || str_contains($lower, '403')) {
+      return $this->t('<strong>AI service rejected your credentials.</strong> Check that your API key is correct and has not expired. <a href="@url">Open AI settings</a>', [
+        '@url' => '/admin/config/ai/settings',
       ]);
     }
 
-    // Generic fallback with constructive guidance.
-    return $this->t('<strong>Unable to generate recommendations.</strong><br>An unexpected error occurred: @error<br><br><strong>What to try:</strong><ul><li>Refresh the page and try again</li><li>Check the <a href="@logs">error logs</a> for details</li><li>Verify your <a href="@ai">AI provider settings</a></li><li>Ensure your site has published content</li></ul>', [
+    // Card or idea not found (CRUD operations).
+    if (str_contains($lower, 'card not found') || str_contains($lower, 'idea not found')) {
+      return $this->t('<strong>Item not found.</strong> It may have already been deleted. Refresh the page to see the current state.');
+    }
+
+    // Generic fallback: state what happened, suggest a concrete next step.
+    return $this->t('<strong>Something went wrong.</strong> @error — <a href="@logs">Check the error log</a> for details, or try again.', [
       '@error' => $message,
       '@logs' => '/admin/reports/dblog',
-      '@ai' => '/admin/config/ai/providers',
     ]);
   }
 
@@ -1317,7 +1334,7 @@ EOT;
 
       $response->addCommand(
         new MessageCommand(
-          $this->t('Error deleting recommendation: @error', ['@error' => $e->getMessage()]),
+          $this->buildUserFriendlyErrorMessage($e),
           NULL,
           ['type' => 'error']
         )
@@ -1370,7 +1387,7 @@ EOT;
 
       $response->addCommand(
         new MessageCommand(
-          $this->t('Error deleting content idea: @error', ['@error' => $e->getMessage()]),
+          $this->buildUserFriendlyErrorMessage($e),
           NULL,
           ['type' => 'error']
         )
@@ -1474,7 +1491,7 @@ EOT;
 
       $response->addCommand(
         new MessageCommand(
-          $this->t('Error saving: @error', ['@error' => $e->getMessage()]),
+          $this->buildUserFriendlyErrorMessage($e),
           NULL,
           ['type' => 'error']
         )

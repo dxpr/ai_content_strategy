@@ -10,6 +10,7 @@
  * - pages_analyzed: Number of pages analyzed from the sitemap.
  * - categories_count: Number of active recommendation categories.
  * - configure_link: Link to configure categories (optional).
+ * - ai_configured: Whether the AI provider is configured and ready.
  *
  * @ingroup themeable
  */
@@ -44,7 +45,7 @@
   {% endif %}
 
   <div class="content-strategy-actions">
-    <button class="generate-recommendations button button--primary" data-has-existing="{{ last_run ? 'true' : 'false' }}">
+    <button class="generate-recommendations button button--primary" data-has-existing="{{ last_run ? 'true' : 'false' }}"{{ not ai_configured ? ' disabled' : '' }}>
       {% if last_run %}
         {{ 'Regenerate recommendations'|t }}
       {% else %}

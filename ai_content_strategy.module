@@ -57,6 +57,7 @@ function ai_content_strategy_theme() {
         'categories' => [],
         'button_text' => [],
         'last_run' => NULL,
+        'ai_configured' => TRUE,
       ],
     ],
     'ai_content_strategy_recommendations_items' => [
