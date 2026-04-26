@@ -1,4 +1,4 @@
-# AI Content Strategy
+# AI Content Strategy :)
 
 AI-powered content strategy recommendations based on your existing content and
 EEAT framework.
