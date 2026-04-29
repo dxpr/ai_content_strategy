@@ -145,12 +145,10 @@ Supports Claude Code, Codex, Gemini CLI, Copilot, and Cursor.
 
 ## Related Modules
 
-- [Analyze](https://www.drupal.org/project/analyze) - Content analysis framework with unified Analyze tab
-- [AI Social Posts](https://www.drupal.org/project/ai_social_posts) - AI-assisted social media content creation
-- [CKEditor AI Agent](https://www.drupal.org/project/ckeditor_ai_agent) - AI writing assistant inside CKEditor
-- [Drush Webmaster](https://www.drupal.org/project/drush_webmaster) - Manage Drupal content and structure via Drush
-- [AI](https://www.drupal.org/project/ai) - Drupal AI integration layer for connecting to LLM providers
-- [Pathauto](https://www.drupal.org/project/pathauto) - Automatic URL alias generation for Drupal content
+- [AI](https://www.drupal.org/project/ai) - Required. Provides the LLM provider layer used for all content analysis and recommendation generation
+- [Menu UI](https://www.drupal.org/docs/core-modules-and-themes/core-modules/menu-ui-module) - Optional core module. When enabled, AI Content Strategy analyzes your site navigation to produce more contextual recommendations
+- [AI Social Posts](https://www.drupal.org/project/ai_social_posts) - Turn your content recommendations into social media posts across 14+ platforms
+- [Drush](https://www.drush.org/) - AI Content Strategy ships 20+ Drush commands for CLI and AI-agent workflows
 
 ## Usage
 
