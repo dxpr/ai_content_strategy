@@ -1,6 +1,10 @@
-> Part of [DXPR CMS](https://dxpr.com/c/marketing-cms) | The AI-Powered Drupal CMS
+> **AI Content Strategy** is a Drupal module by [DXPR](https://dxpr.com) that
+> uses AI to generate data-driven content recommendations based on your existing
+> site content, audience gaps, and publishing patterns.
 >
-> [Documentation](https://dxpr.com/docs) | [Try Free](https://dxpr.com/try) | [dxpr.com](https://dxpr.com)
+> [Getting Started](https://dxpr.com/c/getting-started) |
+> [Pricing](https://dxpr.com/pricing) |
+> [Try Free Demo](https://dxpr.com/try)
 
 # AI Content Strategy: AI-Powered Content Recommendations for Drupal
 
@@ -139,12 +143,14 @@ then use `/acs` in your AI tool to manage content strategy:
 
 Supports Claude Code, Codex, Gemini CLI, Copilot, and Cursor.
 
-## Related DXPR Modules
+## Related Modules
 
 - [Analyze](https://www.drupal.org/project/analyze) - Content analysis framework with unified Analyze tab
 - [AI Social Posts](https://www.drupal.org/project/ai_social_posts) - AI-assisted social media content creation
 - [CKEditor AI Agent](https://www.drupal.org/project/ckeditor_ai_agent) - AI writing assistant inside CKEditor
 - [Drush Webmaster](https://www.drupal.org/project/drush_webmaster) - Manage Drupal content and structure via Drush
+- [AI](https://www.drupal.org/project/ai) - Drupal AI integration layer for connecting to LLM providers
+- [Pathauto](https://www.drupal.org/project/pathauto) - Automatic URL alias generation for Drupal content
 
 ## Usage
 
