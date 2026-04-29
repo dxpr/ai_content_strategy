@@ -1,4 +1,12 @@
-# AI Content Strategy
+> **AI Content Strategy** is a Drupal module by [DXPR](https://dxpr.com) that
+> uses AI to generate data-driven content recommendations based on your existing
+> site content, audience gaps, and publishing patterns.
+>
+> [Getting Started](https://dxpr.com/c/getting-started) |
+> [Pricing](https://dxpr.com/pricing) |
+> [Try Free Demo](https://dxpr.com/try)
+
+# AI Content Strategy: AI-Powered Content Recommendations for Drupal
 
 AI-powered content strategy recommendations based on your existing content and
 EEAT framework.
@@ -134,6 +142,13 @@ then use `/acs` in your AI tool to manage content strategy:
 ```
 
 Supports Claude Code, Codex, Gemini CLI, Copilot, and Cursor.
+
+## Related Modules
+
+- [AI](https://www.drupal.org/project/ai) - Required. Provides the LLM provider layer used for all content analysis and recommendation generation
+- [Menu UI](https://www.drupal.org/docs/core-modules-and-themes/core-modules/menu-ui-module) - Optional core module. When enabled, AI Content Strategy analyzes your site navigation to produce more contextual recommendations
+- [AI Social Posts](https://www.drupal.org/project/ai_social_posts) - Turn your content recommendations into social media posts across 14+ platforms
+- [Drush](https://www.drush.org/) - AI Content Strategy ships 20+ Drush commands for CLI and AI-agent workflows
 
 ## Usage
 
