@@ -1,4 +1,8 @@
-# AI Content Strategy
+> Part of [DXPR CMS](https://dxpr.com/c/marketing-cms) | The AI-Powered Drupal CMS
+>
+> [Documentation](https://dxpr.com/docs) | [Try Free](https://dxpr.com/try) | [dxpr.com](https://dxpr.com)
+
+# AI Content Strategy: AI-Powered Content Recommendations for Drupal
 
 AI-powered content strategy recommendations based on your existing content and
 EEAT framework.
@@ -134,6 +138,13 @@ then use `/acs` in your AI tool to manage content strategy:
 ```
 
 Supports Claude Code, Codex, Gemini CLI, Copilot, and Cursor.
+
+## Related DXPR Modules
+
+- [Analyze](https://www.drupal.org/project/analyze) - Content analysis framework with unified Analyze tab
+- [AI Social Posts](https://www.drupal.org/project/ai_social_posts) - AI-assisted social media content creation
+- [CKEditor AI Agent](https://www.drupal.org/project/ckeditor_ai_agent) - AI writing assistant inside CKEditor
+- [Drush Webmaster](https://www.drupal.org/project/drush_webmaster) - Manage Drupal content and structure via Drush
 
 ## Usage
 
