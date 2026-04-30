@@ -2,9 +2,9 @@
 > uses AI to generate data-driven content recommendations based on your existing
 > site content, audience gaps, and publishing patterns.
 >
-> [Getting Started](https://dxpr.com/c/getting-started) |
+> [Getting Started](https://dxpr.com/c/marketing-cms) |
 > [Pricing](https://dxpr.com/pricing) |
-> [Try Free Demo](https://dxpr.com/try)
+> [Try Free Demo](https://try.dxpr.com)
 
 # AI Content Strategy: AI-Powered Content Recommendations for Drupal
 
