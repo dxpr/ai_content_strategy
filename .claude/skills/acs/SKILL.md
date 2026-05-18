@@ -1,125 +1,70 @@
 ---
+name: acs
 description: >
   Manage AI Content Strategy recommendations via Drush CLI.
   Generate, curate, and export content strategy recommendations
-  powered by AI analysis of your existing site content.
-trigger: when user asks to generate content strategy, manage recommendations, work with content ideas, or export content plans
+  powered by AI analysis of existing site content. Use this skill
+  when the user asks to generate content ideas, manage or curate
+  recommendations, work with content cards or ideas, export content
+  plans, check AI provider health, or inspect site structure for
+  content gaps, even if they don't mention "ACS" or "Drush" directly.
 ---
 
 # AI Content Strategy
 
-You are managing AI-powered content strategy recommendations.
-The module analyzes existing site content, navigation, and sitemap
-to generate actionable content recommendations organized by category.
+Recommendations are stored in Drupal's key-value store, not as nodes.
+Categories are config entities. All commands return structured YAML
+with a `success`/`message`/`data` envelope. All state-changing
+commands support `--dry-run`.
 
-## Preamble — Auto-discover Current State
+## Auto-discover current state
 
 ```bash
-# Check AI provider health
 drush acs:health
-
-# List configured categories
 drush acs:category:list
-
-# Check last generation status
 drush acs:report:status
-
-# Get site structure for context
 drush acs:sitemap
 ```
 
-## Commands Reference
+## Command reference
 
-### Generation
+Read [references/commands.md](references/commands.md) when you need
+the full command table, aliases, or flag details.
 
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:generate` | `acs-g` | Generate recommendations (`--category` to filter) |
-| `acs:generate:more` | `acs-gm` | Generate 5 more ideas for a card |
-| `acs:generate:add` | `acs-ga` | Add more cards to a category |
-| `acs:health` | `acs-h` | Check AI provider configuration |
+## Gotchas
 
-### Reports & Reading
+- `acs:generate` without `--category` replaces ALL existing
+  recommendations. Use `--category` to target one, or
+  `acs:generate:add` to append without replacing.
+- Card and idea UUIDs are auto-generated. Use `acs:report` or
+  `acs:report:card` to discover them before editing or deleting.
+- The AI provider must be configured via the drupal/ai module before
+  any generation commands work. Run `acs:health` first.
+- `acs:generate` requires `-l <site-uri>` in multisite setups so
+  Drush knows which site to analyze.
 
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:report` | `acs-r` | Full report (`--category`, `--priority`) |
-| `acs:report:card` | `acs-rc` | View single card with all ideas |
-| `acs:report:status` | `acs-rs` | Last-run timestamp, pages analyzed |
-| `acs:sitemap` | `acs-s` | Site structure and content types |
+## Workflows
 
-### Card Management
+### Generate and review
 
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:card:edit` | `acs-ce` | Edit card title/description (`--dry-run`) |
-| `acs:card:delete` | `acs-cd` | Delete recommendation card (`--dry-run`) |
-
-### Idea Management
-
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:idea:edit` | `acs-ie` | Edit idea text (`--dry-run`) |
-| `acs:idea:implement` | `acs-ii` | Mark implemented (`--link`, `--undo`, `--dry-run`) |
-| `acs:idea:delete` | `acs-id` | Delete content idea (`--dry-run`) |
-
-### Categories
-
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:category:list` | `acs-catl` | List all with status/weight |
-| `acs:category:get` | `acs-catg` | Full category detail |
-| `acs:category:create` | `acs-catc` | Create category (`--dry-run`) |
-| `acs:category:update` | `acs-catu` | Update category (`--dry-run`) |
-| `acs:category:delete` | `acs-catd` | Delete category (`--dry-run`) |
-
-### Settings & Export
-
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:settings:get` | `acs-sg` | View global settings |
-| `acs:settings:set` | `acs-ss` | Update system prompt (`--dry-run`) |
-| `acs:export` | `acs-e` | Export (`--format=yaml/json/csv`, `--file`) |
-
-### Setup
-
-| Command | Alias | Purpose |
-|---|---|---|
-| `acs:setup-ai` | `acs-sa` | Install AI skill files (`--host`, `--check`) |
-
-## Workflow Examples
-
-### Generate fresh recommendations
-```bash
-drush acs:health
-drush acs:generate -l https://example.com
-drush acs:report
-```
+1. Verify AI provider: `drush acs:health`
+   - If unhealthy, configure the provider in the drupal/ai module first.
+2. Generate: `drush acs:generate -l https://example.com`
+   - To target one category: `--category=content_gaps`
+3. Review: `drush acs:report`
+   - Filter by priority: `--priority=high`
+4. Drill into a card: `drush acs:report:card <section> <uuid>`
+5. If more ideas needed: `drush acs:generate:more <section> <uuid>`
 
 ### Curate and implement
-```bash
-drush acs:report --priority=high
-drush acs:idea:implement content_gaps CARD-UUID IDEA-UUID --link=https://example.com/new-page
-drush acs:export --format=json
-```
+
+1. Find high-priority cards: `drush acs:report --priority=high`
+2. Mark an idea implemented:
+   `drush acs:idea:implement <section> <card-uuid> <idea-uuid> --link=https://example.com/new-page`
+3. Export results: `drush acs:export --format=json`
 
 ### Manage categories
-```bash
-drush acs:category:list
-drush acs:category:create seasonal_content "Seasonal Content" \
-  --instructions="Identify seasonal and timely content opportunities"
-drush acs:category:update trust_signals --weight=5
-```
 
-## Key Concepts
-
-- **Categories** are config entities (content_gaps, authority_topics,
-  expertise_demonstrations, trust_signals, etc.)
-- **Cards** are recommendations within a category, each with a title,
-  description, priority (high/medium/low), and content ideas
-- **Ideas** are specific content suggestions within a card, with
-  implementation status and optional links
-- Recommendations are stored in key-value store, not as nodes
-- Generation requires a configured AI provider (via drupal/ai module)
-- All state-changing commands support `--dry-run`
-- All output is structured YAML with success/message/data envelope
+1. List categories: `drush acs:category:list`
+2. Create: `drush acs:category:create seasonal_content "Seasonal Content" --instructions="Identify seasonal and timely content opportunities"`
+3. Adjust weight: `drush acs:category:update trust_signals --weight=5`
