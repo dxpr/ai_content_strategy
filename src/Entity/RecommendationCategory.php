@@ -148,7 +148,7 @@ class RecommendationCategory extends ConfigEntityBase {
    */
   public static function preDelete(EntityStorageInterface $storage, array $entities) {
     foreach ($entities as $entity) {
-      if ($entity->isLocked() && !$entity->isSyncing() && !$entity->isUninstalling()) {
+      if ($entity instanceof RecommendationCategory && $entity->isLocked() && !$entity->isSyncing() && !$entity->isUninstalling()) {
         throw new \RuntimeException(sprintf('The "%s" category is built-in and cannot be deleted. Disable it instead.', $entity->label()));
       }
     }

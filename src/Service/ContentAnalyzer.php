@@ -329,49 +329,13 @@ class ContentAnalyzer {
       $content = $response->getBody()->getContents();
       $result['exists'] = TRUE;
 
-      // Parse into groups per RFC 9309: a group is one or more consecutive
-      // User-agent lines followed by directives. A new User-agent line after
-      // a directive (or a blank line) starts a new group.
-      $lines = explode("\n", $content);
-      $groups = [];
-      $current_agents = [];
-      $blocks_all = FALSE;
-      $has_directives = FALSE;
-
-      $flush_group = static function () use (&$groups, &$current_agents, &$blocks_all, &$has_directives): void {
-        if (!empty($current_agents)) {
-          $groups[] = ['agents' => $current_agents, 'blocks_all' => $blocks_all];
-        }
-        $current_agents = [];
-        $blocks_all = FALSE;
-        $has_directives = FALSE;
-      };
-
-      foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) {
-          $flush_group();
-          continue;
-        }
-
-        if (preg_match('/^User-agent:\s*(.+)/i', $line, $matches)) {
-          if ($has_directives) {
-            $flush_group();
-          }
-          $current_agents[] = trim($matches[1]);
-        }
-        else {
-          $has_directives = TRUE;
-          if (preg_match('/^Disallow:\s*\/\s*$/i', $line)) {
-            $blocks_all = TRUE;
-          }
-        }
-      }
-      $flush_group();
+      $groups = $this->parseRobotsTxtGroups($content);
 
       // For each AI bot, select the most specific matching group.
       // A bot with an explicit group ignores the wildcard group (RFC 9309
       // section 2.2.1).
+      $blocked = [];
+      $allowed = [];
       foreach ($ai_bots as $bot) {
         $explicit_match = NULL;
         $wildcard_match = NULL;
@@ -389,18 +353,20 @@ class ContentAnalyzer {
         }
 
         $effective = $explicit_match ?? $wildcard_match;
-        if ($effective && $effective['blocks_all']) {
-          $source = $explicit_match ? 'explicit' : 'wildcard';
-          $label = $source === 'wildcard' ? $bot . ' (via wildcard)' : $bot;
-          $result['ai_crawlers_blocked'][] = $label;
+        if ($effective !== NULL && $effective['blocks_all']) {
+          $label = $explicit_match !== NULL ? $bot : $bot . ' (via wildcard)';
+          $blocked[] = $label;
         }
         else {
-          $result['ai_crawlers_allowed'][] = $bot;
+          $allowed[] = $bot;
         }
       }
 
-      if (!empty($result['ai_crawlers_blocked'])) {
-        $result['summary'] = 'Blocked: ' . implode(', ', $result['ai_crawlers_blocked']);
+      $result['ai_crawlers_blocked'] = $blocked;
+      $result['ai_crawlers_allowed'] = $allowed;
+
+      if (!empty($blocked)) {
+        $result['summary'] = 'Blocked: ' . implode(', ', $blocked);
       }
       else {
         $result['summary'] = 'No AI crawlers are explicitly blocked.';
@@ -412,6 +378,63 @@ class ContentAnalyzer {
     }
 
     return $result;
+  }
+
+  /**
+   * Parses robots.txt content into agent groups per RFC 9309.
+   *
+   * A group is one or more consecutive User-agent lines followed by
+   * directives. A blank line or a new User-agent line after directives
+   * starts a new group.
+   *
+   * @param string $content
+   *   Raw robots.txt content.
+   *
+   * @return list<array{agents: list<string>, blocks_all: bool}>
+   *   Parsed groups.
+   */
+  protected function parseRobotsTxtGroups(string $content): array {
+    $lines = explode("\n", $content);
+    $groups = [];
+    $current_agents = [];
+    $blocks_all = FALSE;
+    $has_directives = FALSE;
+
+    foreach ($lines as $line) {
+      $line = trim($line);
+
+      if ($line === '' || str_starts_with($line, '#')) {
+        if ($current_agents !== []) {
+          $groups[] = ['agents' => $current_agents, 'blocks_all' => $blocks_all];
+          $current_agents = [];
+          $blocks_all = FALSE;
+          $has_directives = FALSE;
+        }
+        continue;
+      }
+
+      if (preg_match('/^User-agent:\s*(.+)/i', $line, $matches)) {
+        if ($has_directives) {
+          $groups[] = ['agents' => $current_agents, 'blocks_all' => $blocks_all];
+          $current_agents = [];
+          $blocks_all = FALSE;
+          $has_directives = FALSE;
+        }
+        $current_agents[] = trim($matches[1]);
+      }
+      else {
+        $has_directives = TRUE;
+        if (preg_match('/^Disallow:\s*\/\s*$/i', $line)) {
+          $blocks_all = TRUE;
+        }
+      }
+    }
+
+    if ($current_agents !== []) {
+      $groups[] = ['agents' => $current_agents, 'blocks_all' => $blocks_all];
+    }
+
+    return $groups;
   }
 
   /**
