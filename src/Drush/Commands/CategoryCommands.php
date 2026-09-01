@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\ai_content_strategy\Drush\Commands;
 
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
+use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Attributes as CLI;
 
@@ -46,6 +47,7 @@ class CategoryCommands extends AcsCommandsBase {
         'id' => $category->id(),
         'label' => $category->label(),
         'status' => $category->status() ? 'enabled' : 'disabled',
+        'locked' => $category->isLocked() ? 'yes' : 'no',
         'weight' => $category->getWeight(),
         'instructions' => strlen($instructions) > 80 ? substr($instructions, 0, 80) . '...' : $instructions,
       ];
@@ -77,6 +79,7 @@ class CategoryCommands extends AcsCommandsBase {
         'label' => $category->label(),
         'description' => $category->getDescription(),
         'status' => $category->status() ? 'enabled' : 'disabled',
+        'locked' => $category->isLocked() ? 'yes' : 'no',
         'weight' => $category->getWeight(),
         'instructions' => $category->getInstructions(),
       ],
@@ -259,6 +262,10 @@ class CategoryCommands extends AcsCommandsBase {
       return $this->notFound('Category', $id, 'acs:category:list');
     }
 
+    if ($category->isLocked()) {
+      return $this->error(sprintf('The "%s" category is built-in and cannot be deleted.', $category->label()), ['Use acs:category:update --status=0 to disable it instead.']);
+    }
+
     if ((bool) $options['dry-run']) {
       return $this->success('Dry run: category would be deleted.', [
         'dry_run' => TRUE,
@@ -276,6 +283,58 @@ class CategoryCommands extends AcsCommandsBase {
     catch (\Exception $e) {
       return $this->error('Failed to delete category.', [$e->getMessage()]);
     }
+  }
+
+  /**
+   * Restores missing built-in categories to their shipped defaults.
+   */
+  #[CLI\Command(name: 'acs:category:reset', aliases: ['acs-catr', 'acs:cat:reset'])]
+  #[CLI\Option(name: 'dry-run', description: 'List what would be restored without making changes')]
+  #[CLI\Help(description: '[YAML] Restore missing built-in categories.')]
+  #[CLI\Usage(name: 'drush acs:category:reset', description: 'Restore missing built-in categories')]
+  #[CLI\Usage(name: 'drush acs:category:reset --dry-run', description: 'Preview what would be restored')]
+  public function resetCategories(array $options = ['dry-run' => FALSE]): string {
+    $this->switchToAdmin();
+
+    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $source = new FileStorage($config_path);
+    $storage = $this->entityTypeManager->getStorage('recommendation_category');
+
+    $missing = [];
+    foreach ($source->listAll('ai_content_strategy.recommendation_category') as $name) {
+      $data = $source->read($name);
+      if (!empty($data['locked']) && !$storage->load($data['id'])) {
+        $missing[] = $data;
+      }
+    }
+
+    if (empty($missing)) {
+      return $this->success('All built-in categories are present.', ['missing' => 0]);
+    }
+
+    if ((bool) $options['dry-run']) {
+      $items = array_map(fn($data) => ['id' => $data['id'], 'label' => $data['label']], $missing);
+      return $this->success('Dry run: categories that would be restored.', [
+        'dry_run' => TRUE,
+        'missing' => $items,
+      ]);
+    }
+
+    $restored = [];
+    foreach ($missing as $data) {
+      try {
+        $category = $storage->create($data);
+        $category->save();
+        $restored[] = ['id' => $data['id'], 'label' => $data['label']];
+      }
+      catch (\Exception $e) {
+        return $this->error(sprintf('Failed to restore "%s".', $data['id']), [$e->getMessage()]);
+      }
+    }
+
+    return $this->success(sprintf('Restored %d built-in categories.', count($restored)), [
+      'restored' => $restored,
+    ]);
   }
 
 }

@@ -2,6 +2,7 @@
 
 namespace Drupal\ai_content_strategy\Entity;
 
+use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Link;
 use Drupal\ai_content_strategy\Service\CategorySchemaBuilder;
 use Drupal\Component\Utility\Unicode;
@@ -83,9 +84,32 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   /**
    * {@inheritdoc}
    */
+  /**
+   * {@inheritdoc}
+   */
+  public function getDefaultOperations(EntityInterface $entity) {
+    $operations = parent::getDefaultOperations($entity);
+
+    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $entity */
+    if ($entity->isLocked() && isset($operations['delete'])) {
+      unset($operations['delete']);
+    }
+
+    return $operations;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function buildRow(EntityInterface $entity) {
     /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $entity */
-    $row['label'] = $entity->label();
+    $label = $entity->label();
+    if ($entity->isLocked()) {
+      $label .= ' <small>(' . $this->t('built-in') . ')</small>';
+    }
+    $row['label'] = [
+      '#markup' => $label,
+    ];
 
     // Status with visual indicator.
     $row['status'] = [
@@ -153,9 +177,29 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
 
     // Add helpful description.
     $build['description'] = [
-      '#markup' => '<p>' . $this->t('Manage content strategy recommendation categories. Drag categories to reorder them.') . '</p>',
+      '#markup' => '<p>' . $this->t('Manage content strategy recommendation categories. Drag categories to reorder them. Built-in categories can be disabled but not deleted.') . '</p>',
       '#weight' => -9,
     ];
+
+    // Show "Restore built-in categories" if any are missing.
+    if ($this->hasMissingBuiltInCategories()) {
+      $build['restore'] = [
+        '#type' => 'form',
+        '#form_id' => 'recommendation_category_restore',
+        '#weight' => -8,
+        'actions' => [
+          '#type' => 'actions',
+          'restore' => [
+            '#type' => 'link',
+            '#title' => $this->t('Restore missing built-in categories'),
+            '#url' => Url::fromRoute('ai_content_strategy.category_restore'),
+            '#attributes' => [
+              'class' => ['button', 'button--small'],
+            ],
+          ],
+        ],
+      ];
+    }
 
     // Add link to add new category.
     $build['table']['#empty'] = $this->t('No recommendation categories available. <a href="@add-url">Add a category</a>.', [
@@ -163,6 +207,22 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
     ]);
 
     return $build;
+  }
+
+  /**
+   * Checks whether any built-in categories are missing.
+   */
+  protected function hasMissingBuiltInCategories(): bool {
+    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $source = new FileStorage($config_path);
+
+    foreach ($source->listAll('ai_content_strategy.recommendation_category') as $name) {
+      $data = $source->read($name);
+      if (!empty($data['locked']) && !$this->storage->load($data['id'])) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
 }

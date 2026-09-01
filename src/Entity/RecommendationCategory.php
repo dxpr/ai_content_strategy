@@ -47,7 +47,8 @@ use Drupal\Core\Entity\EntityStorageInterface;
  *     "description",
  *     "weight",
  *     "status",
- *     "instructions"
+ *     "instructions",
+ *     "locked"
  *   }
  * )
  */
@@ -96,6 +97,23 @@ class RecommendationCategory extends ConfigEntityBase {
   protected $instructions = '';
 
   /**
+   * Whether this category is locked (shipped with the module).
+   *
+   * @var bool
+   */
+  protected $locked = FALSE;
+
+  /**
+   * Whether this category is locked (cannot be deleted).
+   *
+   * @return bool
+   *   TRUE if the category is locked.
+   */
+  public function isLocked(): bool {
+    return (bool) $this->locked;
+  }
+
+  /**
    * Gets the description.
    *
    * @return string
@@ -123,6 +141,18 @@ class RecommendationCategory extends ConfigEntityBase {
    */
   public function getInstructions() {
     return $this->instructions;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function preDelete(EntityStorageInterface $storage, array $entities) {
+    foreach ($entities as $entity) {
+      if ($entity->isLocked()) {
+        throw new \RuntimeException(sprintf('The "%s" category is built-in and cannot be deleted. Disable it instead.', $entity->label()));
+      }
+    }
+    parent::preDelete($storage, $entities);
   }
 
   /**

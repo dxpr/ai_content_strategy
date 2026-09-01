@@ -47,6 +47,17 @@ class RecommendationCategoryForm extends EntityForm {
     /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $category */
     $category = $this->entity;
 
+    if (!$category->isNew() && $category->isLocked()) {
+      $form['locked_notice'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['messages', 'messages--status']],
+        '#weight' => -100,
+        'message' => [
+          '#markup' => $this->t('This is a built-in category. You can customise its settings, but it cannot be deleted.'),
+        ],
+      ];
+    }
+
     $form['label'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Category name'),
