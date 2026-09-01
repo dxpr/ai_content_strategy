@@ -7,6 +7,7 @@ namespace Drupal\ai_content_strategy\Drush\Commands;
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
 use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
 use Drush\Attributes as CLI;
 
 /**
@@ -16,6 +17,7 @@ class CategoryCommands extends AcsCommandsBase {
 
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
+    protected readonly ModuleExtensionList $moduleExtensionList,
   ) {
     parent::__construct();
   }
@@ -296,7 +298,7 @@ class CategoryCommands extends AcsCommandsBase {
   public function resetCategories(array $options = ['dry-run' => FALSE]): string {
     $this->switchToAdmin();
 
-    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $config_path = $this->moduleExtensionList->getPath('ai_content_strategy') . '/config/install';
     $source = new FileStorage($config_path);
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
 

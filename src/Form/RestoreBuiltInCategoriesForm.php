@@ -4,6 +4,7 @@ namespace Drupal\ai_content_strategy\Form;
 
 use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
@@ -22,13 +23,23 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
   protected $entityTypeManager;
 
   /**
+   * The module extension list.
+   *
+   * @var \Drupal\Core\Extension\ModuleExtensionList
+   */
+  protected $moduleExtensionList;
+
+  /**
    * Constructs a RestoreBuiltInCategoriesForm.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
+   * @param \Drupal\Core\Extension\ModuleExtensionList $module_extension_list
+   *   The module extension list.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, ModuleExtensionList $module_extension_list) {
     $this->entityTypeManager = $entity_type_manager;
+    $this->moduleExtensionList = $module_extension_list;
   }
 
   /**
@@ -36,7 +47,8 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity_type.manager')
+      $container->get('entity_type.manager'),
+      $container->get('extension.list.module')
     );
   }
 
@@ -107,7 +119,7 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
    *   Array of config data arrays, keyed by config name.
    */
   protected function getMissingCategories(): array {
-    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $config_path = $this->moduleExtensionList->getPath('ai_content_strategy') . '/config/install';
     $source = new FileStorage($config_path);
     $storage = $this->entityTypeManager->getStorage('recommendation_category');
 

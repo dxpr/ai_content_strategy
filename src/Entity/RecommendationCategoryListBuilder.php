@@ -2,14 +2,16 @@
 
 namespace Drupal\ai_content_strategy\Entity;
 
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Link;
 use Drupal\ai_content_strategy\Service\CategorySchemaBuilder;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Config\Entity\DraggableListBuilder;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
@@ -35,21 +37,31 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   protected $currentUser;
 
   /**
+   * The module extension list.
+   *
+   * @var \Drupal\Core\Extension\ModuleExtensionList
+   */
+  protected $moduleExtensionList;
+
+  /**
    * Constructs a new RecommendationCategoryListBuilder.
    *
    * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
    *   The entity type definition.
-   * @param \Drupal\Core\Entity\EntityStorageInterface $storage
-   *   The entity storage class.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    * @param \Drupal\ai_content_strategy\Service\CategorySchemaBuilder $category_schema_builder
    *   The category schema builder service.
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   The current user.
+   * @param \Drupal\Core\Extension\ModuleExtensionList $module_extension_list
+   *   The module extension list.
    */
-  public function __construct(EntityTypeInterface $entity_type, EntityStorageInterface $storage, CategorySchemaBuilder $category_schema_builder, AccountProxyInterface $current_user) {
-    parent::__construct($entity_type, $storage);
+  public function __construct(EntityTypeInterface $entity_type, EntityTypeManagerInterface $entity_type_manager, CategorySchemaBuilder $category_schema_builder, AccountProxyInterface $current_user, ModuleExtensionList $module_extension_list) {
+    parent::__construct($entity_type, $entity_type_manager->getStorage($entity_type->id()));
     $this->categorySchemaBuilder = $category_schema_builder;
     $this->currentUser = $current_user;
+    $this->moduleExtensionList = $module_extension_list;
   }
 
   /**
@@ -58,9 +70,10 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   public static function createInstance(ContainerInterface $container, EntityTypeInterface $entity_type) {
     return new static(
       $entity_type,
-      $container->get('entity_type.manager')->getStorage($entity_type->id()),
+      $container->get('entity_type.manager'),
       $container->get('ai_content_strategy.category_schema_builder'),
-      $container->get('current_user')
+      $container->get('current_user'),
+      $container->get('extension.list.module')
     );
   }
 
@@ -84,11 +97,10 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   /**
    * {@inheritdoc}
    */
-  public function getDefaultOperations(EntityInterface $entity) {
-    $operations = parent::getDefaultOperations($entity);
+  public function getDefaultOperations(EntityInterface $entity, ?CacheableMetadata $cacheability = NULL) {
+    $operations = parent::getDefaultOperations($entity, $cacheability);
 
-    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $entity */
-    if ($entity->isLocked() && isset($operations['delete'])) {
+    if ($entity instanceof RecommendationCategory && $entity->isLocked()) {
       unset($operations['delete']);
     }
 
@@ -204,9 +216,12 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
 
   /**
    * Checks whether any built-in categories are missing.
+   *
+   * @return bool
+   *   TRUE if at least one locked category from config/install is missing.
    */
   protected function hasMissingBuiltInCategories(): bool {
-    $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+    $config_path = $this->moduleExtensionList->getPath('ai_content_strategy') . '/config/install';
     $source = new FileStorage($config_path);
 
     foreach ($source->listAll('ai_content_strategy.recommendation_category') as $name) {

@@ -106,6 +106,7 @@ function ai_content_strategy_uninstall() {
   $storage = $entity_type_manager->getStorage('recommendation_category');
   $categories = $storage->loadMultiple();
   if ($categories) {
+    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $category */
     foreach ($categories as $category) {
       $category->set('locked', FALSE);
     }
