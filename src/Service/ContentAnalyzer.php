@@ -106,43 +106,99 @@ class ContentAnalyzer {
   }
 
   /**
-   * Gets the front page content as plain text.
+   * Gets the front page content as structured plain text.
+   *
+   * Parses the HTML to extract headings, paragraphs, and links
+   * rather than losing all structure via strip_tags().
    *
    * @return string
-   *   The front page content as plain text.
+   *   The front page content as structured plain text.
    */
   protected function getFrontPageContent(): string {
-    // Get the front page path from configuration.
     $front_uri = $this->configFactory->get('system.site')->get('page.front');
 
     if (empty($front_uri)) {
       return '';
     }
 
-    // Extract node ID if front page is a node.
-    if (preg_match('/node\/(\d+)/', $front_uri, $matches)) {
-      $nid = $matches[1];
-      try {
-        $node = $this->entityTypeManager->getStorage('node')->load($nid);
-        if ($node) {
-          // Build the node view.
-          $view_builder = $this->entityTypeManager->getViewBuilder('node');
-          $build = $view_builder->view($node);
+    if (!preg_match('/node\/(\d+)/', $front_uri, $matches)) {
+      return '';
+    }
 
-          // Render the node.
-          $html = $this->renderer->renderInIsolation($build);
-
-          // Convert HTML to plain text.
-          return strip_tags($html);
-        }
+    $nid = $matches[1];
+    try {
+      $node = $this->entityTypeManager->getStorage('node')->load($nid);
+      if (!$node) {
+        return '';
       }
-      catch (\Exception $e) {
-        // Log error but continue with empty content.
-        Error::logException($this->logger, $e);
+
+      $view_builder = $this->entityTypeManager->getViewBuilder('node');
+      $build = $view_builder->view($node);
+      $html = (string) $this->renderer->renderInIsolation($build);
+
+      return $this->extractStructuredText($html);
+    }
+    catch (\Exception $e) {
+      Error::logException($this->logger, $e);
+      return '';
+    }
+  }
+
+  /**
+   * Extracts structured plain text from HTML, preserving headings and links.
+   *
+   * @param string $html
+   *   The rendered HTML.
+   *
+   * @return string
+   *   Structured plain text with headings, paragraphs, and links.
+   */
+  protected function extractStructuredText(string $html): string {
+    $doc = new \DOMDocument();
+    @$doc->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+    $parts = [];
+
+    // Extract headings with their level.
+    for ($level = 1; $level <= 3; $level++) {
+      $elements = $doc->getElementsByTagName('h' . $level);
+      foreach ($elements as $el) {
+        $text = trim($el->textContent);
+        if (!empty($text)) {
+          $prefix = str_repeat('#', $level);
+          $parts[] = "$prefix $text";
+        }
       }
     }
 
-    return '';
+    // Extract paragraph content.
+    $paragraphs = $doc->getElementsByTagName('p');
+    foreach ($paragraphs as $p) {
+      $text = trim($p->textContent);
+      if (mb_strlen($text) > 20) {
+        $parts[] = $text;
+      }
+    }
+
+    // Extract list items for structured content signals.
+    $items = $doc->getElementsByTagName('li');
+    $list_texts = [];
+    foreach ($items as $li) {
+      $text = trim($li->textContent);
+      if (!empty($text) && mb_strlen($text) > 5) {
+        $list_texts[] = '- ' . mb_substr($text, 0, 120);
+      }
+    }
+    if (!empty($list_texts)) {
+      $parts[] = implode("\n", array_slice($list_texts, 0, 15));
+    }
+
+    $result = implode("\n\n", $parts);
+
+    // Normalise whitespace and truncate to a reasonable prompt size.
+    $result = preg_replace('/[ \t]+/', ' ', $result);
+    $result = preg_replace('/\n{3,}/', "\n\n", $result);
+    return mb_substr(trim($result), 0, 8000);
   }
 
   /**
@@ -185,6 +241,7 @@ class ContentAnalyzer {
           'content' => $front_content,
         ],
         'primary_menu' => $menu_items,
+        'ai_visibility' => $this->getAiVisibilityData(),
       ];
     }
     catch (\Exception $e) {
@@ -192,8 +249,250 @@ class ContentAnalyzer {
       return [
         'homepage' => ['title' => '', 'content' => ''],
         'primary_menu' => [],
+        'ai_visibility' => [],
       ];
     }
+  }
+
+  /**
+   * Gets AI visibility data: robots.txt crawler rules, llms.txt, sitemap quality.
+   *
+   * @return array
+   *   AI visibility data with keys: robots_txt, llms_txt, sitemap_quality.
+   */
+  public function getAiVisibilityData(): array {
+    $data = [
+      'robots_txt' => $this->checkRobotsTxt(),
+      'llms_txt' => $this->checkLlmsTxt(),
+      'sitemap_quality' => $this->checkSitemapQuality(),
+    ];
+
+    return $data;
+  }
+
+  /**
+   * Checks robots.txt for AI crawler directives.
+   *
+   * @return array
+   *   Array with 'exists', 'ai_crawlers_blocked', 'blocked_bots', 'content'.
+   */
+  protected function checkRobotsTxt(): array {
+    $result = [
+      'exists' => FALSE,
+      'ai_crawlers_blocked' => [],
+      'ai_crawlers_allowed' => [],
+      'summary' => '',
+    ];
+
+    $ai_bots = [
+      'GPTBot',
+      'ChatGPT-User',
+      'ClaudeBot',
+      'Claude-Web',
+      'PerplexityBot',
+      'Google-Extended',
+      'Amazonbot',
+      'Bytespider',
+      'CCBot',
+      'Cohere-ai',
+      'FacebookBot',
+      'anthropic-ai',
+    ];
+
+    try {
+      $robots_url = Url::fromUserInput('/robots.txt')
+        ->setAbsolute()
+        ->toString();
+
+      $response = $this->httpClient->request('GET', $robots_url, [
+        'timeout' => 5,
+        'http_errors' => FALSE,
+      ]);
+
+      if ($response->getStatusCode() !== 200) {
+        $result['summary'] = 'No robots.txt found.';
+        return $result;
+      }
+
+      $content = $response->getBody()->getContents();
+      $result['exists'] = TRUE;
+
+      $lines = explode("\n", $content);
+      $current_agent = '';
+
+      foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line) || str_starts_with($line, '#')) {
+          continue;
+        }
+
+        if (preg_match('/^User-agent:\s*(.+)/i', $line, $matches)) {
+          $current_agent = trim($matches[1]);
+        }
+        elseif (preg_match('/^Disallow:\s*\/\s*$/i', $line)) {
+          foreach ($ai_bots as $bot) {
+            if (strcasecmp($current_agent, $bot) === 0 || $current_agent === '*') {
+              if ($current_agent === '*') {
+                $result['ai_crawlers_blocked'][] = $bot . ' (via wildcard)';
+              }
+              else {
+                $result['ai_crawlers_blocked'][] = $bot;
+              }
+            }
+          }
+        }
+      }
+
+      // Determine which are effectively allowed.
+      $blocked_names = array_map(function ($item) {
+        return preg_replace('/ \(via wildcard\)$/', '', $item);
+      }, $result['ai_crawlers_blocked']);
+
+      foreach ($ai_bots as $bot) {
+        if (!in_array($bot, $blocked_names, TRUE)) {
+          $result['ai_crawlers_allowed'][] = $bot;
+        }
+      }
+
+      if (!empty($result['ai_crawlers_blocked'])) {
+        $result['summary'] = 'Blocked: ' . implode(', ', $result['ai_crawlers_blocked']);
+      }
+      else {
+        $result['summary'] = 'No AI crawlers are explicitly blocked.';
+      }
+
+    }
+    catch (\Exception $e) {
+      $result['summary'] = 'Could not check robots.txt: ' . $e->getMessage();
+    }
+
+    return $result;
+  }
+
+  /**
+   * Checks for llms.txt presence and content.
+   *
+   * @return array
+   *   Array with 'exists', 'content_preview', 'summary'.
+   */
+  protected function checkLlmsTxt(): array {
+    $result = [
+      'exists' => FALSE,
+      'content_preview' => '',
+      'summary' => '',
+    ];
+
+    try {
+      $llms_url = Url::fromUserInput('/llms.txt')
+        ->setAbsolute()
+        ->toString();
+
+      $response = $this->httpClient->request('GET', $llms_url, [
+        'timeout' => 5,
+        'http_errors' => FALSE,
+      ]);
+
+      if ($response->getStatusCode() === 200) {
+        $content = $response->getBody()->getContents();
+        $result['exists'] = TRUE;
+        $result['content_preview'] = mb_substr(trim($content), 0, 500);
+        $result['summary'] = 'llms.txt found (' . strlen($content) . ' bytes).';
+      }
+      else {
+        $result['summary'] = 'No llms.txt file found at site root.';
+      }
+    }
+    catch (\Exception $e) {
+      $result['summary'] = 'Could not check llms.txt: ' . $e->getMessage();
+    }
+
+    return $result;
+  }
+
+  /**
+   * Checks sitemap.xml quality for AI discoverability.
+   *
+   * @return array
+   *   Array with 'has_lastmod', 'has_priority', 'has_changefreq',
+   *   'lastmod_count', 'total_urls', 'summary'.
+   */
+  protected function checkSitemapQuality(): array {
+    $result = [
+      'has_lastmod' => FALSE,
+      'has_priority' => FALSE,
+      'has_changefreq' => FALSE,
+      'lastmod_count' => 0,
+      'total_urls' => 0,
+      'stale_urls' => 0,
+      'summary' => '',
+    ];
+
+    try {
+      $sitemap_url = Url::fromUserInput('/sitemap.xml')
+        ->setAbsolute()
+        ->toString();
+
+      $fetch = $this->fetchSitemapXml($sitemap_url);
+      if ($fetch['error'] || $fetch['xml'] === NULL) {
+        $result['summary'] = 'Could not parse sitemap.xml.';
+        return $result;
+      }
+
+      $xml = $fetch['xml'];
+
+      if (!isset($xml->url)) {
+        $result['summary'] = 'Sitemap contains no URL entries (may be an index).';
+        return $result;
+      }
+
+      $total = 0;
+      $lastmod_count = 0;
+      $priority_count = 0;
+      $changefreq_count = 0;
+      $stale_count = 0;
+      $one_year_ago = time() - (365 * 24 * 60 * 60);
+
+      foreach ($xml->url as $url_entry) {
+        $total++;
+
+        if (isset($url_entry->lastmod) && !empty((string) $url_entry->lastmod)) {
+          $lastmod_count++;
+          $lastmod_time = strtotime((string) $url_entry->lastmod);
+          if ($lastmod_time !== FALSE && $lastmod_time < $one_year_ago) {
+            $stale_count++;
+          }
+        }
+
+        if (isset($url_entry->priority)) {
+          $priority_count++;
+        }
+
+        if (isset($url_entry->changefreq)) {
+          $changefreq_count++;
+        }
+      }
+
+      $result['total_urls'] = $total;
+      $result['lastmod_count'] = $lastmod_count;
+      $result['has_lastmod'] = $lastmod_count > 0;
+      $result['has_priority'] = $priority_count > 0;
+      $result['has_changefreq'] = $changefreq_count > 0;
+      $result['stale_urls'] = $stale_count;
+
+      $parts = [];
+      $parts[] = $total . ' URLs';
+      $parts[] = $lastmod_count . '/' . $total . ' have lastmod';
+      if ($stale_count > 0) {
+        $parts[] = $stale_count . ' have not been updated in over a year';
+      }
+      $result['summary'] = implode('; ', $parts);
+
+    }
+    catch (\Exception $e) {
+      $result['summary'] = 'Sitemap quality check failed: ' . $e->getMessage();
+    }
+
+    return $result;
   }
 
   /**

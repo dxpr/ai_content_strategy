@@ -149,7 +149,9 @@ class CategoryPromptBuilder {
     $prompt .= "Primary Navigation:\n";
     $prompt .= "{primary_menu}\n\n";
     $prompt .= "Existing Content URLs:\n";
-    $prompt .= "{urls}\n";
+    $prompt .= "{urls}\n\n";
+    $prompt .= "AI Visibility Status:\n";
+    $prompt .= "{ai_visibility}\n";
     $prompt .= "  </website_data>\n\n";
 
     $prompt .= "  <response_requirements>\n";
@@ -166,6 +168,7 @@ class CategoryPromptBuilder {
       '{homepage_content}' => $site_structure['homepage']['content'] ?? '',
       '{primary_menu}' => $this->formatMenuItems($site_structure['primary_menu'] ?? []),
       '{urls}' => $this->formatUrls($sitemap_urls['urls'] ?? []),
+      '{ai_visibility}' => $this->formatAiVisibility($site_structure['ai_visibility'] ?? []),
     ];
 
     return $this->buildPrompt($prompt, $tokens);
@@ -207,6 +210,37 @@ class CategoryPromptBuilder {
     }
 
     return '- ' . implode("\n- ", array_slice($urls, 0, 50));
+  }
+
+  /**
+   * Formats AI visibility data for the prompt.
+   *
+   * @param array $ai_visibility
+   *   The AI visibility data array.
+   *
+   * @return string
+   *   Formatted AI visibility summary.
+   */
+  protected function formatAiVisibility(array $ai_visibility): string {
+    if (empty($ai_visibility)) {
+      return 'AI visibility data not available';
+    }
+
+    $parts = [];
+
+    if (isset($ai_visibility['robots_txt'])) {
+      $parts[] = 'robots.txt: ' . ($ai_visibility['robots_txt']['summary'] ?? 'unknown');
+    }
+
+    if (isset($ai_visibility['llms_txt'])) {
+      $parts[] = 'llms.txt: ' . ($ai_visibility['llms_txt']['summary'] ?? 'unknown');
+    }
+
+    if (isset($ai_visibility['sitemap_quality'])) {
+      $parts[] = 'Sitemap quality: ' . ($ai_visibility['sitemap_quality']['summary'] ?? 'unknown');
+    }
+
+    return implode("\n", $parts);
   }
 
   /**
