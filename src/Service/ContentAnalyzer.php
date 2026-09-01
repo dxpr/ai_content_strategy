@@ -108,7 +108,7 @@ class ContentAnalyzer {
   /**
    * Gets the front page content as structured plain text.
    *
-   * Parses the HTML to extract headings, paragraphs, and links
+   * Parses the HTML to extract headings, paragraphs, and list items
    * rather than losing all structure via strip_tags().
    *
    * @return string
@@ -158,7 +158,7 @@ class ContentAnalyzer {
     @$doc->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
 
     $xpath = new \DOMXPath($doc);
-    $nodes = $xpath->query('//h1|//h2|//h3|//p|//li');
+    $nodes = $xpath->query('//h1|//h2|//h3|//p[not(ancestor::li)]|//li');
 
     $parts = [];
     $list_count = 0;
@@ -317,7 +317,13 @@ class ContentAnalyzer {
 
       foreach ($lines as $line) {
         $line = trim($line);
-        if (empty($line) || str_starts_with($line, '#')) {
+        if (str_starts_with($line, '#')) {
+          continue;
+        }
+
+        // Blank lines end a group per the robots.txt specification.
+        if (empty($line)) {
+          $current_agents = [];
           continue;
         }
 

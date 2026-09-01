@@ -84,9 +84,6 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   /**
    * {@inheritdoc}
    */
-  /**
-   * {@inheritdoc}
-   */
   public function getDefaultOperations(EntityInterface $entity) {
     $operations = parent::getDefaultOperations($entity);
 
@@ -184,18 +181,14 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
     // Show "Restore built-in categories" if any are missing.
     if ($this->hasMissingBuiltInCategories()) {
       $build['restore'] = [
-        '#type' => 'form',
-        '#form_id' => 'recommendation_category_restore',
+        '#type' => 'container',
         '#weight' => -8,
-        'actions' => [
-          '#type' => 'actions',
-          'restore' => [
-            '#type' => 'link',
-            '#title' => $this->t('Restore missing built-in categories'),
-            '#url' => Url::fromRoute('ai_content_strategy.category_restore'),
-            '#attributes' => [
-              'class' => ['button', 'button--small'],
-            ],
+        'restore' => [
+          '#type' => 'link',
+          '#title' => $this->t('Restore missing built-in categories'),
+          '#url' => Url::fromRoute('ai_content_strategy.category_restore'),
+          '#attributes' => [
+            'class' => ['button', 'button--small'],
           ],
         ],
       ];

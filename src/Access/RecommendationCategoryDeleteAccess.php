@@ -23,7 +23,11 @@ class RecommendationCategoryDeleteAccess {
    *   The access result.
    */
   public function access(AccountInterface $account, ?RecommendationCategory $recommendation_category = NULL) {
-    if ($recommendation_category && $recommendation_category->isLocked()) {
+    if (!$recommendation_category) {
+      return AccessResult::forbidden();
+    }
+
+    if ($recommendation_category->isLocked()) {
       return AccessResult::forbidden('Built-in categories cannot be deleted.')
         ->addCacheableDependency($recommendation_category);
     }
