@@ -3,15 +3,14 @@
 namespace Drupal\ai_content_strategy\Entity;
 
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Link;
+use Drupal\ai_content_strategy\Service\BuiltInCategoryManager;
 use Drupal\ai_content_strategy\Service\CategorySchemaBuilder;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Config\Entity\DraggableListBuilder;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Url;
@@ -37,11 +36,11 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
   protected $currentUser;
 
   /**
-   * The module extension list.
+   * The built-in category manager.
    *
-   * @var \Drupal\Core\Extension\ModuleExtensionList
+   * @var \Drupal\ai_content_strategy\Service\BuiltInCategoryManager
    */
-  protected $moduleExtensionList;
+  protected $builtInCategoryManager;
 
   /**
    * Constructs a new RecommendationCategoryListBuilder.
@@ -54,14 +53,14 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
    *   The category schema builder service.
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   The current user.
-   * @param \Drupal\Core\Extension\ModuleExtensionList $module_extension_list
-   *   The module extension list.
+   * @param \Drupal\ai_content_strategy\Service\BuiltInCategoryManager $built_in_category_manager
+   *   The built-in category manager.
    */
-  public function __construct(EntityTypeInterface $entity_type, EntityTypeManagerInterface $entity_type_manager, CategorySchemaBuilder $category_schema_builder, AccountProxyInterface $current_user, ModuleExtensionList $module_extension_list) {
+  public function __construct(EntityTypeInterface $entity_type, EntityTypeManagerInterface $entity_type_manager, CategorySchemaBuilder $category_schema_builder, AccountProxyInterface $current_user, BuiltInCategoryManager $built_in_category_manager) {
     parent::__construct($entity_type, $entity_type_manager->getStorage($entity_type->id()));
     $this->categorySchemaBuilder = $category_schema_builder;
     $this->currentUser = $current_user;
-    $this->moduleExtensionList = $module_extension_list;
+    $this->builtInCategoryManager = $built_in_category_manager;
   }
 
   /**
@@ -73,7 +72,7 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
       $container->get('entity_type.manager'),
       $container->get('ai_content_strategy.category_schema_builder'),
       $container->get('current_user'),
-      $container->get('extension.list.module')
+      $container->get('ai_content_strategy.built_in_category_manager')
     );
   }
 
@@ -112,13 +111,7 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
    */
   public function buildRow(EntityInterface $entity) {
     /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $entity */
-    $label = $entity->label();
-    if ($entity->isLocked()) {
-      $label .= ' <small>(' . $this->t('built-in') . ')</small>';
-    }
-    $row['label'] = [
-      '#markup' => $label,
-    ];
+    $row['label'] = $entity->label();
 
     // Status with visual indicator.
     $row['status'] = [
@@ -145,6 +138,23 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
     }
 
     return $row + parent::buildRow($entity);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildForm($form, $form_state);
+
+    foreach ($this->entities as $entity_id => $entity) {
+      if ($entity instanceof RecommendationCategory && $entity->isLocked() && isset($form[$this->entitiesKey][$entity_id]['label'])) {
+        $form[$this->entitiesKey][$entity_id]['label'] = [
+          '#markup' => $entity->label() . ' <small>(' . $this->t('built-in') . ')</small>',
+        ];
+      }
+    }
+
+    return $form;
   }
 
   /**
@@ -191,7 +201,7 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
     ];
 
     // Show "Restore built-in categories" if any are missing.
-    if ($this->hasMissingBuiltInCategories()) {
+    if (!empty($this->builtInCategoryManager->getMissing())) {
       $build['restore'] = [
         '#type' => 'container',
         '#weight' => -8,
@@ -212,25 +222,6 @@ class RecommendationCategoryListBuilder extends DraggableListBuilder {
     ]);
 
     return $build;
-  }
-
-  /**
-   * Checks whether any built-in categories are missing.
-   *
-   * @return bool
-   *   TRUE if at least one locked category from config/install is missing.
-   */
-  protected function hasMissingBuiltInCategories(): bool {
-    $config_path = $this->moduleExtensionList->getPath('ai_content_strategy') . '/config/install';
-    $source = new FileStorage($config_path);
-
-    foreach ($source->listAll('ai_content_strategy.recommendation_category') as $name) {
-      $data = $source->read($name);
-      if (!empty($data['locked']) && !$this->storage->load($data['id'])) {
-        return TRUE;
-      }
-    }
-    return FALSE;
   }
 
 }

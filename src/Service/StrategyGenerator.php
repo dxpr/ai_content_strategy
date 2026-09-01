@@ -169,7 +169,7 @@ class StrategyGenerator extends AnalyzerBase {
 
     try {
       // Get site data.
-      $site_structure = $this->contentAnalyzer->getSiteStructure();
+      $site_structure = $this->contentAnalyzer->getSiteStructure(TRUE);
       $sitemap_urls = $this->contentAnalyzer->getSitemapUrls();
 
       // Check sitemap data.

@@ -2,9 +2,7 @@
 
 namespace Drupal\ai_content_strategy\Form;
 
-use Drupal\Core\Config\FileStorage;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Extension\ModuleExtensionList;
+use Drupal\ai_content_strategy\Service\BuiltInCategoryManager;
 use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
@@ -16,30 +14,20 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
 
   /**
-   * The entity type manager.
+   * The built-in category manager.
    *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   * @var \Drupal\ai_content_strategy\Service\BuiltInCategoryManager
    */
-  protected $entityTypeManager;
-
-  /**
-   * The module extension list.
-   *
-   * @var \Drupal\Core\Extension\ModuleExtensionList
-   */
-  protected $moduleExtensionList;
+  protected $builtInCategoryManager;
 
   /**
    * Constructs a RestoreBuiltInCategoriesForm.
    *
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The entity type manager.
-   * @param \Drupal\Core\Extension\ModuleExtensionList $module_extension_list
-   *   The module extension list.
+   * @param \Drupal\ai_content_strategy\Service\BuiltInCategoryManager $built_in_category_manager
+   *   The built-in category manager.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, ModuleExtensionList $module_extension_list) {
-    $this->entityTypeManager = $entity_type_manager;
-    $this->moduleExtensionList = $module_extension_list;
+  public function __construct(BuiltInCategoryManager $built_in_category_manager) {
+    $this->builtInCategoryManager = $built_in_category_manager;
   }
 
   /**
@@ -47,8 +35,7 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity_type.manager'),
-      $container->get('extension.list.module')
+      $container->get('ai_content_strategy.built_in_category_manager')
     );
   }
 
@@ -70,7 +57,7 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
    * {@inheritdoc}
    */
   public function getDescription() {
-    $missing = $this->getMissingCategories();
+    $missing = $this->builtInCategoryManager->getMissing();
     if (empty($missing)) {
       return $this->t('All built-in categories are already present.');
     }
@@ -92,15 +79,7 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $missing = $this->getMissingCategories();
-    $storage = $this->entityTypeManager->getStorage('recommendation_category');
-    $restored = 0;
-
-    foreach ($missing as $data) {
-      $category = $storage->create($data);
-      $category->save();
-      $restored++;
-    }
+    $restored = $this->builtInCategoryManager->restoreMissing();
 
     if ($restored > 0) {
       $this->messenger()->addMessage($this->t('Restored @count built-in categories.', ['@count' => $restored]));
@@ -110,27 +89,6 @@ class RestoreBuiltInCategoriesForm extends ConfirmFormBase {
     }
 
     $form_state->setRedirectUrl($this->getCancelUrl());
-  }
-
-  /**
-   * Gets config data for missing built-in categories.
-   *
-   * @return array
-   *   Array of config data arrays, keyed by config name.
-   */
-  protected function getMissingCategories(): array {
-    $config_path = $this->moduleExtensionList->getPath('ai_content_strategy') . '/config/install';
-    $source = new FileStorage($config_path);
-    $storage = $this->entityTypeManager->getStorage('recommendation_category');
-
-    $missing = [];
-    foreach ($source->listAll('ai_content_strategy.recommendation_category') as $name) {
-      $data = $source->read($name);
-      if (!empty($data['locked']) && !$storage->load($data['id'])) {
-        $missing[$name] = $data;
-      }
-    }
-    return $missing;
   }
 
 }

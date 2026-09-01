@@ -101,15 +101,11 @@ function ai_content_strategy_uninstall() {
   // Delete our key-value collection.
   \Drupal::keyValue('ai_content_strategy.recommendations')->deleteAll();
 
-  // Delete recommendation category entities (unlock first to allow deletion).
+  // Delete recommendation category entities.
   $entity_type_manager = \Drupal::entityTypeManager();
   $storage = $entity_type_manager->getStorage('recommendation_category');
   $categories = $storage->loadMultiple();
   if ($categories) {
-    /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $category */
-    foreach ($categories as $category) {
-      $category->set('locked', FALSE);
-    }
     $storage->delete($categories);
   }
 
@@ -196,7 +192,8 @@ function ai_content_strategy_update_10003() {
  * Set locked flag on built-in categories and restore any that were deleted.
  */
 function ai_content_strategy_update_10004() {
-  $config_factory = \Drupal::configFactory();
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $storage = $entity_type_manager->getStorage('recommendation_category');
   $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
   $config_source = new FileStorage($config_path);
 
@@ -209,17 +206,18 @@ function ai_content_strategy_update_10004() {
       continue;
     }
 
-    $config = $config_factory->getEditable($name);
-    if ($config->get('id')) {
-      // Category exists: set locked flag.
-      if (!$config->get('locked')) {
-        $config->set('locked', TRUE)->save();
+    $existing = $storage->load($source_data['id']);
+    if ($existing) {
+      /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $existing */
+      if (!$existing->isLocked()) {
+        $existing->set('locked', TRUE);
+        $existing->save();
         $updated++;
       }
     }
     else {
-      // Category was deleted: restore it.
-      $config->setData($source_data)->save();
+      $category = $storage->create($source_data);
+      $category->save();
       $restored++;
     }
   }

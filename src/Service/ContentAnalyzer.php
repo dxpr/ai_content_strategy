@@ -158,14 +158,14 @@ class ContentAnalyzer {
     @$doc->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
 
     $xpath = new \DOMXPath($doc);
-    $nodes = $xpath->query('//h1|//h2|//h3|//p[not(ancestor::li)]|//li');
+    $nodes = $xpath->query('//h1|//h2|//h3|//p[not(ancestor::li)]|//li[not(ancestor::li)]');
 
     $parts = [];
     $list_count = 0;
 
     foreach ($nodes as $node) {
       $text = trim($node->textContent);
-      if (empty($text)) {
+      if ($text === '') {
         continue;
       }
 
@@ -185,19 +185,39 @@ class ContentAnalyzer {
     }
 
     $result = implode("\n\n", $parts);
-
     $result = preg_replace('/[ \t]+/', ' ', $result);
     $result = preg_replace('/\n{3,}/', "\n\n", $result);
-    return mb_substr(trim($result), 0, 8000);
+    $result = mb_substr(trim($result), 0, 8000);
+
+    // Fall back to stripped full text when structured extraction yields too little.
+    if (mb_strlen($result) < 100) {
+      $body = $xpath->query('//body');
+      if ($body->length > 0) {
+        $full_text = trim($body->item(0)->textContent);
+        $full_text = preg_replace('/[ \t]+/', ' ', $full_text);
+        $full_text = preg_replace('/\n{3,}/', "\n\n", $full_text);
+        $fallback = mb_substr(trim($full_text), 0, 8000);
+        if (mb_strlen($fallback) > mb_strlen($result)) {
+          return $fallback;
+        }
+      }
+    }
+
+    return $result;
   }
 
   /**
    * Gets the site structure including homepage, navigation, and URLs.
    *
+   * @param bool $include_ai_visibility
+   *   Whether to include AI visibility data (robots.txt, llms.txt, sitemap
+   *   quality). Requires loopback HTTP requests; pass TRUE only when the
+   *   caller actually uses the data.
+   *
    * @return array
    *   Site structure array.
    */
-  public function getSiteStructure(): array {
+  public function getSiteStructure(bool $include_ai_visibility = FALSE): array {
     try {
       // Get front page content.
       $front_content = $this->getFrontPageContent();
@@ -231,7 +251,7 @@ class ContentAnalyzer {
           'content' => $front_content,
         ],
         'primary_menu' => $menu_items,
-        'ai_visibility' => $this->getAiVisibilityData(),
+        'ai_visibility' => $include_ai_visibility ? $this->getAiVisibilityData() : [],
       ];
     }
     catch (\Exception $e) {
@@ -309,56 +329,72 @@ class ContentAnalyzer {
       $content = $response->getBody()->getContents();
       $result['exists'] = TRUE;
 
-      // Parse into groups: consecutive User-agent lines share one directive
-      // block, per the robots.txt specification.
+      // Parse into groups per RFC 9309: a group is one or more consecutive
+      // User-agent lines followed by directives. A new User-agent line after
+      // a directive (or a blank line) starts a new group.
       $lines = explode("\n", $content);
+      $groups = [];
       $current_agents = [];
-      $blocked_set = [];
+      $blocks_all = FALSE;
+      $has_directives = FALSE;
+
+      $flush_group = static function () use (&$groups, &$current_agents, &$blocks_all, &$has_directives): void {
+        if (!empty($current_agents)) {
+          $groups[] = ['agents' => $current_agents, 'blocks_all' => $blocks_all];
+        }
+        $current_agents = [];
+        $blocks_all = FALSE;
+        $has_directives = FALSE;
+      };
 
       foreach ($lines as $line) {
         $line = trim($line);
-        if (str_starts_with($line, '#')) {
-          continue;
-        }
-
-        // Blank lines end a group per the robots.txt specification.
-        if (empty($line)) {
-          $current_agents = [];
+        if ($line === '' || str_starts_with($line, '#')) {
+          $flush_group();
           continue;
         }
 
         if (preg_match('/^User-agent:\s*(.+)/i', $line, $matches)) {
+          if ($has_directives) {
+            $flush_group();
+          }
           $current_agents[] = trim($matches[1]);
         }
         else {
+          $has_directives = TRUE;
           if (preg_match('/^Disallow:\s*\/\s*$/i', $line)) {
-            foreach ($current_agents as $agent) {
-              if ($agent === '*') {
-                foreach ($ai_bots as $bot) {
-                  $blocked_set[$bot] ??= 'wildcard';
-                }
-              }
-              else {
-                foreach ($ai_bots as $bot) {
-                  if (strcasecmp($agent, $bot) === 0) {
-                    $blocked_set[$bot] = 'explicit';
-                  }
-                }
-              }
-            }
+            $blocks_all = TRUE;
           }
-          // Any non-User-agent directive ends the agent accumulation.
-          $current_agents = [];
         }
       }
+      $flush_group();
 
-      foreach ($blocked_set as $bot => $source) {
-        $label = $source === 'wildcard' ? $bot . ' (via wildcard)' : $bot;
-        $result['ai_crawlers_blocked'][] = $label;
-      }
-
+      // For each AI bot, select the most specific matching group.
+      // A bot with an explicit group ignores the wildcard group (RFC 9309
+      // section 2.2.1).
       foreach ($ai_bots as $bot) {
-        if (!isset($blocked_set[$bot])) {
+        $explicit_match = NULL;
+        $wildcard_match = NULL;
+
+        foreach ($groups as $group) {
+          foreach ($group['agents'] as $agent) {
+            if (strcasecmp($agent, $bot) === 0) {
+              $explicit_match = $group;
+              break 2;
+            }
+            if ($agent === '*') {
+              $wildcard_match = $group;
+            }
+          }
+        }
+
+        $effective = $explicit_match ?? $wildcard_match;
+        if ($effective && $effective['blocks_all']) {
+          $source = $explicit_match ? 'explicit' : 'wildcard';
+          $label = $source === 'wildcard' ? $bot . ' (via wildcard)' : $bot;
+          $result['ai_crawlers_blocked'][] = $label;
+        }
+        else {
           $result['ai_crawlers_allowed'][] = $bot;
         }
       }
@@ -447,19 +483,6 @@ class ContentAnalyzer {
         ->setAbsolute()
         ->toString();
 
-      $fetch = $this->fetchSitemapXml($sitemap_url);
-      if ($fetch['error'] || $fetch['xml'] === NULL) {
-        $result['summary'] = 'Could not parse sitemap.xml.';
-        return $result;
-      }
-
-      $xml = $fetch['xml'];
-
-      if (!isset($xml->url)) {
-        $result['summary'] = 'Sitemap contains no URL entries (may be an index).';
-        return $result;
-      }
-
       $total = 0;
       $lastmod_count = 0;
       $priority_count = 0;
@@ -467,24 +490,57 @@ class ContentAnalyzer {
       $stale_count = 0;
       $one_year_ago = time() - (365 * 24 * 60 * 60);
 
-      foreach ($xml->url as $url_entry) {
-        $total++;
+      $queue = [$sitemap_url];
+      $processed = [];
 
-        if (isset($url_entry->lastmod) && !empty((string) $url_entry->lastmod)) {
-          $lastmod_count++;
-          $lastmod_time = strtotime((string) $url_entry->lastmod);
-          if ($lastmod_time !== FALSE && $lastmod_time < $one_year_ago) {
-            $stale_count++;
+      while (!empty($queue)) {
+        $current_url = array_shift($queue);
+        if (isset($processed[$current_url])) {
+          continue;
+        }
+        $processed[$current_url] = TRUE;
+
+        $fetch = $this->fetchSitemapXml($current_url);
+        if ($fetch['error'] || $fetch['xml'] === NULL) {
+          continue;
+        }
+
+        $xml = $fetch['xml'];
+
+        if (isset($xml->sitemap)) {
+          foreach ($xml->sitemap as $sub_sitemap) {
+            $queue[] = (string) $sub_sitemap->loc;
           }
         }
 
-        if (isset($url_entry->priority)) {
-          $priority_count++;
+        if (!isset($xml->url)) {
+          continue;
         }
 
-        if (isset($url_entry->changefreq)) {
-          $changefreq_count++;
+        foreach ($xml->url as $url_entry) {
+          $total++;
+
+          if (isset($url_entry->lastmod) && !empty((string) $url_entry->lastmod)) {
+            $lastmod_count++;
+            $lastmod_time = strtotime((string) $url_entry->lastmod);
+            if ($lastmod_time !== FALSE && $lastmod_time < $one_year_ago) {
+              $stale_count++;
+            }
+          }
+
+          if (isset($url_entry->priority)) {
+            $priority_count++;
+          }
+
+          if (isset($url_entry->changefreq)) {
+            $changefreq_count++;
+          }
         }
+      }
+
+      if ($total === 0) {
+        $result['summary'] = 'Sitemap contains no URL entries.';
+        return $result;
       }
 
       $result['total_urls'] = $total;
@@ -592,7 +648,7 @@ class ContentAnalyzer {
   protected function fetchSitemapXml(string $url): array {
     try {
       // Fetch the XML content via HTTP.
-      $response = $this->httpClient->request('GET', $url);
+      $response = $this->httpClient->request('GET', $url, ['timeout' => 10]);
       $xml_content = $response->getBody()->getContents();
 
       // Attempt to parse the XML string.

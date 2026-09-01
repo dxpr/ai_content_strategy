@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Drupal\ai_content_strategy\Drush\Commands;
 
 use Drupal\ai_content_strategy\Entity\RecommendationCategory;
-use Drupal\Core\Config\FileStorage;
+use Drupal\ai_content_strategy\Service\BuiltInCategoryManager;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Extension\ModuleExtensionList;
 use Drush\Attributes as CLI;
 
 /**
@@ -17,7 +16,7 @@ class CategoryCommands extends AcsCommandsBase {
 
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
-    protected readonly ModuleExtensionList $moduleExtensionList,
+    protected readonly BuiltInCategoryManager $builtInCategoryManager,
   ) {
     parent::__construct();
   }
@@ -298,17 +297,7 @@ class CategoryCommands extends AcsCommandsBase {
   public function resetCategories(array $options = ['dry-run' => FALSE]): string {
     $this->switchToAdmin();
 
-    $config_path = $this->moduleExtensionList->getPath('ai_content_strategy') . '/config/install';
-    $source = new FileStorage($config_path);
-    $storage = $this->entityTypeManager->getStorage('recommendation_category');
-
-    $missing = [];
-    foreach ($source->listAll('ai_content_strategy.recommendation_category') as $name) {
-      $data = $source->read($name);
-      if (!empty($data['locked']) && !$storage->load($data['id'])) {
-        $missing[] = $data;
-      }
-    }
+    $missing = $this->builtInCategoryManager->getMissing();
 
     if (empty($missing)) {
       return $this->success('All built-in categories are present.', ['missing' => 0]);
@@ -322,19 +311,9 @@ class CategoryCommands extends AcsCommandsBase {
       ]);
     }
 
-    $restored = [];
-    foreach ($missing as $data) {
-      try {
-        $category = $storage->create($data);
-        $category->save();
-        $restored[] = ['id' => $data['id'], 'label' => $data['label']];
-      }
-      catch (\Exception $e) {
-        return $this->error(sprintf('Failed to restore "%s".', $data['id']), [$e->getMessage()]);
-      }
-    }
+    $restored = $this->builtInCategoryManager->restoreMissing();
 
-    return $this->success(sprintf('Restored %d built-in categories.', count($restored)), [
+    return $this->success(sprintf('Restored %d built-in categories.', $restored), [
       'restored' => $restored,
     ]);
   }
