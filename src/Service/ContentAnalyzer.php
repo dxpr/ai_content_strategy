@@ -145,57 +145,47 @@ class ContentAnalyzer {
   }
 
   /**
-   * Extracts structured plain text from HTML, preserving headings and links.
+   * Extracts structured plain text from HTML, preserving headings and paragraphs.
    *
    * @param string $html
    *   The rendered HTML.
    *
    * @return string
-   *   Structured plain text with headings, paragraphs, and links.
+   *   Structured plain text with headings, paragraphs, and list items.
    */
   protected function extractStructuredText(string $html): string {
     $doc = new \DOMDocument();
     @$doc->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
 
+    $xpath = new \DOMXPath($doc);
+    $nodes = $xpath->query('//h1|//h2|//h3|//p|//li');
+
     $parts = [];
+    $list_count = 0;
 
-    // Extract headings with their level.
-    for ($level = 1; $level <= 3; $level++) {
-      $elements = $doc->getElementsByTagName('h' . $level);
-      foreach ($elements as $el) {
-        $text = trim($el->textContent);
-        if (!empty($text)) {
-          $prefix = str_repeat('#', $level);
-          $parts[] = "$prefix $text";
-        }
+    foreach ($nodes as $node) {
+      $text = trim($node->textContent);
+      if (empty($text)) {
+        continue;
       }
-    }
 
-    // Extract paragraph content.
-    $paragraphs = $doc->getElementsByTagName('p');
-    foreach ($paragraphs as $p) {
-      $text = trim($p->textContent);
-      if (mb_strlen($text) > 20) {
+      $tag = $node->nodeName;
+
+      if (in_array($tag, ['h1', 'h2', 'h3'], TRUE)) {
+        $level = (int) $tag[1];
+        $parts[] = str_repeat('#', $level) . ' ' . $text;
+      }
+      elseif ($tag === 'p' && mb_strlen($text) > 20) {
         $parts[] = $text;
       }
-    }
-
-    // Extract list items for structured content signals.
-    $items = $doc->getElementsByTagName('li');
-    $list_texts = [];
-    foreach ($items as $li) {
-      $text = trim($li->textContent);
-      if (!empty($text) && mb_strlen($text) > 5) {
-        $list_texts[] = '- ' . mb_substr($text, 0, 120);
+      elseif ($tag === 'li' && mb_strlen($text) > 5 && $list_count < 15) {
+        $parts[] = '- ' . mb_substr($text, 0, 120);
+        $list_count++;
       }
-    }
-    if (!empty($list_texts)) {
-      $parts[] = implode("\n", array_slice($list_texts, 0, 15));
     }
 
     $result = implode("\n\n", $parts);
 
-    // Normalise whitespace and truncate to a reasonable prompt size.
     $result = preg_replace('/[ \t]+/', ' ', $result);
     $result = preg_replace('/\n{3,}/', "\n\n", $result);
     return mb_substr(trim($result), 0, 8000);
@@ -261,20 +251,22 @@ class ContentAnalyzer {
    *   AI visibility data with keys: robots_txt, llms_txt, sitemap_quality.
    */
   public function getAiVisibilityData(): array {
-    $data = [
+    return [
       'robots_txt' => $this->checkRobotsTxt(),
       'llms_txt' => $this->checkLlmsTxt(),
       'sitemap_quality' => $this->checkSitemapQuality(),
     ];
-
-    return $data;
   }
 
   /**
    * Checks robots.txt for AI crawler directives.
    *
+   * Parses User-agent groups (including consecutive User-agent lines that
+   * share a single set of directives) and checks for full-site Disallow.
+   *
    * @return array
-   *   Array with 'exists', 'ai_crawlers_blocked', 'blocked_bots', 'content'.
+   *   Array with 'exists', 'ai_crawlers_blocked', 'ai_crawlers_allowed',
+   *   'summary'.
    */
   protected function checkRobotsTxt(): array {
     $result = [
@@ -317,8 +309,11 @@ class ContentAnalyzer {
       $content = $response->getBody()->getContents();
       $result['exists'] = TRUE;
 
+      // Parse into groups: consecutive User-agent lines share one directive
+      // block, per the robots.txt specification.
       $lines = explode("\n", $content);
-      $current_agent = '';
+      $current_agents = [];
+      $blocked_set = [];
 
       foreach ($lines as $line) {
         $line = trim($line);
@@ -327,29 +322,37 @@ class ContentAnalyzer {
         }
 
         if (preg_match('/^User-agent:\s*(.+)/i', $line, $matches)) {
-          $current_agent = trim($matches[1]);
+          $current_agents[] = trim($matches[1]);
         }
-        elseif (preg_match('/^Disallow:\s*\/\s*$/i', $line)) {
-          foreach ($ai_bots as $bot) {
-            if (strcasecmp($current_agent, $bot) === 0 || $current_agent === '*') {
-              if ($current_agent === '*') {
-                $result['ai_crawlers_blocked'][] = $bot . ' (via wildcard)';
+        else {
+          if (preg_match('/^Disallow:\s*\/\s*$/i', $line)) {
+            foreach ($current_agents as $agent) {
+              if ($agent === '*') {
+                foreach ($ai_bots as $bot) {
+                  $blocked_set[$bot] ??= 'wildcard';
+                }
               }
               else {
-                $result['ai_crawlers_blocked'][] = $bot;
+                foreach ($ai_bots as $bot) {
+                  if (strcasecmp($agent, $bot) === 0) {
+                    $blocked_set[$bot] = 'explicit';
+                  }
+                }
               }
             }
           }
+          // Any non-User-agent directive ends the agent accumulation.
+          $current_agents = [];
         }
       }
 
-      // Determine which are effectively allowed.
-      $blocked_names = array_map(function ($item) {
-        return preg_replace('/ \(via wildcard\)$/', '', $item);
-      }, $result['ai_crawlers_blocked']);
+      foreach ($blocked_set as $bot => $source) {
+        $label = $source === 'wildcard' ? $bot . ' (via wildcard)' : $bot;
+        $result['ai_crawlers_blocked'][] = $label;
+      }
 
       foreach ($ai_bots as $bot) {
-        if (!in_array($bot, $blocked_names, TRUE)) {
+        if (!isset($blocked_set[$bot])) {
           $result['ai_crawlers_allowed'][] = $bot;
         }
       }
@@ -393,6 +396,12 @@ class ContentAnalyzer {
       ]);
 
       if ($response->getStatusCode() === 200) {
+        $content_type = $response->getHeaderLine('Content-Type');
+        // Guard against HTML error pages returned with a 200 status.
+        if ($content_type && !str_contains($content_type, 'text/plain') && str_contains($content_type, 'text/html')) {
+          $result['summary'] = 'No llms.txt file found (HTML response at that path).';
+          return $result;
+        }
         $content = $response->getBody()->getContents();
         $result['exists'] = TRUE;
         $result['content_preview'] = mb_substr(trim($content), 0, 500);

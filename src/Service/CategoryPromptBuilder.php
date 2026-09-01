@@ -234,6 +234,10 @@ class CategoryPromptBuilder {
 
     if (isset($ai_visibility['llms_txt'])) {
       $parts[] = 'llms.txt: ' . ($ai_visibility['llms_txt']['summary'] ?? 'unknown');
+      $preview = $ai_visibility['llms_txt']['content_preview'] ?? '';
+      if (!empty($preview)) {
+        $parts[] = 'llms.txt content: ' . $preview;
+      }
     }
 
     if (isset($ai_visibility['sitemap_quality'])) {
