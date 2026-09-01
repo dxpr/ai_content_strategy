@@ -187,3 +187,50 @@ function ai_content_strategy_update_10003() {
 
   return t('Global settings already exist.');
 }
+
+/**
+ * Set locked flag on built-in categories and restore any that were deleted.
+ */
+function ai_content_strategy_update_10004() {
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $storage = $entity_type_manager->getStorage('recommendation_category');
+  $config_path = \Drupal::service('extension.list.module')->getPath('ai_content_strategy') . '/config/install';
+  $config_source = new FileStorage($config_path);
+
+  $updated = 0;
+  $restored = 0;
+
+  foreach ($config_source->listAll('ai_content_strategy.recommendation_category') as $name) {
+    $source_data = $config_source->read($name);
+    if (empty($source_data['locked'])) {
+      continue;
+    }
+
+    $existing = $storage->load($source_data['id']);
+    if ($existing) {
+      /** @var \Drupal\ai_content_strategy\Entity\RecommendationCategory $existing */
+      if (!$existing->isLocked()) {
+        $existing->set('locked', TRUE);
+        $existing->save();
+        $updated++;
+      }
+    }
+    else {
+      $category = $storage->create($source_data);
+      $category->save();
+      $restored++;
+    }
+  }
+
+  $messages = [];
+  if ($updated > 0) {
+    $messages[] = t('Set locked flag on @count existing categories.', ['@count' => $updated]);
+  }
+  if ($restored > 0) {
+    $messages[] = t('Restored @count missing built-in categories.', ['@count' => $restored]);
+  }
+  if (empty($messages)) {
+    return t('All built-in categories already have the locked flag set.');
+  }
+  return implode(' ', $messages);
+}

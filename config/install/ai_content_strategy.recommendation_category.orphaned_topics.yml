@@ -1,5 +1,5 @@
 langcode: en
-status: false
+status: true
 dependencies: {  }
 id: orphaned_topics
 label: 'Orphaned Topic Expansion'
@@ -13,3 +13,4 @@ instructions: |
   - Taxonomy terms applied to very few nodes but represent important subject areas
   - Content pieces with high-value topics that lack context, prerequisites, or follow-up material
   - Subject areas introduced but not developed into comprehensive coverage
+locked: true

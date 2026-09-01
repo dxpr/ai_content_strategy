@@ -50,3 +50,6 @@ ai_content_strategy.recommendation_category.*:
     instructions:
       type: text
       label: 'AI Instructions'
+    locked:
+      type: boolean
+      label: 'Locked (built-in)'

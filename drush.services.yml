@@ -26,6 +26,7 @@ services:
     class: Drupal\ai_content_strategy\Drush\Commands\CategoryCommands
     arguments:
       - '@entity_type.manager'
+      - '@ai_content_strategy.built_in_category_manager'
     tags:
       - { name: drush.command }
 

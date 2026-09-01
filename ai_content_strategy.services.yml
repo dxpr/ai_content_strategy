@@ -34,6 +34,10 @@ services:
       - '@ai_content_strategy.category_schema_builder'
       - '@ai_content_strategy.category_prompt_builder'
 
+  ai_content_strategy.built_in_category_manager:
+    class: Drupal\ai_content_strategy\Service\BuiltInCategoryManager
+    arguments: ['@entity_type.manager', '@extension.list.module']
+
   ai_content_strategy.content_analyzer:
     class: Drupal\ai_content_strategy\Service\ContentAnalyzer
     arguments: ['@entity_type.manager', '@menu.active_trail', '@http_client', '@config.factory', '@renderer', '@module_handler', '@logger.channel.ai_content_strategy']

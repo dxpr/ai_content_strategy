@@ -124,4 +124,12 @@ entity.recommendation_category.delete_form:
     _entity_form: 'recommendation_category.delete'
     _title: 'Delete Recommendation Category'
   requirements:
+    _custom_access: '\Drupal\ai_content_strategy\Access\RecommendationCategoryDeleteAccess::access'
+
+ai_content_strategy.category_restore:
+  path: '/admin/config/ai/content-strategy/categories/restore'
+  defaults:
+    _form: '\Drupal\ai_content_strategy\Form\RestoreBuiltInCategoriesForm'
+    _title: 'Restore Built-in Categories'
+  requirements:
     _permission: 'administer ai content strategy'
