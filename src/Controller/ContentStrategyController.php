@@ -1184,7 +1184,7 @@ EOT;
     }
 
     // Generic fallback: state what happened, suggest a concrete next step.
-    return $this->t('<strong>Something went wrong.</strong> @error — <a href="@logs">Check the error log</a> for details, or try again.', [
+    return $this->t('<strong>Something went wrong.</strong> @error, <a href="@logs">check the error log</a> for details, or try again.', [
       '@error' => $message,
       '@logs' => '/admin/reports/dblog',
     ]);

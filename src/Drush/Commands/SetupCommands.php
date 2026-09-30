@@ -107,18 +107,18 @@ final class SetupCommands extends AcsCommandsBase {
       $dest = $projectRoot . '/' . $relativePath;
 
       if (!file_exists($dest)) {
-        $results[] = sprintf('%s — NOT INSTALLED', $relativePath);
+        $results[] = sprintf('%s: NOT INSTALLED', $relativePath);
         $outdated = TRUE;
       }
       elseif (!file_exists($source)) {
-        $results[] = sprintf('%s — source missing', $relativePath);
+        $results[] = sprintf('%s: source missing', $relativePath);
       }
       elseif (md5_file($source) !== md5_file($dest)) {
-        $results[] = sprintf('%s — OUTDATED', $relativePath);
+        $results[] = sprintf('%s: OUTDATED', $relativePath);
         $outdated = TRUE;
       }
       else {
-        $results[] = sprintf('%s — up to date', $relativePath);
+        $results[] = sprintf('%s: up to date', $relativePath);
       }
     }
 
