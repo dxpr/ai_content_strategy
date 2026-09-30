@@ -56,6 +56,11 @@ final class SetupCommands extends AcsCommandsBase {
         $projectRoot,
         '.claude/skills/acs/SKILL.md',
       ));
+      $results = array_merge($results, $this->installFile(
+        $modulePath,
+        $projectRoot,
+        '.claude/skills/acs/references/commands.md',
+      ));
     }
 
     if ($installAgents) {
@@ -63,6 +68,11 @@ final class SetupCommands extends AcsCommandsBase {
         $modulePath,
         $projectRoot,
         '.agents/skills/acs/SKILL.md',
+      ));
+      $results = array_merge($results, $this->installFile(
+        $modulePath,
+        $projectRoot,
+        '.agents/skills/acs/references/commands.md',
       ));
       $results = array_merge($results, $this->installFile(
         $modulePath,
@@ -94,9 +104,11 @@ final class SetupCommands extends AcsCommandsBase {
     $files = [];
     if (in_array($host, ['claude', 'all'])) {
       $files[] = '.claude/skills/acs/SKILL.md';
+      $files[] = '.claude/skills/acs/references/commands.md';
     }
     if (in_array($host, ['agents', 'all'])) {
       $files[] = '.agents/skills/acs/SKILL.md';
+      $files[] = '.agents/skills/acs/references/commands.md';
       $files[] = '.agents/skills/acs/agents/openai.yaml';
     }
 

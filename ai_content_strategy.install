@@ -35,7 +35,9 @@ function ai_content_strategy_requirements($phase) {
     if ($project_root) {
       $files = [
         '.claude/skills/acs/SKILL.md',
+        '.claude/skills/acs/references/commands.md',
         '.agents/skills/acs/SKILL.md',
+        '.agents/skills/acs/references/commands.md',
         '.agents/skills/acs/agents/openai.yaml',
       ];
 
