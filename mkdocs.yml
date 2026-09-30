@@ -1,0 +1,32 @@
+site_name: 'AI Content Strategy - Documentation'
+site_url: 'https://project.pages.drupalcode.org/ai_content_strategy/'
+repo_url: https://git.drupalcode.org/project/ai_content_strategy
+repo_name: drupal/ai_content_strategy
+edit_uri: -/edit/1.x/docs/
+exclude_docs: |
+  ai_content_strategy_project_desc.html
+  screenshots/
+
+theme:
+  name: material
+  features:
+    - navigation.footer
+
+plugins:
+  - search
+  - privacy:
+      enabled: !ENV [CI, false]
+
+nav:
+  - Home: 'index.md'
+  - Getting Started:
+      - Installation: 'getting-started/installation.md'
+      - Configuration: 'getting-started/configuration.md'
+  - Guides:
+      - Recommendation Categories: 'guides/categories.md'
+      - Dashboard: 'guides/dashboard.md'
+      - Drush Commands: 'guides/drush.md'
+      - AI Assistant Integration: 'guides/ai-assistant.md'
+      - FAQ: 'guides/faq.md'
+  - Development:
+      - Contributing: 'development/contributing.md'
