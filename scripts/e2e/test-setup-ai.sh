@@ -17,14 +17,19 @@ assert_has "check detects not installed" "NOT INSTALLED" "$output"
 output=$($DRUSH acs:setup-ai --host=claude 2>&1)
 assert_has "install claude returns success" "success: true" "$output"
 assert_has "install claude mentions skill file" "SKILL.md" "$output"
+assert_has "install claude copies command reference" \
+  ".claude/skills/acs/references/commands.md" "$output"
 
 # Install for all.
 output=$($DRUSH acs:setup-ai 2>&1)
 assert_has "install all returns success" "success: true" "$output"
+assert_has "install all copies agents command reference" \
+  ".agents/skills/acs/references/commands.md" "$output"
 
 # Check mode after install.
 output=$($DRUSH acs:setup-ai --check 2>&1)
 assert_has "check shows up to date" "up to date" "$output"
+assert_has "check lists command reference" "references/commands.md" "$output"
 
 # Invalid host.
 output=$($DRUSH acs:setup-ai --host=invalid 2>&1 || true)

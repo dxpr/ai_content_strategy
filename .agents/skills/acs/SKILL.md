@@ -10,12 +10,26 @@ description: >
   content gaps, even if they don't mention "ACS" or "Drush" directly.
 ---
 
-# AI Content Strategy (Drush CLI)
+# AI Content Strategy
 
 Recommendations are stored in Drupal's key-value store, not as nodes.
 Categories are config entities. All commands return structured YAML
 with a `success`/`message`/`data` envelope. All state-changing
 commands support `--dry-run`.
+
+## Auto-discover current state
+
+```bash
+drush acs:health
+drush acs:category:list
+drush acs:report:status
+drush acs:sitemap
+```
+
+## Command reference
+
+Read [references/commands.md](references/commands.md) when you need
+the full command table, aliases, or flag details.
 
 ## Gotchas
 
@@ -26,36 +40,31 @@ commands support `--dry-run`.
   `acs:report:card` to discover them before editing or deleting.
 - The AI provider must be configured via the drupal/ai module before
   any generation commands work. Run `acs:health` first.
+- `acs:generate` requires `-l <site-uri>` in multisite setups so
+  Drush knows which site to analyze.
 
-## Commands
+## Workflows
 
-### Generation
-- `drush acs:generate`: Generate recommendations (`--category` to filter)
-- `drush acs:generate:more <section> <uuid>`: Generate more ideas for a card
-- `drush acs:generate:add <section>`: Add more cards to a category
-- `drush acs:health`: Check AI provider configuration
+### Generate and review
 
-### Reports
-- `drush acs:report`: Full report (`--category`, `--priority`)
-- `drush acs:report:card <section> <uuid>`: View single card
-- `drush acs:report:status`: Last-run info
-- `drush acs:sitemap`: Site structure
+1. Verify AI provider: `drush acs:health`
+   - If unhealthy, configure the provider in the drupal/ai module first.
+2. Generate: `drush acs:generate -l https://example.com`
+   - To target one category: `--category=content_gaps`
+3. Review: `drush acs:report`
+   - Filter by priority: `--priority=high`
+4. Drill into a card: `drush acs:report:card <section> <uuid>`
+5. If more ideas needed: `drush acs:generate:more <section> <uuid>`
 
-### Card & Idea CRUD
-- `drush acs:card:edit <section> <uuid> --title="X"`: Edit card
-- `drush acs:card:delete <section> <uuid>`: Delete card
-- `drush acs:idea:edit <section> <uuid> <idea_uuid> --text="X"`: Edit idea
-- `drush acs:idea:implement <section> <uuid> <idea_uuid> --link=URL`: Mark done
-- `drush acs:idea:delete <section> <uuid> <idea_uuid>`: Delete idea
+### Curate and implement
 
-### Categories
-- `drush acs:category:list`: List all categories
-- `drush acs:category:get <id>`: Category detail
-- `drush acs:category:create <id> <label>`: Create category
-- `drush acs:category:update <id>`: Update category
-- `drush acs:category:delete <id>`: Delete category
+1. Find high-priority cards: `drush acs:report --priority=high`
+2. Mark an idea implemented:
+   `drush acs:idea:implement <section> <card-uuid> <idea-uuid> --link=https://example.com/new-page`
+3. Export results: `drush acs:export --format=json`
 
-### Settings & Export
-- `drush acs:settings:get`: View settings
-- `drush acs:settings:set --system-prompt="..."`: Update prompt
-- `drush acs:export --format=yaml|json|csv`: Export recommendations
+### Manage categories
+
+1. List categories: `drush acs:category:list`
+2. Create: `drush acs:category:create seasonal_content "Seasonal Content" --instructions="Identify seasonal and timely content opportunities"`
+3. Adjust weight: `drush acs:category:update trust_signals --weight=5`

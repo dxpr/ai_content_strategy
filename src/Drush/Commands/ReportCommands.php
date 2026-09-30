@@ -79,7 +79,7 @@ class ReportCommands extends AcsCommandsBase {
     ];
 
     if (($stored['pages_analyzed'] ?? 0) < 5) {
-      $extra['warning'] = 'Analysis based on fewer than 5 pages — results may be limited.';
+      $extra['warning'] = 'Analysis based on fewer than 5 pages, so results may be limited.';
     }
 
     return $this->success('Report retrieved.', $extra);
@@ -193,7 +193,7 @@ class ReportCommands extends AcsCommandsBase {
     ];
 
     if (count($urls) < 5) {
-      $extra['warning'] = 'Sitemap has fewer than 5 URLs — analysis may be limited.';
+      $extra['warning'] = 'Sitemap has fewer than 5 URLs, so analysis may be limited.';
     }
 
     return $this->success('Sitemap retrieved.', $extra);
