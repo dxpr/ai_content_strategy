@@ -1,14 +1,17 @@
 /**
  * @file
  * Recommendation card styles for AI Content Strategy.
+ *
+ * Uses Gin CSS variables (dark mode aware) with Claro fallbacks
+ * and hardcoded last-resort values.
  */
 
 /* Recommendations Grid */
 .recommendation-items {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-top: 1.5rem;
+  gap: var(--space-l, 1.5rem);
+  margin-top: var(--space-l, 1.5rem);
 }
 
 @media screen and (max-width: 768px) {
@@ -19,11 +22,11 @@
 
 /* Recommendation Cards */
 .recommendation-item {
-  background: white;
-  padding: 1.5rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: var(--gin-bg-layer, var(--color-white, #fff));
+  padding: var(--space-l, 1.5rem);
+  border: 1px solid var(--gin-border-color-layer, var(--color-gray-200, #d3d4d9));
+  border-radius: var(--base-border-radius, 2px);
+  box-shadow: var(--gin-shadow-l1, var(--details-box-shadow, 0 2px 4px rgba(0, 0, 0, 0.1)));
 }
 
 .recommendation-header {
@@ -41,7 +44,7 @@
 
 .recommendation-item p {
   margin-bottom: 1rem;
-  color: #4a4a4a;
+  color: var(--gin-color-text-light, var(--color-text-light, #545560));
 }
 
 /* Recommendation Actions */
@@ -64,19 +67,19 @@
 }
 
 .priority-badge.high {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background-color: var(--gin-color-danger-lightest, var(--color-red-020, #fdf5f5));
+  color: var(--gin-color-danger, var(--color-maximumred, #dc2323));
+  border: 1px solid var(--gin-color-danger-light, var(--color-red-100, #f8d3d3));
 }
 
 .priority-badge.medium {
-  background-color: #fffbeb;
-  color: #d97706;
-  border: 1px solid #fef3c7;
+  background-color: var(--gin-bg-warning-light, rgba(226, 151, 0, 0.08));
+  color: var(--gin-color-warning, var(--color-sunglow-shaded, #977405));
+  border: 1px solid var(--gin-color-warning-light, rgba(226, 151, 0, 0.2));
 }
 
 .priority-badge.low {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #dcfce7;
+  background-color: var(--gin-bg-green-light, rgba(72, 171, 123, 0.1));
+  color: var(--gin-color-green, var(--color-lightninggreen, #26a769));
+  border: 1px solid var(--gin-color-green-light, rgba(72, 171, 123, 0.3));
 }

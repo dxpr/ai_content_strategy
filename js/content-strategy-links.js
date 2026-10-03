@@ -26,7 +26,7 @@
     // Generate link input HTML (this stays client-side as it's temporary UI).
     const linkInputHTML = `
       <div class="idea-link-input-wrapper">
-        <input type="url" class="idea-link-input form-url" placeholder="${translations.enterUrl || Drupal.t('Enter URL...')}" value="${currentLink}">
+        <input type="url" class="idea-link-input form-element form-url" placeholder="${translations.enterUrl || Drupal.t('Enter URL...')}" value="${currentLink}">
         <button type="button" class="button button--small button--primary idea-link-save">${translations.save || Drupal.t('Save')}</button>
         <button type="button" class="button button--small idea-link-cancel">${translations.cancel || Drupal.t('Cancel')}</button>
       </div>

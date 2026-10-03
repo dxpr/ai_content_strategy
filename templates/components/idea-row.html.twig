@@ -35,9 +35,8 @@
     </div>
   </td>
   <td class="idea-actions">
-    <label class="idea-checkbox" title="{{ 'Mark as implemented'|t }}">
-      <input type="checkbox" class="idea-implemented-checkbox" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}"{{ idea_implemented ? ' checked' : '' }}>
-      <span class="idea-checkbox-visual"></span>
+    <label class="idea-checkbox form-type--checkbox" title="{{ 'Mark as implemented'|t }}">
+      <input type="checkbox" class="idea-implemented-checkbox form-boolean form-boolean--type-checkbox" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}"{{ idea_implemented ? ' checked' : '' }}>
     </label>
     <button type="button" class="delete-idea-link" data-section="{{ section }}" data-uuid="{{ uuid }}" data-idea-uuid="{{ idea_uuid }}" title="{{ 'Delete this content idea'|t }}" aria-label="{{ 'Delete content idea'|t }}">
       <span class="cs-icon cs-icon--trash cs-icon--md" aria-hidden="true"></span>

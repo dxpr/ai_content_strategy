@@ -11,21 +11,21 @@
 }
 
 .editable-field:hover {
-  outline: 1px dashed #ccc;
+  outline: 1px dashed var(--gin-border-color-layer2, var(--color-gray-300, #c1c2c7));
   outline-offset: 2px;
 }
 
 .editable-field:focus {
-  outline: 2px solid #0073aa;
+  outline: 2px solid var(--gin-color-primary, var(--color-link, #003ecc));
   outline-offset: 2px;
-  background-color: #f9f9f9;
+  background-color: var(--gin-bg-layer2, var(--color-gray-050, #f3f4f9));
 }
 
 /* Editable Field States */
 .editable-field--saving {
-  outline: 2px solid #0073aa;
+  outline: 2px solid var(--gin-color-primary, var(--color-link, #003ecc));
   outline-offset: 2px;
-  background-color: #f0f7ff;
+  background-color: var(--color-blue-020, #f5f8ff);
 }
 
 .editable-field--saved {
@@ -35,7 +35,7 @@
 @keyframes field-saved-flash {
   0% {
     background-color: #d4edda;
-    outline: 2px solid #28a745;
+    outline: 2px solid var(--gin-color-green, var(--color-lightninggreen, #26a769));
     outline-offset: 2px;
   }
   100% {
@@ -64,7 +64,7 @@
 /* Checkmark Icon */
 .field-save-indicator__checkmark {
   display: inline-flex;
-  color: #28a745;
+  color: var(--gin-color-green, var(--color-lightninggreen, #26a769));
   animation: checkmark-appear 0.3s ease-out;
 }
 
@@ -76,7 +76,7 @@
 /* Error Icon */
 .field-save-indicator__error {
   display: inline-flex;
-  color: #dc2626;
+  color: var(--gin-color-danger, var(--color-maximumred, #dc2323));
 }
 
 .field-save-indicator__error svg {
