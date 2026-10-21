@@ -1,10 +1,11 @@
 <p><strong>AI Content Strategy</strong> analyses your site's pages, navigation, and sitemap, then generates prioritised content recommendations tailored to your domain. Unlike asking a chatbot for content ideas, this module knows your existing content, tracks what you have acted on, and keeps recommendations organised by category and priority across your team.</p>
 
-<p>Part of the <a href="https://www.drupal.org/project/ai">AI module</a> ecosystem and the <a href="https://dxpr.com/c/marketing-cms?ref=50701">DXPR marketing CMS</a> stack. Included in <a href="https://www.drupal.org/project/dxpr_cms">DXPR CMS</a>.</p>
+<p>Part of the <a href="https://www.drupal.org/project/ai">AI module</a> ecosystem and the <a href="https://dxpr.com/c/marketing-cms?utm_source=drupal.org&amp;utm_medium=referral&amp;utm_campaign=ai_content_strategy_project_page&amp;utm_content=dxpr-marketing-cms&amp;ref=50701">DXPR marketing CMS</a> stack. Included in <a href="https://www.drupal.org/project/dxpr_cms">DXPR CMS</a>.</p>
 
 <p><a href="/files/ai-content-strategy-section-controls.png"><img src="/files/ai-content-strategy-section-controls.png" alt="Content Gaps recommendation section showing two cards with priority badges, implemented ideas with strikethrough and links, checkboxes for tracking progress, and Generate more buttons" /></a></p>
 
 <h3>Generate, edit, and track recommendations</h3>
+
 <ul>
   <li><strong>Site-aware generation</strong>: the module reads your published content, menus, and sitemap before asking the AI model, so recommendations reflect your actual domain rather than generic advice</li>
   <li><strong>Configurable categories</strong>: content gaps, authority topics, expertise demonstrations, trust signals, and more. Create your own, edit the AI instructions per category, reorder or disable them</li>
@@ -17,14 +18,17 @@
 </ul>
 
 <h3>Customise the analysis</h3>
+
 <p>Each recommendation category has its own AI instructions that control how the model analyses your content. You can also modify the global system prompt to shape the overall tone. Categories are configuration entities: export and import them across sites through Drupal's standard configuration management.</p>
 
 <p><a href="/files/ai-content-strategy-categories.png"><img src="/files/ai-content-strategy-categories.png" alt="Recommendation Categories admin table showing the default categories with status, AI instructions preview, and drag-to-reorder handles" /></a></p>
 
 <h3 id="module-project--installation">Install and generate</h3>
-<pre><code>composer require drupal/ai_content_strategy
-drush en ai_content_strategy</code></pre>
-<p>The module requires an XML sitemap at <code>/sitemap.xml</code> (provided by <a href="https://www.drupal.org/project/simple_sitemap">Simple XML Sitemap</a> or similar). Configure an AI provider at /admin/config/ai/providers (or install <a href="https://www.drupal.org/project/ai_provider_dxpr">DXPR AI Provider</a> for a free tier), then visit /admin/reports/ai/content-strategy and click "Generate recommendations."</p>
+
+<pre><pre class="codeblock"><code class="language-php">composer require drupal/ai_content_strategy
+drush en ai_content_strategy</code></pre></pre>
+
+<p>The module requires an XML sitemap at <code class="language-php">/sitemap.xml</code> (provided by <a href="https://www.drupal.org/project/simple_sitemap">Simple XML Sitemap</a> or similar). Configure an AI provider at /admin/config/ai/providers (or install <a href="https://www.drupal.org/project/ai_provider_dxpr">DXPR AI Provider</a> for a free tier), then visit /admin/reports/ai/content-strategy and click "Generate recommendations."</p>
 
 <p><a href="/files/ai-content-strategy-settings.png"><img src="/files/ai-content-strategy-settings.png" alt="AI Content Strategy settings page showing the customisable system prompt that controls how the AI generates recommendations" /></a></p>
 
@@ -34,7 +38,8 @@ drush en ai_content_strategy</code></pre>
 </div>
 
 <h3>CLI and AI assistant support</h3>
-<p>The module ships 23 Drush commands covering generation, reporting, card management, category administration, and export. Run <code>drush acs:setup-ai</code> to enable the built-in <a href="https://agentskills.io/specification">Agent Skills</a> file, which lets AI coding assistants (Claude Code, Codex CLI, Gemini CLI, Cursor) manage recommendations through natural language.</p>
+
+<p>The module ships 23 Drush commands covering generation, reporting, card management, category administration, and export. Run <code class="language-php">drush acs:setup-ai</code> to enable the built-in <a href="https://agentskills.io/specification">Agent Skills</a> file, which lets AI coding assistants (Claude Code, Codex CLI, Gemini CLI, Cursor) manage recommendations through natural language.</p>
 
 <h3>FAQ</h3>
 
@@ -43,29 +48,26 @@ drush en ai_content_strategy</code></pre>
   <dd>
     <p>The module itself is free and open source under the GPL licence. You need an AI provider to generate recommendations. DXPR AI Provider offers a free tier that works out of the box; alternatively, bring your own API keys from OpenAI, Anthropic, Google, or any other provider supported by the Drupal AI module. The module makes one API call per generation request.</p>
   </dd>
-
   <dt>How is this different from asking ChatGPT for content ideas?</dt>
   <dd>
     <p>AI Content Strategy feeds your actual site structure, published pages, and navigation to the AI model before asking for recommendations. The result is advice grounded in what you already have, not generic suggestions. Ideas persist on a shared dashboard where your team can edit, prioritise, track implementation, and export to CSV; a chat conversation disappears when you close the tab.</p>
   </dd>
-
   <dt>How do I track which recommendations I have acted on?</dt>
   <dd>
     <p>Each content idea includes an "Implemented" toggle that lets you mark it complete and optionally add a link to the published content. The dashboard shows implemented ideas with a strikethrough and green checkmark so you can see progress at a glance. Export all recommendations and their status to CSV for tracking in external tools.</p>
   </dd>
-
   <dt>Does AI Content Strategy work with multilingual sites?</dt>
   <dd>
     <p>The module analyses whichever URLs your XML sitemap lists. If your sitemap includes translated pages, those translations are part of the analysis. The module itself has no language-specific logic; coverage depends on your sitemap configuration.</p>
   </dd>
-
   <dt>Can I use AI Content Strategy from the command line?</dt>
   <dd>
-    <p>Yes. The module ships with 23 Drush commands covering generation, reporting, card and idea management, category administration, CSV and YAML export, settings, and health checks. Run <code>drush acs:setup-ai</code> to also enable AI coding assistant support, letting you manage recommendations through natural language prompts in Claude Code, Codex CLI, Gemini CLI, or Cursor.</p>
+    <p>Yes. The module ships with 23 Drush commands covering generation, reporting, card and idea management, category administration, CSV and YAML export, settings, and health checks. Run <code class="language-php">drush acs:setup-ai</code> to also enable AI coding assistant support, letting you manage recommendations through natural language prompts in Claude Code, Codex CLI, Gemini CLI, or Cursor.</p>
   </dd>
 </dl>
 
 <h3>Related Modules</h3>
+
 <ul>
   <li><a href="https://www.drupal.org/project/ai">AI</a>: required; provides the LLM provider layer for content analysis and recommendation generation</li>
   <li><a href="https://www.drupal.org/project/ai_provider_dxpr">DXPR AI Provider</a>: optional; offers a free AI tier so you can get started without your own API keys</li>
