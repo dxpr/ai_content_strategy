@@ -10,7 +10,7 @@
   padding: 0;
   width: 25px;
   height: 25px;
-  color: #dc2626;
+  color: var(--gin-color-danger, #dc2626);
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
@@ -26,7 +26,7 @@
 
 .delete-idea-link:hover {
   opacity: 1 !important;
-  background-color: #fee2e2;
+  background-color: var(--gin-bg-danger-light, #fee2e2);
 }
 
 /* Legacy SVG support - can be removed when all icons use CSS mask-image */
@@ -39,7 +39,7 @@
 }
 
 .delete-idea-link:focus {
-  outline: 2px solid #dc2626;
+  outline: 2px solid var(--gin-color-danger, #dc2626);
   outline-offset: 2px;
   opacity: 1;
 }
@@ -49,7 +49,7 @@
   background: none;
   border: none;
   padding: 0.5rem;
-  color: #dc2626;
+  color: var(--gin-color-danger, #dc2626);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -66,8 +66,8 @@
 
 .delete-card-link:hover {
   opacity: 1 !important;
-  color: #991b1b;
-  background-color: #fee2e2;
+  color: var(--gin-color-danger, #991b1b);
+  background-color: var(--gin-bg-danger-light, #fee2e2);
 }
 
 .delete-card-link svg {
@@ -81,8 +81,8 @@
 }
 
 .delete-card-link:focus {
-  outline: 2px solid #dc2626;
+  outline: 2px solid var(--gin-color-danger, #dc2626);
   outline-offset: 2px;
-  color: #dc2626;
+  color: var(--gin-color-danger, #dc2626);
   opacity: 1;
 }

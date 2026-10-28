@@ -15,8 +15,8 @@
   padding: 0.5rem;
   font-size: 0.9em;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 2px solid #e5e7eb;
+  color: var(--gin-color-text, #374151);
+  border-bottom: 2px solid var(--gin-border-color, #e5e7eb);
 }
 
 .content-ideas-table thead .idea-actions-header {
@@ -25,12 +25,12 @@
 }
 
 .content-ideas-table tbody tr {
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--gin-border-color-table, #f3f4f6);
   transition: background-color 0.15s ease;
 }
 
 .content-ideas-table tbody tr:hover {
-  background-color: #f9fafb;
+  background-color: var(--gin-bg-layer2, #f9fafb);
 }
 
 .content-ideas-table tbody td {
@@ -55,16 +55,16 @@
 
 /* Implemented Row Styling */
 .content-ideas-table tbody tr.idea-implemented {
-  background-color: #f0fdf4;
+  background-color: var(--gin-bg-green-light, #f0fdf4);
 }
 
 .content-ideas-table tbody tr.idea-implemented .editable-field {
   text-decoration: line-through;
-  color: #6b7280;
+  color: var(--gin-color-text-light, #6b7280);
 }
 
 .content-ideas-table tbody tr.idea-implemented:hover {
-  background-color: #dcfce7;
+  background-color: var(--gin-bg-green-light, #dcfce7);
 }
 
 /* Idea Content Cell */
