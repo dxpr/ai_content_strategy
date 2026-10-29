@@ -9,6 +9,9 @@
   // Create namespace for content strategy utilities.
   Drupal.aiContentStrategy = Drupal.aiContentStrategy || {};
 
+  // Counter keeps generated IDs unique within one synchronous loop.
+  let idCounter = 0;
+
   /**
    * DOM utility functions.
    */
@@ -23,7 +26,8 @@
      */
     ensureElementId(element, prefix, index = '') {
       if (!element.id) {
-        element.id = `${prefix}-${index || Date.now()}`;
+        idCounter += 1;
+        element.id = `${prefix}-${index || Date.now()}-${idCounter}`;
       }
       return element.id;
     },
@@ -124,48 +128,47 @@
       base: element.id,
       element: element,
       url: Drupal.url(url),
+      // Disable Drupal's default mousedown/keypress listeners; the caller
+      // triggers execute() on click.
+      event: 'none',
+      keypress: false,
       submit: { js: true },
       progress: { type: 'throbber' },
 
-      beforeSend: function(xhr, settings) {
+      beforeSend: function(xhr, options) {
+        // Keep core's throbber, then apply the loading state.
+        Drupal.Ajax.prototype.beforeSend.call(this, xhr, options);
         element.textContent = loadingText;
         element.disabled = true;
         Drupal.announce(loadingText, 'polite');
         return true;
       },
 
-      // Let Drupal handle success - commands are processed automatically.
-      // We use complete to reset button state and run callbacks.
-      complete: function(response, status) {
-        DOMUtils.clearProgressMessages();
-        element.disabled = false;
+      // Drupal.Ajax calls success(), not complete(). Run core's command
+      // processing first, then reset the button and run callbacks.
+      success: function(response, status) {
+        return Promise.resolve(Drupal.Ajax.prototype.success.call(this, response, status))
+          .then(() => {
+            DOMUtils.clearProgressMessages();
+            element.disabled = false;
 
-        // Check if there was an error in the response.
-        let hasError = false;
-        if (response && response.responseJSON) {
-          const data = response.responseJSON;
-          if (Array.isArray(data)) {
-            data.forEach((cmd) => {
-              if (cmd.command === 'message' && cmd.messageOptions?.type === 'error') {
-                hasError = true;
-              }
+            const hasError = Array.isArray(response) && response.some((cmd) => {
+              return cmd.command === 'message' && cmd.messageOptions?.type === 'error';
             });
-          }
-        }
 
-        if (hasError || status === 'error') {
-          element.textContent = errorText || originalText;
-        }
-        else {
-          element.textContent = successText || originalText;
-          Drupal.announce(Drupal.t('Content loaded successfully'), 'polite');
+            if (hasError) {
+              element.textContent = errorText || originalText;
+              return;
+            }
 
-          // Run success callback if provided.
-          if (onSuccess) {
-            const mainContainer = document.querySelector('.content-strategy-recommendations');
-            onSuccess(mainContainer);
-          }
-        }
+            element.textContent = successText || originalText;
+            Drupal.announce(Drupal.t('Content loaded successfully'), 'polite');
+
+            if (onSuccess) {
+              const mainContainer = document.querySelector('.content-strategy-recommendations');
+              onSuccess(mainContainer);
+            }
+          });
       },
 
       error: function(xhr, status, error) {

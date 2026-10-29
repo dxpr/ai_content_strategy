@@ -154,9 +154,8 @@
           successText: buttonText || link.textContent,
           errorText: buttonText || link.textContent,
           onSuccess: (target) => {
-            target.querySelectorAll('.generate-more-link').forEach((newLink, index) => {
-              attachGenerateMoreBehavior(newLink, index, settings);
-            });
+            // Behaviors use once(), so existing cards are not re-bound.
+            Drupal.attachBehaviors(target, settings);
           }
         }, settings)
       );
@@ -195,17 +194,10 @@
               successText: button.textContent.trim(),
               errorText: button.textContent.trim(),
               onSuccess: (target) => {
+                // Behaviors use once(), so links are never bound twice.
                 const wrapper = document.querySelector('.recommendations-wrapper');
                 if (wrapper) {
-                  wrapper.querySelectorAll('.generate-ideas-link').forEach((link, index) => {
-                    attachGenerateIdeasBehavior(link, index, settings);
-                  });
-                  wrapper.querySelectorAll('.generate-more-link').forEach((link, index) => {
-                    attachGenerateMoreBehavior(link, index, settings);
-                  });
-                  wrapper.querySelectorAll('.add-more-recommendations-link').forEach((link) => {
-                    attachAddMoreRecommendationsBehavior(link, settings);
-                  });
+                  Drupal.attachBehaviors(wrapper, settings);
                 }
                 // Attach behaviors to the newly added export button.
                 const actionsArea = document.querySelector('.content-strategy-actions');

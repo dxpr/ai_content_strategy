@@ -970,6 +970,10 @@ EOT;
         );
       }
 
+      // Ensure new cards and ideas have UUIDs before storing and rendering.
+      $data[$section] = $this->recommendationStorage->ensureUuids([$section => $data[$section]])[$section];
+      $data[$section] = $this->recommendationStorage->ensureIdeaUuids([$section => $data[$section]])[$section];
+
       // Update stored recommendations.
       if ($stored_data) {
         // Merge with existing recommendations or initialize if empty.
@@ -1104,6 +1108,12 @@ EOT;
       '{{ navigation }}' => $context['navigation'],
       '{{ content_urls }}' => $context['content_urls'],
       '{{ existing_recommendations }}' => $context['existing_recommendations'],
+      // Single-brace placeholders used by buildAddMorePrompts().
+      '{homepage_title}' => $context['homepage']['title'],
+      '{homepage_content}' => $context['homepage']['content'],
+      '{primary_menu}' => $context['navigation'],
+      '{urls}' => $context['content_urls'],
+      '{existing_recommendations}' => $context['existing_recommendations'],
     ]);
     return $text;
   }
