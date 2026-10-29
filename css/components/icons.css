@@ -79,11 +79,11 @@
 .field-save-indicator__checkmark .cs-icon {
   width: 16px;
   height: 16px;
-  background-color: #28a745;
+  background-color: var(--gin-color-green, #28a745);
 }
 
 .field-save-indicator__error .cs-icon {
   width: 16px;
   height: 16px;
-  background-color: #dc2626;
+  background-color: var(--gin-color-danger, #dc2626);
 }
