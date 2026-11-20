@@ -5,6 +5,7 @@
  * Install, update and uninstall functions for the AI Content Strategy module.
  */
 
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
 use Drupal\Component\Utility\DeprecationHelper;
 use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Config\FileStorage;
@@ -12,6 +13,7 @@ use Drupal\Core\Config\FileStorage;
 /**
  * Implements hook_requirements().
  */
+#[LegacyRequirementsHook]
 function ai_content_strategy_requirements($phase) {
   $requirements = [];
 

@@ -2,6 +2,10 @@
 
 namespace Drupal\ai_content_strategy\Hook;
 
+use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\State\StateInterface;
+
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\Core\Hook\Attribute\Hook;
@@ -12,6 +16,15 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
  */
 class AiContentStrategyHooks {
   use StringTranslationTrait;
+
+  /**
+   * Constructs the hook service.
+   */
+  public function __construct(
+    protected DateFormatterInterface $dateFormatter,
+    protected AccountProxyInterface $currentUser,
+    protected StateInterface $state,
+  ) {}
 
   /**
    * Implements hook_theme().
@@ -87,12 +100,12 @@ class AiContentStrategyHooks {
     // Get translated button texts.
     $variables['button_text'] = ai_content_strategy_get_button_texts();
     // Get last run time from state if available.
-    $last_run = \Drupal::state()->get('ai_content_strategy.last_run');
+    $last_run = $this->state->get('ai_content_strategy.last_run');
     if ($last_run) {
-      $variables['last_run'] = \Drupal::service('date.formatter')->formatTimeDiffSince($last_run);
+      $variables['last_run'] = $this->dateFormatter->formatTimeDiffSince($last_run);
     }
     // Add "Configure settings" link if user has permission.
-    $current_user = \Drupal::currentUser();
+    $current_user = $this->currentUser;
     if ($current_user->hasPermission('administer ai content strategy')) {
       $settings_url = Url::fromRoute('entity.recommendation_category.collection');
       if ($settings_url->access()) {

@@ -45,3 +45,7 @@ services:
   Drupal\ai_content_strategy\Hook\AiContentStrategyHooks:
     class: Drupal\ai_content_strategy\Hook\AiContentStrategyHooks
     autowire: true
+    arguments:
+      - '@date.formatter'
+      - '@current_user'
+      - '@state'

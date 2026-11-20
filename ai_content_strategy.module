@@ -62,3 +62,15 @@ function ai_content_strategy_theme() {
 function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$variables) {
   \Drupal::service(AiContentStrategyHooks::class)->preprocessAiContentStrategyRecommendations($variables);
 }
+
+/**
+ * Implements hook_runtime_requirements().
+ */
+function ai_content_strategy_runtime_requirements(): array {
+  // Drupal 11.2 still invokes the legacy requirements hook.
+  if (version_compare(\Drupal::VERSION, '11.3.0', '<')) {
+    return [];
+  }
+  \Drupal::moduleHandler()->loadInclude('ai_content_strategy', 'install');
+  return ai_content_strategy_requirements('runtime');
+}
