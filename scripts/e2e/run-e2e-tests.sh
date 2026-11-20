@@ -31,14 +31,14 @@ trap 'rm -rf "$SITE_DIR"' EXIT
 echo "Setting up Drupal in $SITE_DIR..."
 
 cd "$SITE_DIR"
-composer create-project drupal/recommended-project:11.1.x-dev . --no-interaction --quiet
+composer create-project 'drupal/recommended-project:^11.3' . --no-interaction --quiet
 
 # Symlink our module.
 mkdir -p web/modules/contrib
 ln -s "$MODULE_DIR" web/modules/contrib/ai_content_strategy
 
 # Install Drush and AI module dependency.
-composer require drush/drush drupal/ai --quiet --no-interaction
+composer require 'drush/drush:^13.8' drupal/ai --quiet --no-interaction
 
 # Install Drupal with SQLite.
 ./vendor/bin/drush site:install standard \
