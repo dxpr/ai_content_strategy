@@ -2,6 +2,8 @@
 
 namespace Drupal\Tests\ai_content_strategy\Functional\Controller;
 
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 
@@ -11,6 +13,8 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
  * @coversDefaultClass \Drupal\ai_content_strategy\Controller\ContentStrategyController
  * @group ai_content_strategy
  */
+#[Group('ai_content_strategy')]
+#[RunTestsInSeparateProcesses]
 class ContentStrategyControllerTest extends BrowserTestBase {
 
   use UserCreationTrait;

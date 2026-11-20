@@ -2,7 +2,7 @@ name: 'AI Content Strategy'
 type: module
 description: 'Provides AI-powered content strategy recommendations based on existing site content and EEAT framework.'
 package: AI
-core_version_requirement: ^10.2 || ^11
+core_version_requirement: ^11.2 || ^12
 configure: entity.recommendation_category.collection
 dependencies:
   - ai:ai

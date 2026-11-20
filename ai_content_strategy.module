@@ -5,8 +5,8 @@
  * AI Content Strategy module.
  */
 
-use Drupal\Core\Link;
-use Drupal\Core\Url;
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\ai_content_strategy\Hook\AiContentStrategyHooks;
 
 /**
  * Gets translated button texts.
@@ -50,110 +50,15 @@ function ai_content_strategy_get_button_texts() {
 /**
  * Implements hook_theme().
  */
+#[LegacyHook]
 function ai_content_strategy_theme() {
-  return [
-    'ai_content_strategy_recommendations' => [
-      'variables' => [
-        'categories' => [],
-        'button_text' => [],
-        'last_run' => NULL,
-        'ai_configured' => TRUE,
-      ],
-    ],
-    'ai_content_strategy_recommendations_items' => [
-      'variables' => [
-        'items' => [],
-        'section' => NULL,
-        'button_text' => [],
-      ],
-    ],
-    'ai_content_strategy_icon' => [
-      'variables' => [
-        'name' => NULL,
-        'class' => NULL,
-        'size' => NULL,
-      ],
-      'template' => 'components/icon',
-    ],
-    'ai_content_strategy_link_display' => [
-      'variables' => [
-        'link' => NULL,
-        'section' => NULL,
-        'uuid' => NULL,
-        'idea_uuid' => NULL,
-      ],
-      'template' => 'components/link-display',
-    ],
-    'ai_content_strategy_link_add_button' => [
-      'variables' => [
-        'section' => NULL,
-        'uuid' => NULL,
-        'idea_uuid' => NULL,
-      ],
-      'template' => 'components/link-add-button',
-    ],
-    'ai_content_strategy_link_input' => [
-      'variables' => [
-        'current_link' => '',
-      ],
-      'template' => 'components/link-input',
-    ],
-    'ai_content_strategy_idea_row' => [
-      'variables' => [
-        'section' => NULL,
-        'uuid' => NULL,
-        'idea_uuid' => NULL,
-        'idea_text' => NULL,
-        'idea_implemented' => FALSE,
-        'idea_link' => '',
-      ],
-      'template' => 'components/idea-row',
-    ],
-  ];
+  return \Drupal::service(AiContentStrategyHooks::class)->theme();
 }
 
 /**
  * Implements hook_preprocess_HOOK().
  */
+#[LegacyHook]
 function ai_content_strategy_preprocess_ai_content_strategy_recommendations(&$variables) {
-  // Get translated button texts.
-  $variables['button_text'] = ai_content_strategy_get_button_texts();
-
-  // Get last run time from state if available.
-  $last_run = \Drupal::state()->get('ai_content_strategy.last_run');
-  if ($last_run) {
-    $variables['last_run'] = \Drupal::service('date.formatter')->formatTimeDiffSince($last_run);
-  }
-
-  // Add "Configure settings" link if user has permission.
-  $current_user = \Drupal::currentUser();
-  if ($current_user->hasPermission('administer ai content strategy')) {
-    $settings_url = Url::fromRoute('entity.recommendation_category.collection');
-    if ($settings_url->access()) {
-      $link = Link::fromTextAndUrl(t('Configure categories'), $settings_url);
-      $link = $link->toRenderable();
-      $link['#attributes']['class'][] = 'button';
-      $link['#attributes']['class'][] = 'button--small';
-      $link['#attributes']['class'][] = 'button--primary';
-
-      $variables['configure_link'] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['form-actions', 'configure-actions']],
-        '#weight' => -10,
-        'link' => $link,
-      ];
-    }
-  }
-
-  // Add JavaScript settings (icons now use CSS mask-image).
-  $variables['#attached']['drupalSettings']['aiContentStrategy'] = [
-    'buttonText' => $variables['button_text'],
-    'translations' => [
-      'addLink' => t('+ Add link'),
-      'editLink' => t('Edit link'),
-      'save' => t('Save'),
-      'cancel' => t('Cancel'),
-      'enterUrl' => t('Enter URL...'),
-    ],
-  ];
+  \Drupal::service(AiContentStrategyHooks::class)->preprocessAiContentStrategyRecommendations($variables);
 }

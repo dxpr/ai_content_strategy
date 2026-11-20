@@ -5,6 +5,8 @@
  * Install, update and uninstall functions for the AI Content Strategy module.
  */
 
+use Drupal\Component\Utility\DeprecationHelper;
+use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Config\FileStorage;
 
 /**
@@ -72,7 +74,7 @@ function ai_content_strategy_requirements($phase) {
           'description' => t('AI skill files are outdated. Run <code>drush acs:setup-ai</code> to update. Files: @files', [
             '@files' => implode(', ', $outdated),
           ]),
-          'severity' => REQUIREMENT_WARNING,
+          'severity' => DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '11.2.0', fn() => RequirementSeverity::Warning, fn() => REQUIREMENT_WARNING),
         ];
       }
       elseif (!$any_installed) {
@@ -80,14 +82,14 @@ function ai_content_strategy_requirements($phase) {
           'title' => t('AI Content Strategy skill files'),
           'value' => t('Not installed'),
           'description' => t('Run <code>drush acs:setup-ai</code> to install AI skill files for coding assistants.'),
-          'severity' => REQUIREMENT_INFO,
+          'severity' => DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '11.2.0', fn() => RequirementSeverity::Info, fn() => REQUIREMENT_INFO),
         ];
       }
       else {
         $requirements['ai_content_strategy_skill_files'] = [
           'title' => t('AI Content Strategy skill files'),
           'value' => t('Up to date'),
-          'severity' => REQUIREMENT_OK,
+          'severity' => DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '11.2.0', fn() => RequirementSeverity::OK, fn() => REQUIREMENT_OK),
         ];
       }
     }
